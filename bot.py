@@ -54,8 +54,7 @@ TEXTS = {
             "💰 Amount: <b>${price}</b>\n\n"
             "💳 <b>Payment Instructions:</b>\n"
             "Send <b>${price}</b> USDT (TRC20) to:\n\n"
-            "<code>TGZu7K7kfqtNMTqCABfByLceuA49qRvLgo
-</code>\n\n"
+            "<code>TGZu7K7kfqtNMTqCABfByLceuA49qRvLgo</code>\n\n"
             "After payment, send your transaction ID here ⬇️"
         ),
         "payment_received": (
