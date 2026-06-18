@@ -281,6 +281,14 @@ async def panel_router(msg: Message, state: FSMContext):
             "  → Check your coin balance\n\n"
             "  /cancel\n"
             "  → Reset your FSM state\n\n"
+            "  /addaccount <code>EMAIL PASSWORD [label]</code>\n"
+            "  → Add an Artlist account to the pool\n\n"
+            "  /accounts\n"
+            "  → List Artlist account pool status\n\n"
+            "  /accstatus <code>ID active|exhausted|banned|disabled</code>\n"
+            "  → Change an account's status\n\n"
+            "  /delaccount <code>ID</code>\n"
+            "  → Remove an account from the pool\n\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
             parse_mode="HTML"
         )
@@ -458,6 +466,80 @@ async def cancelorder_cmd(msg: Message):
 async def cancel_cmd(msg: Message, state: FSMContext):
     await state.clear()
     await msg.answer("◌  State cleared. Use the menu below to continue.")
+
+# ── Artlist account pool admin commands ────────────────────────
+@dp.message(Command("addaccount"))
+async def add_account_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split(None, 3)
+    if len(parts) < 3:
+        await msg.answer(
+            "Usage: <code>/addaccount EMAIL PASSWORD [label]</code>",
+            parse_mode="HTML"
+        )
+        return
+    email, password = parts[1], parts[2]
+    label = parts[3] if len(parts) > 3 else None
+    from database import add_artlist_account
+    aid = add_artlist_account(email, password, label)
+    await msg.answer(f"✓  Artlist account #{aid} added ({email}).")
+
+@dp.message(Command("accounts"))
+async def list_accounts_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    from database import list_artlist_accounts
+    accounts = list_artlist_accounts()
+    if not accounts:
+        await msg.answer("No Artlist accounts in the pool yet. Use /addaccount to add one.")
+        return
+    status_emoji = {"active": "✓", "exhausted": "○", "banned": "✕", "disabled": "—"}
+    lines = "◈  <b>Artlist Account Pool</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+    for a in accounts:
+        e = status_emoji.get(a["status"], "?")
+        label = a["label"] or a["email"]
+        worker = f"  · {a['assigned_worker']}" if a["assigned_worker"] else ""
+        lines += f"  {e}  #{a['id']}  <b>{label}</b>  ({a['status']}){worker}\n"
+    lines += "\n  /accstatus ID active|exhausted|banned|disabled\n  /delaccount ID"
+    await msg.answer(lines, parse_mode="HTML")
+
+@dp.message(Command("accstatus"))
+async def account_status_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split()
+    if len(parts) != 3 or parts[2] not in ("active", "exhausted", "banned", "disabled"):
+        await msg.answer(
+            "Usage: <code>/accstatus ID active|exhausted|banned|disabled</code>",
+            parse_mode="HTML"
+        )
+        return
+    try:
+        aid = int(parts[1])
+    except ValueError:
+        await msg.answer("Invalid account ID.")
+        return
+    from database import set_artlist_account_status
+    set_artlist_account_status(aid, parts[2])
+    await msg.answer(f"✓  Account #{aid} set to '{parts[2]}'.")
+
+@dp.message(Command("delaccount"))
+async def del_account_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split()
+    if len(parts) != 2:
+        await msg.answer("Usage: <code>/delaccount ID</code>", parse_mode="HTML")
+        return
+    try:
+        aid = int(parts[1])
+    except ValueError:
+        await msg.answer("Invalid account ID.")
+        return
+    from database import remove_artlist_account
+    remove_artlist_account(aid)
+    await msg.answer(f"✓  Account #{aid} removed.")
 
 @dp.message(Command("balance"))
 async def balance_cmd(msg: Message):

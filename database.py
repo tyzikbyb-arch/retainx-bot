@@ -43,6 +43,21 @@ def init_db():
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS file_type TEXT DEFAULT NULL")
             except Exception:
                 pass
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS artlist_accounts (
+                    id SERIAL PRIMARY KEY,
+                    label TEXT,
+                    email TEXT NOT NULL,
+                    password TEXT NOT NULL,
+                    cookies_json TEXT,
+                    status TEXT DEFAULT 'active',
+                    assigned_worker TEXT,
+                    last_used INTEGER,
+                    last_error TEXT,
+                    exhausted_at INTEGER,
+                    created INTEGER
+                )
+            """)
         conn.commit()
 
 # ── User functions ────────────────────────────────────────────
@@ -227,6 +242,50 @@ def get_user_orders(uid: int) -> list:
                     d["params"] = json.loads(d["params"])
                 result.append(d)
             return result
+
+# ── Artlist account pool ─────────────────────────────────────
+def add_artlist_account(email: str, password: str, label: str = None) -> int:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO artlist_accounts (label, email, password, status, created)
+                VALUES (%s, %s, %s, 'active', %s)
+                RETURNING id
+            """, (label, email, password, int(time.time())))
+            aid = cur.fetchone()[0]
+        conn.commit()
+        return aid
+
+def list_artlist_accounts() -> list:
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM artlist_accounts ORDER BY id ASC")
+            return [dict(r) for r in cur.fetchall()]
+
+def get_artlist_account(account_id: int) -> dict:
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM artlist_accounts WHERE id = %s", (account_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+def set_artlist_account_status(account_id: int, status: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            if status == "active":
+                cur.execute(
+                    "UPDATE artlist_accounts SET status = %s, exhausted_at = NULL, last_error = NULL, assigned_worker = NULL WHERE id = %s",
+                    (status, account_id)
+                )
+            else:
+                cur.execute("UPDATE artlist_accounts SET status = %s WHERE id = %s", (status, account_id))
+        conn.commit()
+
+def remove_artlist_account(account_id: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM artlist_accounts WHERE id = %s", (account_id,))
+        conn.commit()
 
 # Initialize on import
 try:

@@ -97,7 +97,7 @@ VIDEO_SUBCATS = {
     "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc","klve"],
-    "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1"],
+    "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
 SUBCAT_LABELS = {
     "Standard": "▸  Standard Video",
@@ -252,7 +252,8 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
     fixed = {
         "klmc": ({"Resolution":"1080p","Duration":"30 sec"}, 1.00),
         "klve": ({"Resolution":"1080p","Duration":"10 sec"}, 0.25),
-        # omni, aur1, fab1 handled separately
+        "fab1": ({"Type":"Avatar Video"}, 0.90),
+        # omni, aur1 handled separately
     }
     if tid in fixed:
         params, usd = fixed[tid]
