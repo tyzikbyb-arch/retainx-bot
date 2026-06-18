@@ -947,8 +947,9 @@ async def sd_add_imgs(cb: CallbackQuery, state: FSMContext):
         f"◈  <b>Image Reference</b>  ({count}/9)\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         "  Send up to <b>9 images</b> as reference.\n\n"
-        "  In your prompt use <code>@img1</code>, <code>@img2</code> etc.\n"
-        "  to refer to each image by order.\n\n"
+        "  <code>@img1</code>, <code>@img2</code> etc. are just labels\n"
+        "  for you — the AI doesn't read them. Describe each image\n"
+        "  in words in your prompt instead (e.g. \"the woman in photo 1\").\n\n"
         "  Send images one by one or as album.\n"
         "  Tap <b>Done</b> when finished.",
         reply_markup=kb(
@@ -991,7 +992,9 @@ async def sd_add_vids(cb: CallbackQuery, state: FSMContext):
         f"◈  <b>Video Reference</b>  ({len(vids)}/3)\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         "  Send up to <b>3 videos</b> as reference.\n\n"
-        "  In your prompt use <code>@vid1</code>, <code>@vid2</code> etc.\n\n"
+        "  <code>@vid1</code>, <code>@vid2</code> etc. are just labels\n"
+        "  for you — the AI doesn't read them. Describe each video\n"
+        "  in words in your prompt instead.\n\n"
         "  Tap <b>Done</b> when finished.",
         reply_markup=kb(
             [InlineKeyboardButton(text="✓  Done", callback_data="sd_back_attach")],
@@ -1033,7 +1036,9 @@ async def sd_add_auds(cb: CallbackQuery, state: FSMContext):
         f"◈  <b>Audio File</b>  ({len(auds)}/3)\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         "  Send up to <b>3 audio files</b>.\n\n"
-        "  In your prompt use <code>@aud1</code>, <code>@aud2</code> etc.\n\n"
+        "  <code>@aud1</code>, <code>@aud2</code> etc. are just labels\n"
+        "  for you — the AI doesn't read them. Describe each audio\n"
+        "  file in words in your prompt instead.\n\n"
         "  Tap <b>Done</b> when finished.",
         reply_markup=kb(
             [InlineKeyboardButton(text="✓  Done", callback_data="sd_back_attach")],
@@ -1115,8 +1120,9 @@ async def sd_to_prompt(cb: CallbackQuery, state: FSMContext):
     if attach_lines:
         hint = (
             f"\n  <b>Attached files:</b>\n{attach_lines}\n"
-            "  Use <code>@img1</code>, <code>@vid1</code>, <code>@aud1</code>\n"
-            "  in your prompt to reference files.\n"
+            "  Note: these labels are just for your own reference —\n"
+            "  the AI doesn't read them. Describe each file in words\n"
+            "  in your prompt.\n"
         )
 
     await cb.message.edit_text(
@@ -1312,7 +1318,8 @@ async def att_add_imgs(cb: CallbackQuery, state: FSMContext):
     await cb.message.edit_text(
         f"◈  <b>Image Reference</b>  ({len(imgs)}/{max_imgs})\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  Send up to <b>{max_imgs} image(s)</b>.\n"
-        f"  Use <code>@img1</code>, <code>@img2</code> in your prompt.\n\n"
+        f"  <code>@img1</code> etc. are just labels for you — the AI\n"
+        f"  doesn't read them. Describe each image in words instead.\n\n"
         f"  Tap Done when finished.",
         reply_markup=kb([InlineKeyboardButton(text="✓  Done", callback_data="att_back")], [menu_btn()]),
         parse_mode="HTML"
@@ -1352,7 +1359,8 @@ async def att_add_vids(cb: CallbackQuery, state: FSMContext):
     await cb.message.edit_text(
         f"◈  <b>Video Reference</b>  ({len(vids)}/{max_vids})\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  Send up to <b>{max_vids} video(s)</b> in any format.\n"
-        f"  Use <code>@vid1</code>, <code>@vid2</code> in your prompt.\n\n"
+        f"  <code>@vid1</code> etc. are just labels for you — the AI\n"
+        f"  doesn't read them. Describe each video in words instead.\n\n"
         f"  Tap Done when finished.",
         reply_markup=kb([InlineKeyboardButton(text="✓  Done", callback_data="att_back")], [menu_btn()]),
         parse_mode="HTML"
@@ -1396,7 +1404,8 @@ async def att_add_auds(cb: CallbackQuery, state: FSMContext):
     await cb.message.edit_text(
         f"◈  <b>Audio File</b>  ({len(auds)}/{max_auds})\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  Send up to <b>{max_auds} audio file(s)</b>.\n"
-        f"  Use <code>@aud1</code>, <code>@aud2</code> in your prompt.\n\n"
+        f"  <code>@aud1</code> etc. are just labels for you — the AI\n"
+        f"  doesn't read them. Describe each audio file in words instead.\n\n"
         f"  Tap Done when finished.",
         reply_markup=kb([InlineKeyboardButton(text="✓  Done", callback_data="att_back")], [menu_btn()]),
         parse_mode="HTML"
@@ -1800,3 +1809,4 @@ async def aur1_dur(cb: CallbackQuery, state: FSMContext):
     )
     await _show_attach_menu(cb, state)
     await state.set_state(VideoStates.attach_mode)
+
