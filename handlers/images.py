@@ -314,8 +314,9 @@ async def img_add_refs(cb: CallbackQuery, state: FSMContext):
         f"◈  <b>Image Reference</b>  ({len(refs)}/{max_refs})\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  Send up to <b>{max_refs} images</b> as reference.\n\n"
-        f"  Use <code>@img1</code>, <code>@img2</code> etc.\n"
-        f"  in your prompt to refer to each image.\n\n"
+        f"  <code>@img1</code>, <code>@img2</code> etc. are just labels\n"
+        f"  for you — the AI doesn't read them. Describe each image\n"
+        f"  in words in your prompt instead.\n\n"
         f"  Tap <b>Done</b> when finished.",
         reply_markup=kb(
             [InlineKeyboardButton(text="✓  Done", callback_data="img_refs_done")],
