@@ -98,28 +98,29 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
         file_id = None
         file_type = None
         # Video/animation/document are always re-sent via send_document
-        # (not send_video/send_animation). Telegram silently reclassifies
-        # silent MP4s (e.g. audio=False generations) as "animation" the
-        # moment they're attached through the normal video picker, and
-        # send_animation then delivers them to the client as an auto-
-        # playing muted GIF instead of a real video — this is the cause of
-        # orders being delivered as a "гифка" instead of MP4. send_document
-        # forces Telegram to treat the file as a generic attachment and
-        # never re-applies that animation/GIF heuristic, matching the
-        # automated worker delivery path in playwright_worker.py, which
-        # uses sendDocument for the exact same reason.
+        # (not send_video/send_animation), saved as file_type="document" so
+        # any later re-send (handlers/orders.py "My Orders" detail view)
+        # also goes through send_document instead of resurrecting the GIF
+        # bug from a stale file_type. disable_content_type_detection stops
+        # Telegram from still auto-detecting a silent MP4 and rendering it
+        # as an auto-playing GIF-style preview even though it's sent as a
+        # plain document — matching the automated worker delivery path in
+        # playwright_worker.py.
         if msg.video:
             file_id = msg.video.file_id
-            file_type = "video"
-            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML")
+            file_type = "document"
+            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML",
+                                     disable_content_type_detection=True)
         elif msg.animation:
             file_id = msg.animation.file_id
-            file_type = "animation"
-            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML")
+            file_type = "document"
+            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML",
+                                     disable_content_type_detection=True)
         elif msg.document:
             file_id = msg.document.file_id
             file_type = "document"
-            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML")
+            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML",
+                                     disable_content_type_detection=True)
         elif msg.photo:
             file_id = msg.photo[-1].file_id
             file_type = "photo"

@@ -1207,12 +1207,14 @@ def _build_attach_buttons(tid: str, data: dict) -> list:
     has_any = start or end_ or imgs or vids or auds
     img_required = cfg.get("img_required", False)
     aud_required = cfg.get("aud_required", False)
+    start_required = cfg.get("start_frame_required", False)
 
     # Check all required files
     missing = []
     if vid_required and not vids: missing.append("video")
     if img_required and not imgs: missing.append("image")
     if aud_required and not auds: missing.append("audio")
+    if start_required and not start: missing.append("start frame")
 
     if missing:
         label = "⚠️  Upload " + " & ".join(missing) + " to continue"
@@ -1511,6 +1513,7 @@ async def att_confirm_no_prompt(cb: CallbackQuery, state: FSMContext):
     if cfg.get("vid_ref_required") and not vids: missing.append("video")
     if cfg.get("img_required") and not imgs: missing.append("image")
     if cfg.get("aud_required") and not auds: missing.append("audio")
+    if cfg.get("start_frame_required") and not data.get("att_start"): missing.append("start frame")
 
     if missing:
         await cb.answer(

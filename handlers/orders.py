@@ -131,14 +131,16 @@ async def order_detail(cb: CallbackQuery):
             from config import BOT_TOKEN
             bot = Bot(token=BOT_TOKEN)
             uid = cb.from_user.id
-            if file_type == "video":
-                await bot.send_video(uid, file_id, caption="◈  Your generated result")
-            elif file_type == "animation":
-                await bot.send_animation(uid, file_id, caption="◈  Your generated result")
-            elif file_type == "document":
-                await bot.send_document(uid, file_id, caption="◈  Your generated result")
-            elif file_type == "photo":
+            if file_type == "photo":
                 await bot.send_photo(uid, file_id, caption="◈  Your generated result")
+            else:
+                # video/animation/document (and legacy NULL from before this
+                # field was always populated) are all re-sent as a document —
+                # send_video/send_animation re-trigger Telegram's silent-MP4
+                # auto-play "GIF" preview, the same bug already fixed for the
+                # original delivery path.
+                await bot.send_document(uid, file_id, caption="◈  Your generated result",
+                                         disable_content_type_detection=True)
         except Exception:
             pass
 
