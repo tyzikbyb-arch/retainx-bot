@@ -16,6 +16,7 @@ Defines what files each tool accepts and custom UI text.
 #   vid_ref_required: bool - video reference is mandatory
 #   img_required: bool - image reference is mandatory
 #   aud_required: bool - audio is mandatory
+#   start_frame_required: bool - start frame is mandatory (end frame stays optional)
 #   exclusive_startend: bool - start/end frame are mutually exclusive with img_refs
 
 TOOL_ATTACHMENTS = {
@@ -42,10 +43,16 @@ TOOL_ATTACHMENTS = {
         "img_refs": 1,
         "exclusive_startend": True,
     },
-    "grok": {   # Grok Imagine 1.5
+    "grok": {   # Grok Imagine 1.5 — Start Frame is mandatory, End Frame stays
+                # optional. img_refs intentionally omitted: it would let a
+                # user satisfy the attach screen via a plain Image Reference
+                # while never providing the required Start Frame, since
+                # exclusive_startend hides each alternative once the other
+                # is chosen — a dead end the menu can't recover from.
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
         "exclusive_startend": True,
+        "start_frame_required": True,
+        "hint": "Attach a Start Frame to continue — it's required for this model. End Frame is optional.",
     },
 
     # ── Premium video ─────────────────────────────────────────────────────────
