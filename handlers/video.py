@@ -486,14 +486,11 @@ async def grok_dur(cb: CallbackQuery, state: FSMContext):
     sec = int(cb.data[6:])
     usd = GROK_IMAGINE_15_PRICES[sec]
     coins = usd_to_coins(usd)
-    await state.update_data(v_tool="Grok Imagine 1.5", v_tid="grok", v_dur=sec, v_coins=coins, v_usd=usd)
-    await cb.message.edit_text(
-        f"◈  <b>Grok Imagine 1.5</b>  —  {sec} sec\n\n"
-        f"  Cost   <b>{coins} coins</b>\n\n"
-        "Enter your prompt:",
-        reply_markup=kb([back_btn("vt_grok"), menu_btn()]), parse_mode="HTML"
-    )
-    await state.set_state(VideoStates.entering_prompt)
+    await state.update_data(v_tool="Grok Imagine 1.5", v_tid="grok", v_dur=sec, v_coins=coins, v_usd=usd,
+                            att_mode="free", att_start=None, att_end=None,
+                            att_imgs=[], att_vids=[], att_auds=[])
+    await _show_attach_menu(cb, state)
+    await state.set_state(VideoStates.attach_mode)
 
 # ── Duration tools ────────────────────────────────────────────
 async def show_duration_tool(cb, state, tid):
@@ -1200,7 +1197,8 @@ def _build_attach_buttons(tid: str, data: dict) -> list:
 
         # Show startend option only if nothing else attached
         if start_frame and exclusive and not (imgs or vids or auds):
-            se_label = "✓  Start & End Frame" if (start or end_) else "◈  Start & End Frame"
+            se_name = "Start & End Frame" if end_frame else "Start Frame"
+            se_label = f"✓  {se_name}" if (start or end_) else f"◈  {se_name}"
             buttons.append([InlineKeyboardButton(text=se_label, callback_data="att_startend_mode")])
 
     # Proceed button

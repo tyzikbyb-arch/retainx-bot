@@ -16,7 +16,7 @@ Defines what files each tool accepts and custom UI text.
 #   vid_ref_required: bool - video reference is mandatory
 #   img_required: bool - image reference is mandatory
 #   aud_required: bool - audio is mandatory
-#   start_frame_required: bool - start frame is mandatory (end frame stays optional)
+#   start_frame_required: bool - start frame is mandatory
 #   exclusive_startend: bool - start/end frame are mutually exclusive with img_refs
 
 TOOL_ATTACHMENTS = {
@@ -33,8 +33,8 @@ TOOL_ATTACHMENTS = {
         "img_refs": 9, "vid_refs": 3, "aud_refs": 3,
         "exclusive_startend": True,
     },
-    "hh10": {   # Happy Horse 1.0
-        "start_frame": True, "end_frame": True,
+    "hh10": {   # Happy Horse 1.0 — no End Frame button for this tool
+        "start_frame": True, "end_frame": False,
         "img_refs": 1,
         "exclusive_startend": True,
     },
@@ -43,16 +43,15 @@ TOOL_ATTACHMENTS = {
         "img_refs": 1,
         "exclusive_startend": True,
     },
-    "grok": {   # Grok Imagine 1.5 — Start Frame is mandatory, End Frame stays
-                # optional. img_refs intentionally omitted: it would let a
-                # user satisfy the attach screen via a plain Image Reference
-                # while never providing the required Start Frame, since
-                # exclusive_startend hides each alternative once the other
-                # is chosen — a dead end the menu can't recover from.
-        "start_frame": True, "end_frame": True,
-        "exclusive_startend": True,
+    "grok": {   # Grok Imagine 1.5 — Start Frame only, mandatory. No End Frame
+                # button at all for this tool. img_refs intentionally omitted:
+                # it would let a user satisfy the attach screen via a plain
+                # Image Reference while never providing the required Start
+                # Frame, since exclusive_startend hides each alternative once
+                # the other is chosen — a dead end the menu can't recover from.
+        "start_frame": True, "end_frame": False,
         "start_frame_required": True,
-        "hint": "Attach a Start Frame to continue — it's required for this model. End Frame is optional.",
+        "hint": "Attach a Start Frame to continue — it's required for this model.",
     },
 
     # ── Premium video ─────────────────────────────────────────────────────────
@@ -77,8 +76,8 @@ TOOL_ATTACHMENTS = {
         "prompt_label": "Upload a 2–30 second video and describe what happens next",
         "hint": "Works best with videos created using Veo models",
     },
-    "sora2": {  # Sora 2 Pro
-        "start_frame": True, "end_frame": True,
+    "sora2": {  # Sora 2 Pro — no End Frame button for this tool
+        "start_frame": True, "end_frame": False,
         "hint": "Sora 2 Pro is highly unstable. Switch to another model if it fails.",
     },
     "ltx23": {  # LTX 2.3 Pro
