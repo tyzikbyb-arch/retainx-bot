@@ -53,7 +53,7 @@ IMAGE_TOOLS = {
         "pricing": {"Medium": 0.05, "High": 0.29},
         "coins_by_quality": {"Medium": 1, "High": 6},
     },
-    "Kling Image 3.0": {
+    "Kling 3.0": {
         "emoji": "◉",
         "max_refs": 1,
         "desc": "Kling's powerful image generation engine",
@@ -62,7 +62,7 @@ IMAGE_TOOLS = {
         "pricing": {"per_gen": 0.05},
         "coins": 1,
     },
-    "Kling Image 0.3": {
+    "Kling O3": {
         "emoji": "◉",
         "max_refs": 10,
         "desc": "Kling's ultra-quality image model with 4K support",
@@ -71,7 +71,7 @@ IMAGE_TOOLS = {
         "pricing": {"2K": 0.05, "4K": 0.09},
         "coins_by_quality": {"1K": 1, "2K": 1, "4K": 2},
     },
-    "Wan 2.7 Pro Image": {
+    "Wan 2.7 Pro": {
         "emoji": "◈",
         "max_refs": 9,
         "desc": "Professional image generation in 4K",

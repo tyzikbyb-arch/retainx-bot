@@ -35,14 +35,17 @@ TOOL_ATTACHMENTS = {
     "hh10": {   # Happy Horse 1.0
         "start_frame": True, "end_frame": True,
         "img_refs": 1,
+        "exclusive_startend": True,
     },
     "wan27": {  # Wan 2.7
         "start_frame": True, "end_frame": True,
         "img_refs": 1,
+        "exclusive_startend": True,
     },
     "grok": {   # Grok Imagine 1.5
         "start_frame": True, "end_frame": True,
         "img_refs": 1,
+        "exclusive_startend": True,
     },
 
     # ── Premium video ─────────────────────────────────────────────────────────
@@ -50,14 +53,17 @@ TOOL_ATTACHMENTS = {
     "veo31": {  # Veo 3.1
         "start_frame": True, "end_frame": True,
         "img_refs": 3,
+        "exclusive_startend": True,
     },
     "veo31f": { # Veo 3.1 Fast
         "start_frame": True, "end_frame": True,
         "img_refs": 3,
+        "exclusive_startend": True,
     },
     "veo31l": { # Veo 3.1 Lite
         "start_frame": True, "end_frame": True,
         "img_refs": 1,
+        "exclusive_startend": True,
     },
     "veo31e": { # Veo 3.1 Extend — requires video
         "vid_refs": 1, "vid_ref_required": True,
@@ -71,6 +77,7 @@ TOOL_ATTACHMENTS = {
     "ltx23": {  # LTX 2.3 Pro
         "start_frame": True, "end_frame": True,
         "img_refs": 1,
+        "exclusive_startend": True,
     },
 
     # ── Kling ─────────────────────────────────────────────────────────────────
@@ -78,10 +85,12 @@ TOOL_ATTACHMENTS = {
     "kl30": {   # Kling 3.0
         "start_frame": True, "end_frame": True,
         "img_refs": 1,
+        "exclusive_startend": True,
     },
     "kl03": {   # Kling 0.3
         "start_frame": True, "end_frame": True,
         "img_refs": 1,
+        "exclusive_startend": True,
     },
     "klmc": {   # Kling 3.0 Motion Control
         "img_refs": 1, "vid_refs": 1,
