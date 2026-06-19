@@ -97,14 +97,25 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
     try:
         file_id = None
         file_type = None
+        # Video/animation/document are always re-sent via send_document
+        # (not send_video/send_animation). Telegram silently reclassifies
+        # silent MP4s (e.g. audio=False generations) as "animation" the
+        # moment they're attached through the normal video picker, and
+        # send_animation then delivers them to the client as an auto-
+        # playing muted GIF instead of a real video — this is the cause of
+        # orders being delivered as a "гифка" instead of MP4. send_document
+        # forces Telegram to treat the file as a generic attachment and
+        # never re-applies that animation/GIF heuristic, matching the
+        # automated worker delivery path in playwright_worker.py, which
+        # uses sendDocument for the exact same reason.
         if msg.video:
             file_id = msg.video.file_id
             file_type = "video"
-            await bot.send_video(uid, file_id, caption=caption, parse_mode="HTML")
+            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML")
         elif msg.animation:
             file_id = msg.animation.file_id
             file_type = "animation"
-            await bot.send_animation(uid, file_id, caption=caption, parse_mode="HTML")
+            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML")
         elif msg.document:
             file_id = msg.document.file_id
             file_type = "document"
