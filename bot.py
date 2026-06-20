@@ -145,13 +145,8 @@ async def panel_router(msg: Message, state: FSMContext):
         await show_wallet(msg, state)
     elif action == "video":
         await state.clear()
-        buttons = [
-            [InlineKeyboardButton(text="▸  Standard Video",   callback_data="vsub_Standard")],
-            [InlineKeyboardButton(text="▸  Premium Video",    callback_data="vsub_Premium")],
-            [InlineKeyboardButton(text="▸  Kling Video",      callback_data="vsub_Kling")],
-            [InlineKeyboardButton(text="▸  Avatar & Dubbing", callback_data="vsub_Avatar")],
-            [InlineKeyboardButton(text=t("btn_back", lang),   callback_data="main_menu")],
-        ]
+        buttons = [[InlineKeyboardButton(text=video.subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in video.VIDEO_SUBCATS]
+        buttons.append([InlineKeyboardButton(text=t("btn_back", lang),   callback_data="main_menu")])
         await msg.answer(
             f"{t('video_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('select_category', lang)}",
             reply_markup=kb(*buttons), parse_mode="HTML"
@@ -342,7 +337,8 @@ async def pricing_menu(cb: CallbackQuery):
 @dp.callback_query(F.data == "price_images")
 async def price_images(cb: CallbackQuery):
     from config import IMAGE_TOOLS
-    lines = "◎  <b>Image Pricing</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+    lang = get_lang(cb.from_user.id)
+    lines = f"{t('price_images_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
     for name, info in IMAGE_TOOLS.items():
         if "coins_by_quality" in info:
             coins_str = "  /  ".join(f"{q}: {c}◈" for q, c in info["coins_by_quality"].items())
@@ -352,26 +348,21 @@ async def price_images(cb: CallbackQuery):
     await cb.message.edit_text(
         lines,
         reply_markup=kb(
-            [InlineKeyboardButton(text="▸  Video Pricing", callback_data="price_video")],
-            [InlineKeyboardButton(text="⌂  Main Menu",     callback_data="main_menu")],
+            [InlineKeyboardButton(text=t("btn_video_pricing", lang), callback_data="price_video")],
+            [InlineKeyboardButton(text=t("menu_main_menu", lang),    callback_data="main_menu")],
         ),
         parse_mode="HTML"
     )
 
 @dp.callback_query(F.data == "price_video")
 async def price_video(cb: CallbackQuery):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "◎  <b>Video Pricing</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Prices vary by model, resolution & duration.\n"
-        "  Select a model in Video Generation\n"
-        "  to see exact coin costs per option.\n\n"
-        "  <b>Sample rates:</b>\n"
-        "  Kling 3.0   720p  5s  —  6◈\n"
-        "  Veo 3.1     4K    8s  —  58◈\n"
-        "  Seedance   1080p 10s  —  60◈\n",
+        f"{t('price_video_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('price_video_body', lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="▸  Image Pricing", callback_data="price_images")],
-            [InlineKeyboardButton(text="⌂  Main Menu",     callback_data="main_menu")],
+            [InlineKeyboardButton(text=t("btn_image_pricing", lang), callback_data="price_images")],
+            [InlineKeyboardButton(text=t("menu_main_menu", lang),    callback_data="main_menu")],
         ),
         parse_mode="HTML"
     )

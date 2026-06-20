@@ -3,8 +3,9 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from keyboards import kb, back_btn, menu_btn, chunked
-from handlers.attachments import get_attach_config, has_attachments
-from database import get_coins, spend_coins, create_order
+from handlers.attachments import get_attach_config, has_attachments, get_hint, get_prompt_label
+from database import get_coins, spend_coins, create_order, get_lang
+from i18n import t
 from config import (
     usd_to_coins,
     SEEDANCE_20_PRICES, SEEDANCE_20_FAST_PRICES, HAPPY_HORSE_PRICES,
@@ -99,12 +100,13 @@ VIDEO_SUBCATS = {
     "Kling":     ["kl30","kl03","klmc","klve"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
-SUBCAT_LABELS = {
-    "Standard": "▸  Standard Video",
-    "Premium":  "▸  Premium Video",
-    "Kling":    "▸  Kling Video",
-    "Avatar":   "▸  Avatar & Dubbing",
-}
+def subcat_label(sub: str, lang: str = "en") -> str:
+    return {
+        "Standard": t("vid_sub_standard", lang),
+        "Premium":  t("vid_sub_premium", lang),
+        "Kling":    t("vid_sub_kling", lang),
+        "Avatar":   t("vid_sub_avatar", lang),
+    }.get(sub, sub)
 
 def get_price_table(tid: str):
     return {
@@ -172,41 +174,41 @@ HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl
 @router.callback_query(F.data == "cat_video")
 async def video_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
-    buttons = [[InlineKeyboardButton(text=SUBCAT_LABELS[s], callback_data=f"vsub_{s}")] for s in VIDEO_SUBCATS]
-    buttons.append([back_btn("main_menu", "⌂  Main Menu")])
+    lang = get_lang(cb.from_user.id)
+    buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in VIDEO_SUBCATS]
+    buttons.append([back_btn("main_menu", t("menu_main_menu", lang))])
     await cb.message.edit_text(
-        "◈  <b>Video Generation</b>\n"
+        f"{t('vid_menu_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Select a category:",
+        f"{t('vid_select_category', lang)}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vsub_"))
 async def video_subcat(cb: CallbackQuery, state: FSMContext):
     sub = cb.data[5:]
+    lang = get_lang(cb.from_user.id)
     tids = VIDEO_SUBCATS.get(sub, [])
-    buttons = [[InlineKeyboardButton(text=TOOL_IDS[t], callback_data=f"vt_{t}")] for t in tids]
-    buttons.append([back_btn("cat_video"), menu_btn()])
+    buttons = [[InlineKeyboardButton(text=TOOL_IDS[tid], callback_data=f"vt_{tid}")] for tid in tids]
+    buttons.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        f"▸  <b>{SUBCAT_LABELS.get(sub, sub)}</b>\n"
+        f"▸  <b>{subcat_label(sub, lang)}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Select a model:",
+        f"{t('vid_select_model', lang)}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
     await state.update_data(v_sub=sub)
 
 # ── Tool selected ─────────────────────────────────────────────
-def _sd_attach_menu(coins: int = 0) -> str:
+def _sd_attach_menu(coins: int = 0, lang: str = "en") -> str:
     return (
         "◈  <b>Seedance 2.0</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Attach reference files (optional)\n"
-        "  or skip directly to your prompt.\n\n"
-        "  ⚠️  Start/End Frame cannot be combined\n"
-        "  with other attachment types."
+        f"  {t('vid_attach_optional_inline', lang)}\n\n"
+        f"{t('vid_sd_attach_warning', lang)}"
     )
 
-def _sd_attach_kb(data: dict) -> list:
+def _sd_attach_kb(data: dict, lang: str = "en") -> list:
     mode = data.get("sd_mode", "free")  # "startend" or "free"
     imgs = data.get("sd_imgs", [])
     vids = data.get("sd_vids", [])
@@ -217,42 +219,43 @@ def _sd_attach_kb(data: dict) -> list:
     buttons = []
     if mode != "free":
         # Start/End mode active
-        s_label = f"✓ Start Frame" if start else "◈  Start Frame"
-        e_label = f"✓ End Frame" if end else "◈  End Frame"
+        s_label = f"✓ {t('vid_btn_start_frame', lang)}" if start else f"◈  {t('vid_btn_start_frame', lang)}"
+        e_label = f"✓ {t('vid_btn_end_frame', lang)}" if end else f"◈  {t('vid_btn_end_frame', lang)}"
         buttons.append([InlineKeyboardButton(text=s_label, callback_data="sd_set_start")])
         buttons.append([InlineKeyboardButton(text=e_label, callback_data="sd_set_end")])
-        buttons.append([InlineKeyboardButton(text="✕  Clear Start/End", callback_data="sd_clear_startend")])
+        buttons.append([InlineKeyboardButton(text=t("vid_btn_clear_startend", lang), callback_data="sd_clear_startend")])
     else:
         # Free mode
-        img_label = f"◈  Image Ref  ({len(imgs)}/9)" if imgs else "◈  Image Reference"
-        vid_label = f"◈  Video Ref  ({len(vids)}/3)" if vids else "◈  Video Reference"
-        aud_label = f"◈  Audio File  ({len(auds)}/3)" if auds else "◈  Audio File"
+        img_label = t("vid_btn_image_ref", lang, count=len(imgs), max=9) if imgs else t("vid_btn_image_reference", lang)
+        vid_label = t("vid_btn_video_ref", lang, count=len(vids), max=3) if vids else t("vid_btn_video_reference", lang)
+        aud_label = t("vid_btn_audio_file", lang, count=len(auds), max=3) if auds else t("vid_btn_audio_file_plain", lang)
         buttons.append([InlineKeyboardButton(text=img_label, callback_data="sd_add_imgs")])
         buttons.append([InlineKeyboardButton(text=vid_label, callback_data="sd_add_vids")])
         buttons.append([InlineKeyboardButton(text=aud_label, callback_data="sd_add_auds")])
         if not (imgs or vids or auds):
-            buttons.append([InlineKeyboardButton(text="◈  Start & End Frame", callback_data="sd_startend_mode")])
+            buttons.append([InlineKeyboardButton(text=t("vid_btn_start_end_frame", lang), callback_data="sd_startend_mode")])
 
     has_any = start or end or imgs or vids or auds
-    prompt_label = f"✓  Write Prompt →" if has_any else "▸  Skip — Write Prompt"
+    prompt_label = t("vid_btn_write_prompt", lang) if has_any else t("vid_btn_skip_write_prompt", lang)
     buttons.append([InlineKeyboardButton(text=prompt_label, callback_data="sd_to_prompt")])
-    buttons.append([back_btn("vt_sd20"), menu_btn()])  # sd20/sd20f share same menu
+    buttons.append([back_btn("vt_sd20", lang=lang), menu_btn(lang)])  # sd20/sd20f share same menu
     return buttons
 
 @router.callback_query(F.data.startswith("vt_"))
 async def tool_selected(cb: CallbackQuery, state: FSMContext):
     tid = cb.data[3:]
+    lang = get_lang(cb.from_user.id)
     if tid not in TOOL_IDS:
-        await cb.answer("Unknown tool")
+        await cb.answer(t("vid_unknown_tool_alert", lang))
         return
     name = TOOL_IDS[tid]
     await state.update_data(v_tid=tid, v_tool=name)
 
     # Fixed price tools
     fixed = {
-        "klmc": ({"Resolution":"1080p","Duration":"30 sec"}, 1.00),
-        "klve": ({"Resolution":"1080p","Duration":"10 sec"}, 0.25),
-        "fab1": ({"Type":"Avatar Video"}, 0.90),
+        "klmc": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"30 {t('vid_sec_word', lang)}"}, 1.00),
+        "klve": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"10 {t('vid_sec_word', lang)}"}, 0.25),
+        "fab1": ({t("vid_type_word", lang): t("vid_avatar_video_word", lang)}, 0.90),
         # omni, aur1 handled separately
     }
     if tid in fixed:
@@ -272,9 +275,9 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
                 f"━━━━━━━━━━━━━━━━━━━━\n\n"
                 f"  {TOOL_DESCS.get(name,'')}\n\n"
                 f"{lines}\n"
-                f"  Cost           <b>{coins} coins</b>\n\n"
-                "Enter your prompt:",
-                reply_markup=kb([back_btn(f"vsub_{sub}"), menu_btn()]), parse_mode="HTML"
+                f"  {t('vid_cost_label_short', lang, coins=coins)}\n\n"
+                f"{t('vid_enter_prompt', lang)}",
+                reply_markup=kb([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)]), parse_mode="HTML"
             )
             await state.set_state(VideoStates.entering_prompt)
         return
@@ -320,18 +323,19 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
     resolutions = get_resolutions(tid)
     sub = (await state.get_data()).get("v_sub","cat_video")
     buttons = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in resolutions]
-    buttons.append([back_btn(f"vsub_{sub}"), menu_btn()])
+    buttons.append([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {TOOL_DESCS.get(name,'')}\n\n"
-        "  Select resolution:",
+        f"{t('vid_select_resolution', lang)}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vr_"))
 async def res_selected(cb: CallbackQuery, state: FSMContext):
     res = cb.data[3:]
+    lang = get_lang(cb.from_user.id)
     await state.update_data(v_res=res)
     data = await state.get_data()
     tid = data.get("v_tid","")
@@ -339,11 +343,11 @@ async def res_selected(cb: CallbackQuery, state: FSMContext):
     ars = get_aspect_ratios(tid)
     buttons = [InlineKeyboardButton(text=ar, callback_data=f"va_{ar.replace(':','x')}") for ar in ars]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn(f"vt_{tid}"), menu_btn()])
+    rows.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{name}</b>  —  {res}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select aspect ratio:",
+        f"{t('vid_select_aspect_ratio', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
@@ -358,6 +362,7 @@ async def ar_selected(cb: CallbackQuery, state: FSMContext):
     await show_duration(cb, state, tid, res, ar, name)
 
 async def show_duration(cb, state, tid, res, ar, name):
+    lang = get_lang(cb.from_user.id)
     price_table = get_price_table(tid)
     durations = get_durations(tid)
     buttons = []
@@ -369,17 +374,18 @@ async def show_duration(cb, state, tid, res, ar, name):
             callback_data=f"vd_{d}"
         ))
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn(f"vr_{res}"), menu_btn()])
+    rows.append([back_btn(f"vr_{res}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{name}</b>  —  {res}  {ar}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select duration:",
+        f"{t('vid_select_duration', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vd_"))
 async def dur_selected(cb: CallbackQuery, state: FSMContext):
     dur = int(cb.data[3:])
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     tid  = data.get("v_tid","")
     res  = data.get("v_res","")
@@ -395,12 +401,12 @@ async def dur_selected(cb: CallbackQuery, state: FSMContext):
         await cb.message.edit_text(
             f"◈  <b>{name}</b>  —  {res}  {dur}s\n"
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"  Cost   <b>{coins} coins</b>\n\n"
-            "  Include audio in the video?",
+            f"{t('vid_cost_label_short', lang, coins=coins)}\n\n"
+            f"{t('vid_include_audio', lang)}",
             reply_markup=kb(
-                [InlineKeyboardButton(text="🔊 With Audio", callback_data="vaud_yes"),
-                 InlineKeyboardButton(text="🔇 No Audio",   callback_data="vaud_no")],
-                [back_btn(f"va_{ar.replace(':','x')}"), menu_btn()],
+                [InlineKeyboardButton(text=t("vid_btn_with_audio", lang), callback_data="vaud_yes"),
+                 InlineKeyboardButton(text=t("vid_btn_no_audio", lang),   callback_data="vaud_no")],
+                [back_btn(f"va_{ar.replace(':','x')}", lang=lang), menu_btn(lang)],
             ), parse_mode="HTML"
         )
         return
@@ -423,31 +429,33 @@ async def audio_selected(cb: CallbackQuery, state: FSMContext):
     )
 
 async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
+    lang = get_lang(cb.from_user.id)
+    audio_word = t("vid_audio_yes", lang) if audio else t("vid_audio_no", lang)
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Resolution    {res}\n"
-        f"  Aspect ratio  {ar}\n"
-        f"  Duration       {dur} sec\n"
-        f"  Audio            {'Yes' if audio else 'No'}\n"
-        f"  Cost              <b>{coins} coins</b>\n\n"
-        "Enter your prompt:",
-        reply_markup=kb([back_btn(f"va_{str(ar).replace(':','x')}"), menu_btn()]),
+        f"{t('vid_resolution_label', lang, res=res)}\n"
+        f"{t('vid_aspect_ratio_label', lang, ar=ar)}\n"
+        f"{t('vid_duration_label', lang, dur=dur)}\n"
+        f"{t('vid_audio_label', lang, audio=audio_word)}\n"
+        f"{t('vid_cost_label', lang, coins=coins)}\n\n"
+        f"{t('vid_enter_prompt', lang)}",
+        reply_markup=kb([back_btn(f"va_{str(ar).replace(':','x')}", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.entering_prompt)
 
 # ── Veo Extend ────────────────────────────────────────────────
 async def show_veo_extend(cb, state):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "◈  <b>Veo 3.1 Extend Video</b>\n"
+        f"{t('vid_extend_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Extend any video clip by 7 seconds.\n\n"
-        "  Select mode:",
+        f"{t('vid_extend_desc', lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="Fast  —  14◈  (7 sec)", callback_data="vext_Fast")],
-            [InlineKeyboardButton(text="Premium  —  30◈  (7 sec)", callback_data="vext_Premium")],
-            [back_btn("vsub_Premium"), menu_btn()],
+            [InlineKeyboardButton(text=t("vid_extend_fast", lang), callback_data="vext_Fast")],
+            [InlineKeyboardButton(text=t("vid_extend_premium", lang), callback_data="vext_Premium")],
+            [back_btn("vsub_Premium", lang=lang), menu_btn(lang)],
         ), parse_mode="HTML"
     )
 
@@ -464,6 +472,7 @@ async def veo_extend(cb: CallbackQuery, state: FSMContext):
 
 # ── Grok ─────────────────────────────────────────────────────
 async def show_grok(cb, state):
+    lang = get_lang(cb.from_user.id)
     buttons = [
         InlineKeyboardButton(
             text=f"{s}s — {usd_to_coins(usd)}◈",
@@ -472,12 +481,11 @@ async def show_grok(cb, state):
         for s, usd in GROK_IMAGINE_15_PRICES.items()
     ]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("vsub_Avatar"), menu_btn()])
+    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        "◈  <b>Grok Imagine 1.5</b>\n"
+        f"{t('vid_grok_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Resolution: 720p\n\n"
-        "  Select duration:",
+        f"{t('vid_grok_resolution_line', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
@@ -494,6 +502,7 @@ async def grok_dur(cb: CallbackQuery, state: FSMContext):
 
 # ── Duration tools ────────────────────────────────────────────
 async def show_duration_tool(cb, state, tid):
+    lang = get_lang(cb.from_user.id)
     name = TOOL_IDS[tid]
     prices = {
         "hgtr": HEYGEN_TRANSLATE_PRICES,
@@ -501,7 +510,7 @@ async def show_duration_tool(cb, state, tid):
         "lips": LIPSYNC_PRICES,
     }.get(tid, {})
     if not prices:
-        await cb.answer("Unknown tool")
+        await cb.answer(t("vid_unknown_tool_alert", lang))
         return
     btns = [
         InlineKeyboardButton(
@@ -512,17 +521,18 @@ async def show_duration_tool(cb, state, tid):
     ]
     buttons = btns
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("vsub_Avatar"), menu_btn()])
+    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {TOOL_DESCS.get(name,'')}\n\n"
-        "  Select duration:",
+        f"{t('vid_select_duration', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vdtool_"))
 async def dur_tool_selected(cb: CallbackQuery, state: FSMContext):
+    ui_lang = get_lang(cb.from_user.id)
     parts = cb.data[7:].rsplit("_", 1)
     tid = parts[0]
     minutes = int(parts[1])
@@ -554,60 +564,60 @@ async def dur_tool_selected(cb: CallbackQuery, state: FSMContext):
 
     await cb.message.edit_text(
         f"◈  <b>{name}</b>  —  {minutes} min\n\n"
-        f"  Cost   <b>{coins} coins</b>\n\n"
-        "Enter your prompt:",
-        reply_markup=kb([back_btn(f"vt_{tid}"), menu_btn()]), parse_mode="HTML"
+        f"{t('vid_cost_label_short', ui_lang, coins=coins)}\n\n"
+        f"{t('vid_enter_prompt', ui_lang)}",
+        reply_markup=kb([back_btn(f"vt_{tid}", lang=ui_lang), menu_btn(ui_lang)]), parse_mode="HTML"
     )
     await state.set_state(VideoStates.entering_prompt)
 
 async def show_lang_select(cb, state, langs, prefix):
+    ui_lang = get_lang(cb.from_user.id)
     buttons = [InlineKeyboardButton(text=l, callback_data=f"{prefix}_{l[:20]}") for l in langs]
     rows = list(chunked(buttons, 3))
     data = await state.get_data()
     tid = data.get("v_tid","")
-    rows.append([back_btn(f"vt_{tid}"), menu_btn()])
+    rows.append([back_btn(f"vt_{tid}", lang=ui_lang), menu_btn(ui_lang)])
     await cb.message.edit_text(
-        "◈  Select target language:",
+        t("vid_select_lang_label", ui_lang),
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vlangh_"))
 async def heygen_lang(cb: CallbackQuery, state: FSMContext):
-    lang = cb.data[7:]
-    await state.update_data(v_lang=lang)
+    ui_lang = get_lang(cb.from_user.id)
+    target_lang = cb.data[7:]
+    await state.update_data(v_lang=target_lang)
     data = await state.get_data()
     coins = data.get("v_coins", 0)
     await cb.message.edit_text(
-        f"◈  <b>HeyGen Translate</b>  —  {lang}\n\n"
-        f"  Cost   <b>{coins} coins</b>\n\n"
-        "  Send your video file in any format\n"
-        "  (MP4, MOV, AVI, MKV etc.)",
-        reply_markup=kb([menu_btn()]), parse_mode="HTML"
+        f"◈  <b>HeyGen Translate</b>  —  {target_lang}\n\n"
+        f"{t('vid_translate_cost', ui_lang, coins=coins)}\n\n"
+        f"{t('vid_send_video_any_format', ui_lang)}",
+        reply_markup=kb([menu_btn(ui_lang)]), parse_mode="HTML"
     )
     await state.set_state(VideoStates.uploading_video)
 
 @router.callback_query(F.data.startswith("vlange_"))
 async def eleven_lang(cb: CallbackQuery, state: FSMContext):
-    lang = cb.data[7:]
-    await state.update_data(v_lang=lang)
+    ui_lang = get_lang(cb.from_user.id)
+    target_lang = cb.data[7:]
+    await state.update_data(v_lang=target_lang)
     data = await state.get_data()
     coins = data.get("v_coins", 0)
     await cb.message.edit_text(
-        f"◈  <b>ElevenLabs Dubbing</b>  —  {lang}\n\n"
-        f"  Cost   <b>{coins} coins</b>\n\n"
-        "  Send your video file in any format\n"
-        "  (MP4, MOV, AVI, MKV etc.)",
-        reply_markup=kb([menu_btn()]), parse_mode="HTML"
+        f"◈  <b>ElevenLabs Dubbing</b>  —  {target_lang}\n\n"
+        f"{t('vid_translate_cost', ui_lang, coins=coins)}\n\n"
+        f"{t('vid_send_video_any_format', ui_lang)}",
+        reply_markup=kb([menu_btn(ui_lang)]), parse_mode="HTML"
     )
     await state.set_state(VideoStates.uploading_video)
 
 # ── Video upload (HeyGen/ElevenLabs) ─────────────────────────
 @router.message(VideoStates.uploading_video)
 async def video_uploaded(msg: Message, state: FSMContext):
+    ui_lang = get_lang(msg.from_user.id)
     if not (msg.video or msg.document or msg.animation):
-        await msg.answer(
-            "Please send a video file (MP4, MOV, AVI, MKV etc.)\n\nType /cancel to exit."
-        )
+        await msg.answer(t("vid_please_send_video", ui_lang))
         return
 
     if msg.video:
@@ -623,19 +633,18 @@ async def video_uploaded(msg: Message, state: FSMContext):
     await state.update_data(v_upload_file_id=file_id, v_upload_file_type=ftype)
     data = await state.get_data()
     tool = data.get("v_tool", "—")
-    lang = data.get("v_lang", "—")
+    dub_lang = data.get("v_lang", "—")
     coins = data.get("v_coins", 0)
 
     await msg.answer(
-        f"✓  Video received\n\n"
-        f"◈  <b>{tool}</b>  —  {lang}\n"
-        f"  Cost   <b>{coins} coins</b>\n\n"
-        f"  Add any additional notes (optional)\n"
-        f"  or skip to confirm order:",
+        f"{t('vid_video_received', ui_lang)}\n\n"
+        f"◈  <b>{tool}</b>  —  {dub_lang}\n"
+        f"{t('vid_cost_label_short', ui_lang, coins=coins)}\n\n"
+        f"{t('vid_add_notes_prompt', ui_lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text=f"◈  Confirm  ({coins} coins)", callback_data="vid_confirm")],
-            [InlineKeyboardButton(text="✎  Add Notes", callback_data="vid_add_notes")],
-            [menu_btn()],
+            [InlineKeyboardButton(text=t("vid_btn_confirm", ui_lang, coins=coins), callback_data="vid_confirm")],
+            [InlineKeyboardButton(text=t("vid_btn_add_notes", ui_lang), callback_data="vid_add_notes")],
+            [menu_btn(ui_lang)],
         ),
         parse_mode="HTML"
     )
@@ -643,15 +652,17 @@ async def video_uploaded(msg: Message, state: FSMContext):
 
 @router.callback_query(F.data == "vid_add_notes")
 async def vid_add_notes(cb: CallbackQuery, state: FSMContext):
+    ui_lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "✎  Add notes or instructions (optional):",
-        reply_markup=kb([menu_btn()])
+        t("vid_add_notes_only", ui_lang),
+        reply_markup=kb([menu_btn(ui_lang)])
     )
     await state.set_state(VideoStates.entering_prompt)
 
 # ── Prompt ────────────────────────────────────────────────────
 @router.message(VideoStates.entering_prompt)
 async def prompt_received(msg: Message, state: FSMContext):
+    ui_lang = get_lang(msg.from_user.id)
     data = await state.get_data()
     tool  = data.get("v_tool", "—")
     tid   = data.get("v_tid", "")
@@ -660,7 +671,7 @@ async def prompt_received(msg: Message, state: FSMContext):
     ar    = data.get("v_ar", "—")
     dur   = data.get("v_dur", "—")
     audio = data.get("v_audio", False)
-    lang  = data.get("v_lang")
+    dub_lang = data.get("v_lang")
     prompt = msg.text
     await state.update_data(v_prompt=prompt)
 
@@ -671,41 +682,43 @@ async def prompt_received(msg: Message, state: FSMContext):
     att_auds = data.get("att_auds", []) or data.get("sd_auds", [])
     att_start = data.get("att_start") or data.get("sd_start")
     att_end = data.get("att_end") or data.get("sd_end")
-    if att_start: attach_summary += "  ◈  Start frame\n"
-    if att_end:   attach_summary += "  ◈  End frame\n"
-    if att_imgs:  attach_summary += f"  ◈  {len(att_imgs)} image ref(s)\n"
-    if att_vids:  attach_summary += f"  ◈  {len(att_vids)} video ref(s)\n"
-    if att_auds:  attach_summary += f"  ◈  {len(att_auds)} audio file(s)\n"
+    if att_start: attach_summary += t("vid_attach_start_frame", ui_lang)
+    if att_end:   attach_summary += t("vid_attach_end_frame", ui_lang)
+    if att_imgs:  attach_summary += t("vid_attach_imgs", ui_lang, count=len(att_imgs))
+    if att_vids:  attach_summary += t("vid_attach_vids", ui_lang, count=len(att_vids))
+    if att_auds:  attach_summary += t("vid_attach_auds", ui_lang, count=len(att_auds))
     if tool == "Seedance 2.0":
         pass  # already handled above
 
     # Tools that don't show resolution/aspect/audio in summary
     no_res_tools = {"aur1", "omni", "hga4", "lips"}
-    lines = f"  Model          <b>{tool}</b>\n"
-    if res != "—" and tid not in no_res_tools:   lines += f"  Resolution    {res}\n"
-    if ar  != "—" and tid not in no_res_tools:   lines += f"  Aspect ratio  {ar}\n"
-    if dur != "—":   lines += f"  Duration       {dur} sec\n"
-    if lang:          lines += f"  Language      {lang}\n"
-    if tid not in no_res_tools: lines += f"  Audio            {'Yes' if audio else 'No'}\n"
-    if attach_summary: lines += f"\n  Attachments:\n{attach_summary}"
-    lines += f"  Cost              <b>{coins} coins</b>\n"
+    lines = t("vid_model_label", ui_lang, name=tool) + "\n"
+    if res != "—" and tid not in no_res_tools:   lines += t("vid_resolution_label", ui_lang, res=res) + "\n"
+    if ar  != "—" and tid not in no_res_tools:   lines += t("vid_aspect_ratio_label", ui_lang, ar=ar) + "\n"
+    if dur != "—":   lines += t("vid_duration_label", ui_lang, dur=dur) + "\n"
+    if dub_lang:      lines += t("vid_language_label", ui_lang, lang=dub_lang) + "\n"
+    audio_word = t("vid_audio_yes", ui_lang) if audio else t("vid_audio_no", ui_lang)
+    if tid not in no_res_tools: lines += t("vid_audio_label", ui_lang, audio=audio_word) + "\n"
+    if attach_summary: lines += t("vid_attachments_label", ui_lang) + attach_summary
+    lines += t("vid_cost_label", ui_lang, coins=coins) + "\n"
 
     await msg.answer(
-        f"◈  <b>Order Summary</b>\n"
+        f"{t('vid_order_summary_title', ui_lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{lines}\n"
-        f"  Prompt:\n<i>{prompt}</i>\n\n"
+        f"{t('vid_prompt_label', ui_lang)}\n<i>{prompt}</i>\n\n"
         f"━━━━━━━━━━━━━━━━━━━━",
         reply_markup=kb(
-            [InlineKeyboardButton(text=f"◈  Confirm  ({coins} coins)", callback_data="vid_confirm")],
-            [InlineKeyboardButton(text="✎  Edit Prompt", callback_data="vid_edit")],
-            [menu_btn()],
+            [InlineKeyboardButton(text=t("vid_btn_confirm", ui_lang, coins=coins), callback_data="vid_confirm")],
+            [InlineKeyboardButton(text=t("vid_btn_edit_prompt", ui_lang), callback_data="vid_edit")],
+            [menu_btn(ui_lang)],
         ), parse_mode="HTML"
     )
 
 @router.callback_query(F.data == "vid_edit")
 async def vid_edit(cb: CallbackQuery, state: FSMContext):
-    await cb.message.edit_text("✎  Enter your new prompt:", reply_markup=kb([menu_btn()]))
+    ui_lang = get_lang(cb.from_user.id)
+    await cb.message.edit_text(t("vid_edit_prompt_prompt", ui_lang), reply_markup=kb([menu_btn(ui_lang)]))
     await state.set_state(VideoStates.entering_prompt)
 
 @router.callback_query(F.data == "vid_confirm")
@@ -859,11 +872,12 @@ async def notify_admin(cb, oid, tool, params, coins, usd):
 # ═══════════════════════════════════════════════════════════
 
 async def _refresh_attach_menu(cb: CallbackQuery, state: FSMContext, coins: int = None):
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     c = coins or data.get("v_coins", usd_to_coins(0.60))
     await cb.message.edit_text(
-        _sd_attach_menu(c),
-        reply_markup=kb(*_sd_attach_kb(data)),
+        _sd_attach_menu(c, lang),
+        reply_markup=kb(*_sd_attach_kb(data, lang)),
         parse_mode="HTML"
     )
 
@@ -881,20 +895,21 @@ async def sd_clear_startend(cb: CallbackQuery, state: FSMContext):
 # ── Start frame ───────────────────────────────────────────
 @router.callback_query(F.data == "sd_set_start")
 async def sd_set_start(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "◈  <b>Start Frame</b>\n"
+        f"{t('vid_start_frame_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Send the image for the <b>first frame</b> of your video.\n\n"
-        "  Reference it in your prompt as <code>@start</code>",
-        reply_markup=kb([back_btn("sd_back_attach"), menu_btn()]),
+        f"{t('vid_start_frame_desc', lang)}",
+        reply_markup=kb([back_btn("sd_back_attach", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.sd_collecting_start)
 
 @router.message(VideoStates.sd_collecting_start)
 async def sd_collect_start(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
-        await msg.answer("◈  Please send an image file (JPG, PNG, WEBP etc.)")
+        await msg.answer(t("vid_please_send_image", lang))
         return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
@@ -902,27 +917,28 @@ async def sd_collect_start(msg: Message, state: FSMContext):
     await state.set_state(VideoStates.sd_attach_mode)
     data = await state.get_data()
     await msg.answer(
-        "✓  Start frame saved.\n\nNow set the End Frame or write your prompt.",
-        reply_markup=kb(*_sd_attach_kb(data))
+        t("vid_start_frame_saved", lang),
+        reply_markup=kb(*_sd_attach_kb(data, lang))
     )
 
 # ── End frame ─────────────────────────────────────────────
 @router.callback_query(F.data == "sd_set_end")
 async def sd_set_end(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "◈  <b>End Frame</b>\n"
+        f"{t('vid_end_frame_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Send the image for the <b>last frame</b> of your video.\n\n"
-        "  Reference it in your prompt as <code>@end</code>",
-        reply_markup=kb([back_btn("sd_back_attach"), menu_btn()]),
+        f"{t('vid_end_frame_desc', lang)}",
+        reply_markup=kb([back_btn("sd_back_attach", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.sd_collecting_end)
 
 @router.message(VideoStates.sd_collecting_end)
 async def sd_collect_end(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
-        await msg.answer("◈  Please send an image file (JPG, PNG, WEBP etc.)")
+        await msg.answer(t("vid_please_send_image", lang))
         return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
@@ -930,28 +946,24 @@ async def sd_collect_end(msg: Message, state: FSMContext):
     await state.set_state(VideoStates.sd_attach_mode)
     data = await state.get_data()
     await msg.answer(
-        "✓  End frame saved.\n\nWrite your prompt when ready.",
-        reply_markup=kb(*_sd_attach_kb(data))
+        t("vid_end_frame_saved", lang),
+        reply_markup=kb(*_sd_attach_kb(data, lang))
     )
 
 # ── Image references ──────────────────────────────────────
 @router.callback_query(F.data == "sd_add_imgs")
 async def sd_add_imgs(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     imgs = data.get("sd_imgs", [])
     count = len(imgs)
     await cb.message.edit_text(
-        f"◈  <b>Image Reference</b>  ({count}/9)\n"
+        f"{t('vid_img_ref_title', lang, count=count, max=9)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Send up to <b>9 images</b> as reference.\n\n"
-        "  <code>@img1</code>, <code>@img2</code> etc. are just labels\n"
-        "  for you — the AI doesn't read them. Describe each image\n"
-        "  in words in your prompt instead (e.g. \"the woman in photo 1\").\n\n"
-        "  Send images one by one or as album.\n"
-        "  Tap <b>Done</b> when finished.",
+        f"{t('vid_img_ref_instructions', lang, max=9)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="✓  Done", callback_data="sd_back_attach")],
-            [menu_btn()]
+            [InlineKeyboardButton(text=t("btn_done", lang), callback_data="sd_back_attach")],
+            [menu_btn(lang)]
         ),
         parse_mode="HTML"
     )
@@ -959,43 +971,41 @@ async def sd_add_imgs(cb: CallbackQuery, state: FSMContext):
 
 @router.message(VideoStates.sd_collecting_imgs)
 async def sd_collect_img(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
-        await msg.answer("◈  Please send an image file (JPG, PNG, WEBP etc.)")
+        await msg.answer(t("vid_please_send_image", lang))
         return
     data = await state.get_data()
     imgs = data.get("sd_imgs", [])
     if len(imgs) >= 9:
-        await msg.answer("Maximum 9 images reached. Tap Done to continue.")
+        await msg.answer(t("vid_img_max_reached", lang, max=9))
         return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
     imgs.append({"file_id": file_id, "type": ftype, "ref": f"img{len(imgs)+1}"})
     await state.update_data(sd_imgs=imgs)
     await msg.answer(
-        f"✓  Image @img{len(imgs)} saved.  ({len(imgs)}/9)\n"
-        f"{'Send more or tap Done.' if len(imgs) < 9 else 'Maximum reached. Tap Done.'}",
+        f"{t('vid_img_saved', lang, n=len(imgs), count=len(imgs), max=9)}\n"
+        f"{t('vid_send_more_or_done', lang) if len(imgs) < 9 else t('vid_max_reached_tap_done', lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="✓  Done", callback_data="sd_back_attach")],
-            [menu_btn()]
+            [InlineKeyboardButton(text=t("btn_done", lang), callback_data="sd_back_attach")],
+            [menu_btn(lang)]
         )
     )
 
 # ── Video references ──────────────────────────────────────
 @router.callback_query(F.data == "sd_add_vids")
 async def sd_add_vids(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     vids = data.get("sd_vids", [])
     await cb.message.edit_text(
-        f"◈  <b>Video Reference</b>  ({len(vids)}/3)\n"
+        f"{t('vid_vid_ref_title', lang, count=len(vids), max=3)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Send up to <b>3 videos</b> as reference.\n\n"
-        "  <code>@vid1</code>, <code>@vid2</code> etc. are just labels\n"
-        "  for you — the AI doesn't read them. Describe each video\n"
-        "  in words in your prompt instead.\n\n"
-        "  Tap <b>Done</b> when finished.",
+        f"{t('vid_vid_ref_instructions', lang, max=3)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="✓  Done", callback_data="sd_back_attach")],
-            [menu_btn()]
+            [InlineKeyboardButton(text=t("btn_done", lang), callback_data="sd_back_attach")],
+            [menu_btn(lang)]
         ),
         parse_mode="HTML"
     )
@@ -1003,43 +1013,41 @@ async def sd_add_vids(cb: CallbackQuery, state: FSMContext):
 
 @router.message(VideoStates.sd_collecting_vids)
 async def sd_collect_vid(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.video or msg.animation or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("video/"))):
-        await msg.answer("◈  Please send a video file (MP4, MOV, AVI etc.)")
+        await msg.answer(t("vid_please_send_video_short", lang))
         return
     data = await state.get_data()
     vids = data.get("sd_vids", [])
     if len(vids) >= 3:
-        await msg.answer("Maximum 3 videos reached. Tap Done to continue.")
+        await msg.answer(t("vid_vid_max_reached", lang, max=3))
         return
     file_id = msg.video.file_id if msg.video else msg.document.file_id
     ftype = "video" if msg.video else "document"
     vids.append({"file_id": file_id, "type": ftype, "ref": f"vid{len(vids)+1}"})
     await state.update_data(sd_vids=vids)
     await msg.answer(
-        f"✓  Video @vid{len(vids)} saved.  ({len(vids)}/3)\n"
-        f"{'Send more or tap Done.' if len(vids) < 3 else 'Maximum reached. Tap Done.'}",
+        f"{t('vid_vid_saved', lang, n=len(vids), count=len(vids), max=3)}\n"
+        f"{t('vid_send_more_or_done', lang) if len(vids) < 3 else t('vid_max_reached_tap_done', lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="✓  Done", callback_data="sd_back_attach")],
-            [menu_btn()]
+            [InlineKeyboardButton(text=t("btn_done", lang), callback_data="sd_back_attach")],
+            [menu_btn(lang)]
         )
     )
 
 # ── Audio files ───────────────────────────────────────────
 @router.callback_query(F.data == "sd_add_auds")
 async def sd_add_auds(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     auds = data.get("sd_auds", [])
     await cb.message.edit_text(
-        f"◈  <b>Audio File</b>  ({len(auds)}/3)\n"
+        f"{t('vid_aud_ref_title', lang, count=len(auds), max=3)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Send up to <b>3 audio files</b>.\n\n"
-        "  <code>@aud1</code>, <code>@aud2</code> etc. are just labels\n"
-        "  for you — the AI doesn't read them. Describe each audio\n"
-        "  file in words in your prompt instead.\n\n"
-        "  Tap <b>Done</b> when finished.",
+        f"{t('vid_aud_ref_instructions', lang, max=3)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="✓  Done", callback_data="sd_back_attach")],
-            [menu_btn()]
+            [InlineKeyboardButton(text=t("btn_done", lang), callback_data="sd_back_attach")],
+            [menu_btn(lang)]
         ),
         parse_mode="HTML"
     )
@@ -1047,13 +1055,14 @@ async def sd_add_auds(cb: CallbackQuery, state: FSMContext):
 
 @router.message(VideoStates.sd_collecting_audio)
 async def sd_collect_aud(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.audio or msg.voice or (msg.document and msg.document.mime_type and (msg.document.mime_type.startswith("audio/") or msg.document.mime_type == "application/ogg"))):
-        await msg.answer("◈  Please send an audio file (MP3, OGG, WAV, M4A etc.)")
+        await msg.answer(t("vid_please_send_audio", lang))
         return
     data = await state.get_data()
     auds = data.get("sd_auds", [])
     if len(auds) >= 3:
-        await msg.answer("Maximum 3 audio files reached. Tap Done to continue.")
+        await msg.answer(t("vid_aud_max_reached", lang, max=3))
         return
     if msg.audio:
         file_id = msg.audio.file_id
@@ -1067,11 +1076,11 @@ async def sd_collect_aud(msg: Message, state: FSMContext):
     auds.append({"file_id": file_id, "type": ftype, "ref": f"aud{len(auds)+1}"})
     await state.update_data(sd_auds=auds)
     await msg.answer(
-        f"✓  Audio @aud{len(auds)} saved.  ({len(auds)}/3)\n"
-        f"{'Send more or tap Done.' if len(auds) < 3 else 'Maximum reached. Tap Done.'}",
+        f"{t('vid_aud_saved', lang, n=len(auds), count=len(auds), max=3)}\n"
+        f"{t('vid_send_more_or_done', lang) if len(auds) < 3 else t('vid_max_reached_tap_done', lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="✓  Done", callback_data="sd_back_attach")],
-            [menu_btn()]
+            [InlineKeyboardButton(text=t("btn_done", lang), callback_data="sd_back_attach")],
+            [menu_btn(lang)]
         )
     )
 
@@ -1090,48 +1099,44 @@ async def sd_to_prompt(cb: CallbackQuery, state: FSMContext):
     auds = data.get("sd_auds", [])
     start = data.get("sd_start")
     end = data.get("sd_end")
+    lang = get_lang(cb.from_user.id)
 
     # Build attachment summary
     attach_lines = ""
     if start:
-        attach_lines += "  ◈  Start frame attached\n"
+        attach_lines += t("vid_attach_start_attached", lang)
     if end:
-        attach_lines += "  ◈  End frame attached\n"
+        attach_lines += t("vid_attach_end_attached", lang)
     if imgs:
-        attach_lines += f"  ◈  {len(imgs)} image(s) → @img1"
+        line = t("vid_attach_n_imgs", lang, count=len(imgs))
         if len(imgs) > 1:
-            attach_lines += f"–@img{len(imgs)}"
-        attach_lines += "\n"
+            line += f"–@img{len(imgs)}"
+        attach_lines += line + "\n"
     if vids:
-        attach_lines += f"  ◈  {len(vids)} video(s) → @vid1"
+        line = t("vid_attach_n_vids", lang, count=len(vids))
         if len(vids) > 1:
-            attach_lines += f"–@vid{len(vids)}"
-        attach_lines += "\n"
+            line += f"–@vid{len(vids)}"
+        attach_lines += line + "\n"
     if auds:
-        attach_lines += f"  ◈  {len(auds)} audio(s) → @aud1"
+        line = t("vid_attach_n_auds", lang, count=len(auds))
         if len(auds) > 1:
-            attach_lines += f"–@aud{len(auds)}"
-        attach_lines += "\n"
+            line += f"–@aud{len(auds)}"
+        attach_lines += line + "\n"
 
     hint = ""
     if attach_lines:
-        hint = (
-            f"\n  <b>Attached files:</b>\n{attach_lines}\n"
-            "  Note: these labels are just for your own reference —\n"
-            "  the AI doesn't read them. Describe each file in words\n"
-            "  in your prompt.\n"
-        )
+        hint = t("vid_attached_files_label", lang, lines=attach_lines)
 
     await cb.message.edit_text(
         f"◈  <b>Seedance 2.0</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{hint}\n"
-        "  Now select resolution:",
+        f"{t('vid_now_select_resolution', lang)}",
         reply_markup=kb(
             [InlineKeyboardButton(text="480p", callback_data="vr_480p")],
             [InlineKeyboardButton(text="720p", callback_data="vr_720p")],
             [InlineKeyboardButton(text="1080p", callback_data="vr_1080p")],
-            [back_btn("vt_sd20"), menu_btn()],
+            [back_btn("vt_sd20", lang=lang), menu_btn(lang)],
         ),
         parse_mode="HTML"
     )
@@ -1140,17 +1145,17 @@ async def sd_to_prompt(cb: CallbackQuery, state: FSMContext):
 # UNIVERSAL ATTACHMENT SYSTEM (all tools except Seedance)
 # ═══════════════════════════════════════════════════════════
 
-def _build_attach_menu_text(tid: str, data: dict) -> str:
+def _build_attach_menu_text(tid: str, data: dict, lang: str = "en") -> str:
     cfg = get_attach_config(tid)
     name = data.get("v_tool", "")
-    hint = cfg.get("hint", "Attach reference files (optional)\n  or skip directly to your prompt.")
+    hint = get_hint(tid, lang, "Attach reference files (optional)\n  or skip directly to your prompt.")
     return (
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {hint}"
     )
 
-def _build_attach_buttons(tid: str, data: dict) -> list:
+def _build_attach_buttons(tid: str, data: dict, lang: str = "en") -> list:
     cfg = get_attach_config(tid)
     buttons = []
     mode = data.get("att_mode", "free")
@@ -1172,33 +1177,33 @@ def _build_attach_buttons(tid: str, data: dict) -> list:
 
     # Start/End frame section
     if start_frame and (mode == "startend" or not exclusive):
-        s_label = "✓  Start Frame" if start else "◈  Start Frame"
+        s_label = f"✓  {t('vid_btn_start_frame', lang)}" if start else f"◈  {t('vid_btn_start_frame', lang)}"
         buttons.append([InlineKeyboardButton(text=s_label, callback_data="att_set_start")])
         if end_frame:
-            e_label = "✓  End Frame" if end_ else "◈  End Frame"
+            e_label = f"✓  {t('vid_btn_end_frame', lang)}" if end_ else f"◈  {t('vid_btn_end_frame', lang)}"
             buttons.append([InlineKeyboardButton(text=e_label, callback_data="att_set_end")])
         if exclusive and (start or end_):
-            buttons.append([InlineKeyboardButton(text="✕  Clear", callback_data="att_clear_startend")])
+            buttons.append([InlineKeyboardButton(text=t("vid_btn_clear", lang), callback_data="att_clear_startend")])
 
     # For exclusive tools, show img/vid/aud only if not in startend mode
     if exclusive and mode == "startend":
         pass  # hide other options
     else:
         if max_imgs > 0 and not (exclusive and (start or end_)):
-            img_label = f"✓  Image Ref  ({len(imgs)}/{max_imgs})" if imgs else f"◈  Image Reference  (up to {max_imgs})"
+            img_label = t("vid_btn_image_ref", lang, count=len(imgs), max=max_imgs) if imgs else t("vid_btn_image_reference_max", lang, max=max_imgs)
             buttons.append([InlineKeyboardButton(text=img_label, callback_data="att_add_imgs")])
         if max_vids > 0:
-            req = " *required" if vid_required and not vids else ""
-            vid_label = f"✓  Video Ref  ({len(vids)}/{max_vids})" if vids else f"◈  Video Reference  (up to {max_vids}){req}"
+            req = t("vid_required_label", lang) if vid_required and not vids else ""
+            vid_label = t("vid_btn_video_ref", lang, count=len(vids), max=max_vids) if vids else t("vid_btn_video_reference_max", lang, max=max_vids, req=req)
             buttons.append([InlineKeyboardButton(text=vid_label, callback_data="att_add_vids")])
         if max_auds > 0:
-            aud_label = f"✓  Audio File  ({len(auds)}/{max_auds})" if auds else f"◈  Audio File  (up to {max_auds})"
+            aud_label = t("vid_btn_audio_file", lang, count=len(auds), max=max_auds) if auds else t("vid_btn_audio_file_max", lang, max=max_auds)
             buttons.append([InlineKeyboardButton(text=aud_label, callback_data="att_add_auds")])
 
         # Show startend option only if nothing else attached
         if start_frame and exclusive and not (imgs or vids or auds):
-            se_name = "Start & End Frame" if end_frame else "Start Frame"
-            se_label = f"✓  {se_name}" if (start or end_) else f"◈  {se_name}"
+            se_text = t("vid_btn_start_end_frame", lang) if end_frame else t("vid_btn_start_frame_only", lang)
+            se_label = se_text.replace("◈", "✓", 1) if (start or end_) else se_text
             buttons.append([InlineKeyboardButton(text=se_label, callback_data="att_startend_mode")])
 
     # Proceed button
@@ -1209,34 +1214,36 @@ def _build_attach_buttons(tid: str, data: dict) -> list:
 
     # Check all required files
     missing = []
-    if vid_required and not vids: missing.append("video")
-    if img_required and not imgs: missing.append("image")
-    if aud_required and not auds: missing.append("audio")
-    if start_required and not start: missing.append("start frame")
+    if vid_required and not vids: missing.append(t("vid_required_video", lang))
+    if img_required and not imgs: missing.append(t("vid_required_image", lang))
+    if aud_required and not auds: missing.append(t("vid_required_audio", lang))
+    if start_required and not start: missing.append(t("vid_required_start_frame", lang))
 
     if missing:
-        label = "⚠️  Upload " + " & ".join(missing) + " to continue"
+        items = t("vid_required_and", lang).join(missing)
+        label = t("vid_btn_upload_required", lang, items=items)
         buttons.append([InlineKeyboardButton(text=label, callback_data="att_required_alert")])
-        buttons.append([back_btn(f"vt_{tid}"), menu_btn()])
+        buttons.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
         return buttons
 
     if no_prompt:
-        proceed_label = "◈  Confirm Order"
+        proceed_label = t("vid_btn_confirm_order", lang)
         proceed_cb = "att_confirm_no_prompt"
     else:
-        proceed_label = "✓  Write Prompt →" if has_any else "▸  Skip — Write Prompt"
+        proceed_label = t("vid_btn_write_prompt", lang) if has_any else t("vid_btn_skip_write_prompt", lang)
         proceed_cb = "att_to_prompt"
 
     buttons.append([InlineKeyboardButton(text=proceed_label, callback_data=proceed_cb)])
-    buttons.append([back_btn(f"vt_{tid}"), menu_btn()])
+    buttons.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
     return buttons
 
 async def _show_attach_menu(target, state: FSMContext, edit: bool = True):
     from aiogram.exceptions import TelegramBadRequest
     data = await state.get_data()
     tid = data.get("v_tid", "")
-    text = _build_attach_menu_text(tid, data)
-    markup = kb(*_build_attach_buttons(tid, data))
+    lang = get_lang(target.from_user.id)
+    text = _build_attach_menu_text(tid, data, lang)
+    markup = kb(*_build_attach_buttons(tid, data, lang))
     try:
         if edit and isinstance(target, CallbackQuery):
             await target.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
@@ -1264,19 +1271,20 @@ async def att_clear_startend(cb: CallbackQuery, state: FSMContext):
 # ── Start frame ───────────────────────────────────────────────
 @router.callback_query(F.data == "att_set_start")
 async def att_set_start(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "◈  <b>Start Frame</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Send the image for the <b>first frame</b>.\n\n"
-        "  Reference it in your prompt as <code>@start</code>",
-        reply_markup=kb([back_btn("att_back"), menu_btn()]),
+        f"{t('vid_start_frame_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_start_frame_desc_short', lang)}",
+        reply_markup=kb([back_btn("att_back", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.collecting_start)
 
 @router.message(VideoStates.collecting_start)
 async def att_collect_start(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
-        await msg.answer("◈  Please send an image file (JPG, PNG, WEBP etc.)")
+        await msg.answer(t("vid_please_send_image", lang))
         return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
@@ -1287,19 +1295,20 @@ async def att_collect_start(msg: Message, state: FSMContext):
 # ── End frame ─────────────────────────────────────────────────
 @router.callback_query(F.data == "att_set_end")
 async def att_set_end(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "◈  <b>End Frame</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Send the image for the <b>last frame</b>.\n\n"
-        "  Reference it in your prompt as <code>@end</code>",
-        reply_markup=kb([back_btn("att_back"), menu_btn()]),
+        f"{t('vid_end_frame_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_end_frame_desc_short', lang)}",
+        reply_markup=kb([back_btn("att_back", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.collecting_end)
 
 @router.message(VideoStates.collecting_end)
 async def att_collect_end(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
-        await msg.answer("◈  Please send an image file (JPG, PNG, WEBP etc.)")
+        await msg.answer(t("vid_please_send_image", lang))
         return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
@@ -1310,26 +1319,25 @@ async def att_collect_end(msg: Message, state: FSMContext):
 # ── Image refs ────────────────────────────────────────────────
 @router.callback_query(F.data == "att_add_imgs")
 async def att_add_imgs(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     tid = data.get("v_tid", "")
     cfg = get_attach_config(tid)
     max_imgs = cfg.get("img_refs", 9)
     imgs = data.get("att_imgs", [])
     await cb.message.edit_text(
-        f"◈  <b>Image Reference</b>  ({len(imgs)}/{max_imgs})\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Send up to <b>{max_imgs} image(s)</b>.\n"
-        f"  <code>@img1</code> etc. are just labels for you — the AI\n"
-        f"  doesn't read them. Describe each image in words instead.\n\n"
-        f"  Tap Done when finished.",
-        reply_markup=kb([InlineKeyboardButton(text="✓  Done", callback_data="att_back")], [menu_btn()]),
+        f"{t('vid_img_ref_title', lang, count=len(imgs), max=max_imgs)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_img_ref_instructions_short', lang, max=max_imgs)}",
+        reply_markup=kb([InlineKeyboardButton(text=t("btn_done", lang), callback_data="att_back")], [menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.collecting_imgs)
 
 @router.message(VideoStates.collecting_imgs)
 async def att_collect_img(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
-        await msg.answer("◈  Please send an image file (JPG, PNG, WEBP etc.)")
+        await msg.answer(t("vid_please_send_image", lang))
         return
     data = await state.get_data()
     tid = data.get("v_tid", "")
@@ -1337,40 +1345,39 @@ async def att_collect_img(msg: Message, state: FSMContext):
     max_imgs = cfg.get("img_refs", 9)
     imgs = data.get("att_imgs", [])
     if len(imgs) >= max_imgs:
-        await msg.answer(f"Maximum {max_imgs} image(s) reached. Tap Done.")
+        await msg.answer(t("vid_img_max_reached_short", lang, max=max_imgs))
         return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
     imgs.append({"file_id": file_id, "type": ftype, "ref": f"img{len(imgs)+1}"})
     await state.update_data(att_imgs=imgs)
     await msg.answer(
-        f"✓  @img{len(imgs)} saved  ({len(imgs)}/{max_imgs})",
-        reply_markup=kb([InlineKeyboardButton(text="✓  Done", callback_data="att_back")], [menu_btn()])
+        t("vid_img_saved_short", lang, n=len(imgs), count=len(imgs), max=max_imgs),
+        reply_markup=kb([InlineKeyboardButton(text=t("btn_done", lang), callback_data="att_back")], [menu_btn(lang)])
     )
 
 # ── Video refs ────────────────────────────────────────────────
 @router.callback_query(F.data == "att_add_vids")
 async def att_add_vids(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     tid = data.get("v_tid", "")
     cfg = get_attach_config(tid)
     max_vids = cfg.get("vid_refs", 3)
     vids = data.get("att_vids", [])
     await cb.message.edit_text(
-        f"◈  <b>Video Reference</b>  ({len(vids)}/{max_vids})\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Send up to <b>{max_vids} video(s)</b> in any format.\n"
-        f"  <code>@vid1</code> etc. are just labels for you — the AI\n"
-        f"  doesn't read them. Describe each video in words instead.\n\n"
-        f"  Tap Done when finished.",
-        reply_markup=kb([InlineKeyboardButton(text="✓  Done", callback_data="att_back")], [menu_btn()]),
+        f"{t('vid_vid_ref_title', lang, count=len(vids), max=max_vids)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_vid_ref_instructions_short', lang, max=max_vids)}",
+        reply_markup=kb([InlineKeyboardButton(text=t("btn_done", lang), callback_data="att_back")], [menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.collecting_vids)
 
 @router.message(VideoStates.collecting_vids)
 async def att_collect_vid(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.video or msg.animation or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("video/"))):
-        await msg.answer("◈  Please send a video file (MP4, MOV, AVI etc.)")
+        await msg.answer(t("vid_please_send_video_short", lang))
         return
     data = await state.get_data()
     tid = data.get("v_tid", "")
@@ -1378,7 +1385,7 @@ async def att_collect_vid(msg: Message, state: FSMContext):
     max_vids = cfg.get("vid_refs", 3)
     vids = data.get("att_vids", [])
     if len(vids) >= max_vids:
-        await msg.answer(f"Maximum {max_vids} video(s) reached. Tap Done.")
+        await msg.answer(t("vid_vid_max_reached_short", lang, max=max_vids))
         return
     if msg.video:
         file_id, ftype = msg.video.file_id, "video"
@@ -1389,33 +1396,32 @@ async def att_collect_vid(msg: Message, state: FSMContext):
     vids.append({"file_id": file_id, "type": ftype, "ref": f"vid{len(vids)+1}"})
     await state.update_data(att_vids=vids)
     await msg.answer(
-        f"✓  @vid{len(vids)} saved  ({len(vids)}/{max_vids})",
-        reply_markup=kb([InlineKeyboardButton(text="✓  Done", callback_data="att_back")], [menu_btn()])
+        t("vid_vid_saved_short", lang, n=len(vids), count=len(vids), max=max_vids),
+        reply_markup=kb([InlineKeyboardButton(text=t("btn_done", lang), callback_data="att_back")], [menu_btn(lang)])
     )
 
 # ── Audio refs ────────────────────────────────────────────────
 @router.callback_query(F.data == "att_add_auds")
 async def att_add_auds(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     tid = data.get("v_tid", "")
     cfg = get_attach_config(tid)
     max_auds = cfg.get("aud_refs", 3)
     auds = data.get("att_auds", [])
     await cb.message.edit_text(
-        f"◈  <b>Audio File</b>  ({len(auds)}/{max_auds})\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Send up to <b>{max_auds} audio file(s)</b>.\n"
-        f"  <code>@aud1</code> etc. are just labels for you — the AI\n"
-        f"  doesn't read them. Describe each audio file in words instead.\n\n"
-        f"  Tap Done when finished.",
-        reply_markup=kb([InlineKeyboardButton(text="✓  Done", callback_data="att_back")], [menu_btn()]),
+        f"{t('vid_aud_ref_title', lang, count=len(auds), max=max_auds)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_aud_ref_instructions_short', lang, max=max_auds)}",
+        reply_markup=kb([InlineKeyboardButton(text=t("btn_done", lang), callback_data="att_back")], [menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.collecting_audio)
 
 @router.message(VideoStates.collecting_audio)
 async def att_collect_aud(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     if not (msg.audio or msg.voice or (msg.document and msg.document.mime_type and (msg.document.mime_type.startswith("audio/") or msg.document.mime_type == "application/ogg"))):
-        await msg.answer("◈  Please send an audio file (MP3, OGG, WAV, M4A etc.)")
+        await msg.answer(t("vid_please_send_audio", lang))
         return
     data = await state.get_data()
     tid = data.get("v_tid", "")
@@ -1423,7 +1429,7 @@ async def att_collect_aud(msg: Message, state: FSMContext):
     max_auds = cfg.get("aud_refs", 3)
     auds = data.get("att_auds", [])
     if len(auds) >= max_auds:
-        await msg.answer(f"Maximum {max_auds} audio file(s) reached. Tap Done.")
+        await msg.answer(t("vid_aud_max_reached_short", lang, max=max_auds))
         return
     if msg.audio:
         file_id, ftype = msg.audio.file_id, "audio"
@@ -1434,13 +1440,14 @@ async def att_collect_aud(msg: Message, state: FSMContext):
     auds.append({"file_id": file_id, "type": ftype, "ref": f"aud{len(auds)+1}"})
     await state.update_data(att_auds=auds)
     await msg.answer(
-        f"✓  @aud{len(auds)} saved  ({len(auds)}/{max_auds})",
-        reply_markup=kb([InlineKeyboardButton(text="✓  Done", callback_data="att_back")], [menu_btn()])
+        t("vid_aud_saved_short", lang, n=len(auds), count=len(auds), max=max_auds),
+        reply_markup=kb([InlineKeyboardButton(text=t("btn_done", lang), callback_data="att_back")], [menu_btn(lang)])
     )
 
 @router.callback_query(F.data.in_({"att_vid_required_alert", "att_required_alert"}))
 async def att_required_alert(cb: CallbackQuery, state: FSMContext):
-    await cb.answer("Please upload the required files first.", show_alert=True)
+    lang = get_lang(cb.from_user.id)
+    await cb.answer(t("vid_required_files_alert_simple", lang), show_alert=True)
 
 # ── Back to attach menu ───────────────────────────────────────
 @router.callback_query(F.data == "att_back")
@@ -1455,6 +1462,7 @@ NEEDS_RESOLUTION = {"sd20", "sd20f", "hh10", "veo31", "veo31f", "veo31l",
 
 @router.callback_query(F.data == "att_to_prompt")
 async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     tid = data.get("v_tid", "")
     cfg = get_attach_config(tid)
@@ -1466,32 +1474,32 @@ async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
         resolutions = get_resolutions(tid)
         name = tool
         buttons = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in resolutions]
-        buttons.append([back_btn("att_back"), menu_btn()])
+        buttons.append([back_btn("att_back", lang=lang), menu_btn(lang)])
         await cb.message.edit_text(
             f"◈  <b>{name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-            "  Select resolution:",
+            f"{t('vid_select_resolution', lang)}",
             reply_markup=kb(*buttons), parse_mode="HTML"
         )
         return
 
     # Fixed price tools — go directly to prompt
-    prompt_label = cfg.get("prompt_label", "Enter your prompt:")
+    prompt_label = get_prompt_label(tid, lang, "Enter your prompt:")
     lines = ""
-    if data.get("att_start"): lines += "  ◈  Start frame\n"
-    if data.get("att_end"):   lines += "  ◈  End frame\n"
+    if data.get("att_start"): lines += t("vid_attach_start_frame", lang)
+    if data.get("att_end"):   lines += t("vid_attach_end_frame", lang)
     imgs = data.get("att_imgs", [])
     vids = data.get("att_vids", [])
     auds = data.get("att_auds", [])
-    if imgs: lines += f"  ◈  {len(imgs)} image ref(s)\n"
-    if vids: lines += f"  ◈  {len(vids)} video ref(s)\n"
-    if auds: lines += f"  ◈  {len(auds)} audio file(s)\n"
+    if imgs: lines += t("vid_attach_imgs", lang, count=len(imgs))
+    if vids: lines += t("vid_attach_vids", lang, count=len(vids))
+    if auds: lines += t("vid_attach_auds", lang, count=len(auds))
 
     attach_block = f"\n{lines}" if lines else ""
     await cb.message.edit_text(
         f"◈  <b>{tool}</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"{attach_block}\n"
         f"  {prompt_label}",
-        reply_markup=kb([back_btn("att_back"), menu_btn()]),
+        reply_markup=kb([back_btn("att_back", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.entering_prompt)
@@ -1499,6 +1507,7 @@ async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
 # ── Confirm without prompt (no_prompt tools) ──────────────────
 @router.callback_query(F.data == "att_confirm_no_prompt")
 async def att_confirm_no_prompt(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     tid = data.get("v_tid", "")
     cfg = get_attach_config(tid)
@@ -1508,14 +1517,14 @@ async def att_confirm_no_prompt(cb: CallbackQuery, state: FSMContext):
     auds = data.get("att_auds", [])
 
     missing = []
-    if cfg.get("vid_ref_required") and not vids: missing.append("video")
-    if cfg.get("img_required") and not imgs: missing.append("image")
-    if cfg.get("aud_required") and not auds: missing.append("audio")
-    if cfg.get("start_frame_required") and not data.get("att_start"): missing.append("start frame")
+    if cfg.get("vid_ref_required") and not vids: missing.append(t("vid_required_video", lang))
+    if cfg.get("img_required") and not imgs: missing.append(t("vid_required_image", lang))
+    if cfg.get("aud_required") and not auds: missing.append(t("vid_required_audio", lang))
+    if cfg.get("start_frame_required") and not data.get("att_start"): missing.append(t("vid_required_start_frame", lang))
 
     if missing:
         await cb.answer(
-            "Please upload required files: " + ", ".join(missing),
+            t("vid_required_files_alert", lang, items=", ".join(missing)),
             show_alert=True
         )
         return
@@ -1554,6 +1563,7 @@ async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, 
 
 async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     """Shared confirmation logic."""
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     coins = data.get("v_coins", 0)
     uid = cb.from_user.id
@@ -1562,13 +1572,13 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     prompt = data.get("v_prompt", "—")
 
     if not tool or tool == "—" or coins == 0:
-        await cb.answer("Session expired. Please start again.", show_alert=True)
+        await cb.answer(t("vid_session_expired", lang), show_alert=True)
         await state.clear()
         return
 
     from database import spend_coins, create_order
     if not spend_coins(uid, coins):
-        await cb.answer("Insufficient coins.", show_alert=True)
+        await cb.answer(t("vid_insufficient_coins", lang), show_alert=True)
         return
 
     # Build unified attachments
@@ -1606,12 +1616,12 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     await notify_admin(cb, oid, tool, params, coins, usd)
 
     await cb.message.edit_text(
-        f"◌  <b>Order #{oid} Placed</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Model     <b>{tool}</b>\n"
-        f"  Coins      <b>{coins} deducted</b>\n\n"
-        f"  Estimated delivery  ~2 minutes\n\n"
-        f"  Your result will be sent here.",
-        reply_markup=kb([menu_btn()]), parse_mode="HTML"
+        f"{t('vid_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_model_row', lang, name=tool)}\n"
+        f"{t('vid_coins_deducted', lang, coins=coins)}\n\n"
+        f"{t('vid_estimated_delivery', lang)}\n\n"
+        f"{t('vid_will_deliver', lang)}",
+        reply_markup=kb([menu_btn(lang)]), parse_mode="HTML"
     )
     await state.clear()
 
@@ -1621,42 +1631,46 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
 # ═══════════════════════════════════════════════════════════
 
 async def show_hga4_ar(cb, state):
+    lang = get_lang(cb.from_user.id)
     buttons = [[InlineKeyboardButton(text=ar, callback_data=f"hga4_ar_{ar}")] for ar in HEYGEN_AVATAR_ASPECT_RATIOS]
-    buttons.append([back_btn("vsub_Avatar"), menu_btn()])
+    buttons.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         "◈  <b>HeyGen Avatar 4</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select aspect ratio:",
+        f"{t('vid_hga4_select_ar', lang)}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("hga4_ar_"))
 async def hga4_ar(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     ar = cb.data[8:]
     await state.update_data(v_ar=ar)
     buttons = [[InlineKeyboardButton(text=r, callback_data=f"hga4_res_{r}")] for r in HEYGEN_AVATAR_RESOLUTIONS]
-    buttons.append([back_btn("vt_hga4"), menu_btn()])
+    buttons.append([back_btn("vt_hga4", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>HeyGen Avatar 4</b>  —  {ar}\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select resolution:",
+        f"{t('vid_hga4_select_res', lang)}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("hga4_res_"))
 async def hga4_res(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     res = cb.data[9:]
     await state.update_data(v_res=res)
     buttons = [[InlineKeyboardButton(text=s, callback_data=f"hga4_style_{s}")] for s in HEYGEN_AVATAR_TALKING_STYLES]
     data = await state.get_data()
     ar = data.get("v_ar", "—")
-    buttons.append([back_btn(f"hga4_ar_{ar}"), menu_btn()])
+    buttons.append([back_btn(f"hga4_ar_{ar}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>HeyGen Avatar 4</b>  —  {ar}  {res}\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select talking style:",
+        f"{t('vid_hga4_select_style', lang)}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("hga4_style_"))
 async def hga4_style(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     style = cb.data[11:]
     await state.update_data(v_style=style)
     data = await state.get_data()
@@ -1671,10 +1685,10 @@ async def hga4_style(cb: CallbackQuery, state: FSMContext):
     ]
     # 3 per row for 1-9, 2 per row for 10-15
     rows = list(chunked(buttons_hga4[:9], 3)) + list(chunked(buttons_hga4[9:], 2))
-    rows.append([back_btn(f"hga4_res_{res}"), menu_btn()])
+    rows.append([back_btn(f"hga4_res_{res}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>HeyGen Avatar 4</b>  —  {ar}  {res}  {style}\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select duration:",
+        f"{t('vid_select_duration', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
@@ -1697,21 +1711,21 @@ async def hga4_dur(cb: CallbackQuery, state: FSMContext):
 # ═══════════════════════════════════════════════════════════
 
 async def show_hgtr_quality(cb, state):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
         "◈  <b>HeyGen Translate</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select quality mode:\n\n"
-        "  <b>Precision</b>  —  highest accuracy, slower\n"
-        "  <b>Speed</b>  —  faster processing, lower cost",
+        f"{t('vid_hgtr_quality_desc', lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="◈  Precision", callback_data="hgtr_q_Precision")],
-            [InlineKeyboardButton(text="◈  Speed",     callback_data="hgtr_q_Speed")],
-            [back_btn("vsub_Avatar"), menu_btn()],
+            [InlineKeyboardButton(text=t("vid_btn_precision", lang), callback_data="hgtr_q_Precision")],
+            [InlineKeyboardButton(text=t("vid_btn_speed", lang),     callback_data="hgtr_q_Speed")],
+            [back_btn("vsub_Avatar", lang=lang), menu_btn(lang)],
         ),
         parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("hgtr_q_"))
 async def hgtr_quality(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     quality = cb.data[7:]
     await state.update_data(v_quality=quality)
     prices = HEYGEN_TRANSLATE_PRECISION_PRICES if quality == "Precision" else HEYGEN_TRANSLATE_SPEED_PRICES
@@ -1723,10 +1737,10 @@ async def hgtr_quality(cb: CallbackQuery, state: FSMContext):
         for m, usd in prices.items()
     ]
     rows = list(chunked(buttons_hgtr[:9], 3)) + list(chunked(buttons_hgtr[9:], 2))
-    rows.append([back_btn("vt_hgtr"), menu_btn()])
+    rows.append([back_btn("vt_hgtr", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>HeyGen Translate</b>  —  {quality}\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select duration:",
+        f"{t('vid_select_duration', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
@@ -1746,6 +1760,7 @@ async def hgtr_dur(cb: CallbackQuery, state: FSMContext):
 # ═══════════════════════════════════════════════════════════
 
 async def show_omni_dur(cb, state):
+    lang = get_lang(cb.from_user.id)
     btns = [
         InlineKeyboardButton(
             text=f"{m} min — {usd_to_coins(usd)}◈",
@@ -1754,11 +1769,10 @@ async def show_omni_dur(cb, state):
         for m, usd in OMNIHUMAN_PRICES.items()
     ]
     rows = list(chunked(btns[:9], 3)) + list(chunked(btns[9:], 2))
-    rows.append([back_btn("vsub_Avatar"), menu_btn()])
+    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         "◈  <b>OmniHuman 1.5</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Animate any portrait with voice.\n\n"
-        "  Select duration:",
+        f"{t('vid_omni_desc', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
@@ -1782,6 +1796,7 @@ async def omni_dur(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "vt_aur1")
 async def aur1_start(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     await state.update_data(v_tool="Aurora Avatar", v_tid="aur1")
     btns = [
         InlineKeyboardButton(
@@ -1791,10 +1806,10 @@ async def aur1_start(cb: CallbackQuery, state: FSMContext):
         for m, usd in AURORA_AVATAR_PRICES.items()
     ]
     rows = list(chunked(btns[:9], 3)) + list(chunked(btns[9:], 2))
-    rows.append([back_btn("vsub_Avatar"), menu_btn()])
+    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         "◈  <b>Aurora Avatar</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select duration:",
+        f"{t('vid_select_duration', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 

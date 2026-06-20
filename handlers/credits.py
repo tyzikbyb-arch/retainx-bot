@@ -5,8 +5,9 @@ from aiogram.types import Message, CallbackQuery, LabeledPrice, InlineKeyboardMa
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN
-from database import get_coins, add_coins, get_referred_by
+from database import get_coins, add_coins, get_referred_by, get_lang
 from keyboards import kb, back_btn, menu_btn
+from i18n import t
 
 router = Router()
 
@@ -21,20 +22,21 @@ async def show_wallet(target, state: FSMContext = None):
     if state:
         await state.clear()
     uid = target.from_user.id if isinstance(target, (Message, CallbackQuery)) else target
+    lang = get_lang(uid)
     coins = get_coins(uid)
     usd_val = round(coins * COIN_TO_USD, 2)
     text = (
-        "◈  <b>Your Wallet</b>\n"
+        f"{t('wallet_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Balance     <b>{coins} coins</b>  (≈ ${usd_val})\n\n"
-        "  Rate          1 coin  =  $0.05\n"
-        "  Min top-up   $2.00  =  40 coins\n\n"
+        f"{t('wallet_balance', lang, coins=coins, usd=usd_val)}\n\n"
+        f"{t('wallet_rate', lang)}\n"
+        f"{t('wallet_min_topup', lang)}\n\n"
         "━━━━━━━━━━━━━━━━━━━━"
     )
     keyboard = kb(
-        [InlineKeyboardButton(text="＋  Add Coins", callback_data="topup_start")],
-        [InlineKeyboardButton(text="◈  Referral Program", callback_data="referral_info")],
-        [menu_btn()],
+        [InlineKeyboardButton(text=t("wallet_btn_add_coins", lang), callback_data="topup_start")],
+        [InlineKeyboardButton(text=t("wallet_btn_referral", lang), callback_data="referral_info")],
+        [menu_btn(lang)],
     )
     if isinstance(target, CallbackQuery):
         await target.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
@@ -48,22 +50,23 @@ async def wallet_cb(cb: CallbackQuery, state: FSMContext):
 # ── Top-up start ──────────────────────────────────────────────
 @router.callback_query(F.data == "topup_start")
 async def topup_start(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     text = (
-        "＋  <b>Add Coins</b>\n"
+        f"{t('wallet_topup_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  1 coin  =  <b>$0.05</b>\n"
-        "  $2.00   =  <b>40 coins</b>  ← minimum\n"
-        "  $5.00   =  <b>100 coins</b>\n"
-        "  $10.00  =  <b>200 coins</b>\n\n"
-        "Select amount or enter custom:"
+        f"{t('wallet_topup_rate_line', lang)}\n"
+        f"{t('wallet_topup_min_line', lang)}\n"
+        f"{t('wallet_topup_5_line', lang)}\n"
+        f"{t('wallet_topup_10_line', lang)}\n\n"
+        f"{t('wallet_topup_select_or_custom', lang)}"
     )
     keyboard = kb(
-        [InlineKeyboardButton(text="$2  →  40 coins",   callback_data="topup_amount_2"),
-         InlineKeyboardButton(text="$5  →  100 coins",  callback_data="topup_amount_5")],
-        [InlineKeyboardButton(text="$10  →  200 coins", callback_data="topup_amount_10"),
-         InlineKeyboardButton(text="$20  →  400 coins", callback_data="topup_amount_20")],
-        [InlineKeyboardButton(text="✎  Custom amount", callback_data="topup_custom")],
-        [back_btn("wallet"), menu_btn()],
+        [InlineKeyboardButton(text=t("wallet_btn_2", lang),  callback_data="topup_amount_2"),
+         InlineKeyboardButton(text=t("wallet_btn_5", lang),  callback_data="topup_amount_5")],
+        [InlineKeyboardButton(text=t("wallet_btn_10", lang), callback_data="topup_amount_10"),
+         InlineKeyboardButton(text=t("wallet_btn_20", lang), callback_data="topup_amount_20")],
+        [InlineKeyboardButton(text=t("wallet_btn_custom", lang), callback_data="topup_custom")],
+        [back_btn("wallet", lang=lang), menu_btn(lang)],
     )
     await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
@@ -74,63 +77,66 @@ async def topup_preset(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "topup_custom")
 async def topup_custom(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "✎  <b>Custom Amount</b>\n"
+        f"{t('wallet_custom_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Type the amount in USD (minimum $2.00):\n\n"
-        "<i>Example: 7.5</i>",
-        reply_markup=kb([back_btn("topup_start"), menu_btn()]),
+        f"{t('wallet_custom_desc', lang)}",
+        reply_markup=kb([back_btn("topup_start", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(TopupStates.entering_amount)
 
 @router.message(TopupStates.entering_amount)
 async def receive_custom_amount(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     text = msg.text.strip()
     try:
         amount = float(text.replace(",", ".").replace("$", "").strip())
         if amount < MIN_TOPUP_USD:
-            await msg.answer(f"Minimum deposit is ${MIN_TOPUP_USD}. Please enter a valid amount (e.g. 2, 5, 10).")
+            await msg.answer(t("wallet_min_deposit_error", lang, min=MIN_TOPUP_USD))
             return
         await state.clear()
         await show_payment_options_msg(msg, state, amount)
     except ValueError:
-        await msg.answer("Please enter a number (e.g. 5 or 7.50).\n\nType /cancel to exit.")
+        await msg.answer(t("wallet_enter_number_error", lang))
 
 async def show_payment_options(cb: CallbackQuery, state: FSMContext, amount: float):
+    lang = get_lang(cb.from_user.id)
     coins = math.floor(amount / COIN_TO_USD)
     stars_amount = int(amount * 100)
     text = (
-        f"◈  <b>Confirm Top-up</b>\n"
+        f"{t('wallet_confirm_title', lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Amount      <b>${amount:.2f}</b>\n"
-        f"  You receive  <b>{coins} coins</b>\n\n"
+        f"{t('wallet_confirm_amount', lang, amount=f'{amount:.2f}')}\n"
+        f"{t('wallet_confirm_receive', lang, coins=coins)}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"Choose payment method:"
+        f"{t('wallet_choose_payment', lang)}"
     )
     keyboard = kb(
-        [InlineKeyboardButton(text=f"⭐  Pay with Stars ({stars_amount} XTR)", callback_data=f"pay_stars_{amount}")],
-        [InlineKeyboardButton(text="₮  Pay with USDT (TRC20)", callback_data=f"pay_usdt_{amount}")],
-        [back_btn("topup_start"), menu_btn()],
+        [InlineKeyboardButton(text=t("wallet_btn_pay_stars", lang, stars=stars_amount), callback_data=f"pay_stars_{amount}")],
+        [InlineKeyboardButton(text=t("wallet_btn_pay_usdt", lang), callback_data=f"pay_usdt_{amount}")],
+        [back_btn("topup_start", lang=lang), menu_btn(lang)],
     )
     await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     await state.update_data(topup_amount=amount)
 
 async def show_payment_options_msg(msg: Message, state: FSMContext, amount: float):
+    lang = get_lang(msg.from_user.id)
     coins = math.floor(amount / COIN_TO_USD)
     stars_amount = int(amount * 100)
     text = (
-        f"◈  <b>Confirm Top-up</b>\n"
+        f"{t('wallet_confirm_title', lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Amount      <b>${amount:.2f}</b>\n"
-        f"  You receive  <b>{coins} coins</b>\n\n"
+        f"{t('wallet_confirm_amount', lang, amount=f'{amount:.2f}')}\n"
+        f"{t('wallet_confirm_receive', lang, coins=coins)}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"Choose payment method:"
+        f"{t('wallet_choose_payment', lang)}"
     )
     keyboard = kb(
-        [InlineKeyboardButton(text=f"⭐  Pay with Stars ({stars_amount} XTR)", callback_data=f"pay_stars_{amount}")],
-        [InlineKeyboardButton(text="₮  Pay with USDT (TRC20)", callback_data=f"pay_usdt_{amount}")],
-        [back_btn("topup_start"), menu_btn()],
+        [InlineKeyboardButton(text=t("wallet_btn_pay_stars", lang, stars=stars_amount), callback_data=f"pay_stars_{amount}")],
+        [InlineKeyboardButton(text=t("wallet_btn_pay_usdt", lang), callback_data=f"pay_usdt_{amount}")],
+        [back_btn("topup_start", lang=lang), menu_btn(lang)],
     )
     await msg.answer(text, reply_markup=keyboard, parse_mode="HTML")
     await state.update_data(topup_amount=amount)
@@ -138,23 +144,23 @@ async def show_payment_options_msg(msg: Message, state: FSMContext, amount: floa
 # ── USDT payment ──────────────────────────────────────────────
 @router.callback_query(F.data.startswith("pay_usdt_"))
 async def pay_usdt(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
     amount = float(cb.data.replace("pay_usdt_", ""))
     coins = math.floor(amount / COIN_TO_USD)
     await state.update_data(topup_amount=amount, topup_coins=coins)
     text = (
-        f"₮  <b>USDT Payment</b>\n"
+        f"{t('wallet_usdt_title', lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Send exactly  <b>${amount:.2f} USDT</b>\n"
-        f"  Network          <b>TRC20 (Tron)</b>\n\n"
-        f"  Wallet address:\n"
+        f"{t('wallet_usdt_send_exactly', lang, amount=f'{amount:.2f}')}\n"
+        f"{t('wallet_usdt_network', lang)}\n\n"
+        f"{t('wallet_usdt_address_label', lang)}\n"
         f"<code>{USDT_WALLET}</code>\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"After sending, paste your <b>transaction hash</b> below.\n"
-        f"<i>The system will verify it automatically.</i>"
+        f"{t('wallet_usdt_after_sending', lang)}"
     )
     await cb.message.edit_text(
         text,
-        reply_markup=kb([back_btn("topup_start"), menu_btn()]),
+        reply_markup=kb([back_btn("topup_start", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(TopupStates.entering_tx)
@@ -162,13 +168,14 @@ async def pay_usdt(cb: CallbackQuery, state: FSMContext):
 # ── Auto-verify TX hash ───────────────────────────────────────
 @router.message(TopupStates.entering_tx)
 async def receive_tx_hash(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
     tx_hash = msg.text.strip()
     data = await state.get_data()
     amount = float(data.get("topup_amount", 0))
     coins = int(data.get("topup_coins", math.floor(amount / COIN_TO_USD)))
     uid = msg.from_user.id
 
-    await msg.answer("⏳  Verifying transaction...")
+    await msg.answer(t("wallet_verifying", lang))
 
     try:
         verified, actual_amount = await verify_tron_tx(tx_hash, amount)
@@ -178,13 +185,13 @@ async def receive_tx_hash(msg: Message, state: FSMContext):
             add_coins(uid, coins)
             await _handle_referral_bonus(uid, coins)
             await msg.answer(
-                f"✓  <b>Payment Verified</b>\n"
+                f"{t('wallet_verified_title', lang)}\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"  Transaction confirmed\n"
-                f"  Amount received   <b>${actual_amount:.2f} USDT</b>\n"
-                f"  Coins credited     <b>{coins} coins</b>\n"
-                f"  New balance        <b>{get_coins(uid)} coins</b>",
-                reply_markup=kb([menu_btn()]),
+                f"{t('wallet_verified_confirmed', lang)}\n"
+                f"{t('wallet_verified_amount', lang, amount=f'{actual_amount:.2f}')}\n"
+                f"{t('wallet_verified_coins', lang, coins=coins)}\n"
+                f"{t('wallet_verified_balance', lang, coins=get_coins(uid))}",
+                reply_markup=kb([menu_btn(lang)]),
                 parse_mode="HTML"
             )
             await state.clear()
@@ -244,12 +251,11 @@ async def _send_for_manual_review(msg: Message, tx_hash: str, amount: float, coi
         f"  <i>Auto-verify could not confirm. Please check manually.</i>",
         reply_markup=keyboard, parse_mode="HTML"
     )
+    lang = get_lang(uid)
     await msg.answer(
-        "◌  <b>Under Review</b>\n\n"
-        "  We could not verify your transaction automatically.\n"
-        "  Our team will review it manually within 15 minutes.\n\n"
-        "  Coins will be credited after confirmation.",
-        reply_markup=kb([menu_btn()]),
+        f"{t('wallet_review_title', lang)}\n\n"
+        f"{t('wallet_review_body', lang)}",
+        reply_markup=kb([menu_btn(lang)]),
         parse_mode="HTML"
     )
 
@@ -257,23 +263,25 @@ async def _send_for_manual_review(msg: Message, tx_hash: str, amount: float, coi
 @router.callback_query(F.data.startswith("pay_stars_"))
 async def pay_stars(cb: CallbackQuery, state: FSMContext):
     from aiogram import Bot
+    lang = get_lang(cb.from_user.id)
     amount = float(cb.data.replace("pay_stars_", ""))
     coins = math.floor(amount / COIN_TO_USD)
     stars_amount = int(amount * 100)
     bot = Bot(token=BOT_TOKEN)
     await bot.send_invoice(
         chat_id=cb.from_user.id,
-        title="RetainX Studio — Coins",
-        description=f"Top up {coins} coins to your RetainX account",
+        title=t("wallet_stars_invoice_title", lang),
+        description=t("wallet_stars_invoice_desc", lang, coins=coins),
         payload=f"topup_{coins}_{cb.from_user.id}",
         currency="XTR",
-        prices=[LabeledPrice(label=f"{coins} Coins", amount=stars_amount)],
+        prices=[LabeledPrice(label=t("wallet_stars_label", lang, coins=coins), amount=stars_amount)],
         provider_token="",
     )
     await cb.answer()
 
 @router.message(F.successful_payment)
 async def successful_stars_payment(msg: Message):
+    lang = get_lang(msg.from_user.id)
     payload = msg.successful_payment.invoice_payload
     parts = payload.split("_")
     coins = int(parts[1])
@@ -281,9 +289,8 @@ async def successful_stars_payment(msg: Message):
     add_coins(uid, coins)
     await _handle_referral_bonus(uid, coins)
     await msg.answer(
-        f"⭐  <b>Payment Successful</b>\n\n"
-        f"  {coins} coins added to your wallet.\n"
-        f"  New balance: <b>{get_coins(uid)} coins</b>",
+        f"{t('wallet_stars_success_title', lang)}\n\n"
+        f"{t('wallet_stars_success_body', lang, coins=coins, coins2=get_coins(uid))}",
         parse_mode="HTML"
     )
 
@@ -300,11 +307,11 @@ async def admin_confirm_topup(cb: CallbackQuery):
     await _handle_referral_bonus(uid, coins)
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
+    user_lang = get_lang(uid)
     await bot.send_message(
         uid,
-        f"✓  <b>Top-up Confirmed</b>\n\n"
-        f"  <b>{coins} coins</b> added to your wallet.\n"
-        f"  Balance: <b>{get_coins(uid)} coins</b>",
+        f"{t('wallet_topup_confirmed_title', user_lang)}\n\n"
+        f"{t('wallet_topup_confirmed_body', user_lang, coins=coins, balance=get_coins(uid))}",
         parse_mode="HTML"
     )
     await cb.message.edit_text(f"✓  Confirmed — {coins} coins → user {uid}", parse_mode="HTML")
@@ -317,7 +324,8 @@ async def admin_reject_topup(cb: CallbackQuery):
     uid = int(cb.data.split("_")[-1])
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
-    await bot.send_message(uid, "✕  Your top-up was not confirmed. Please contact support.")
+    user_lang = get_lang(uid)
+    await bot.send_message(uid, t("wallet_topup_rejected", user_lang))
     await cb.message.edit_text(f"✕  Rejected — user {uid}")
 
 async def _handle_referral_bonus(uid: int, coins_added: int):
@@ -328,29 +336,30 @@ async def _handle_referral_bonus(uid: int, coins_added: int):
             add_coins(ref_uid, bonus)
             from aiogram import Bot
             bot = Bot(token=BOT_TOKEN)
+            ref_lang = get_lang(ref_uid)
             await bot.send_message(
                 ref_uid,
-                f"◈  <b>Referral Bonus</b>\n\n"
-                f"  Your referral topped up their wallet.\n"
-                f"  You received <b>{bonus} coins</b> (20%).",
+                f"{t('wallet_referral_bonus_title', ref_lang)}\n\n"
+                f"{t('wallet_referral_bonus_body', ref_lang, bonus=bonus)}",
                 parse_mode="HTML"
             )
 
 # ── Referral info ─────────────────────────────────────────────
 @router.callback_query(F.data == "referral_info")
 async def referral_info(cb: CallbackQuery):
+    lang = get_lang(cb.from_user.id)
     bot_username = "RetainXStudio"
     link = f"https://t.me/{bot_username}?start=ref_{cb.from_user.id}"
     text = (
-        "◈  <b>Referral Program</b>\n"
+        f"{t('wallet_referral_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Earn <b>20% in coins</b> every time your referral tops up.\n\n"
-        "  Your referral link:\n"
+        f"{t('wallet_referral_desc', lang)}\n\n"
+        f"{t('wallet_referral_link_label', lang)}\n"
         f"<code>{link}</code>\n\n"
-        "  Share it and earn passively."
+        f"{t('wallet_referral_share', lang)}"
     )
     await cb.message.edit_text(
         text,
-        reply_markup=kb([back_btn("wallet"), menu_btn()]),
+        reply_markup=kb([back_btn("wallet", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )

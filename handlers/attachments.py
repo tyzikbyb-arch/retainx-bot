@@ -165,3 +165,55 @@ def has_attachments(tid: str) -> bool:
         cfg.get("start_frame") or cfg.get("img_refs") or
         cfg.get("vid_refs") or cfg.get("aud_refs")
     )
+
+
+# Russian translations for per-tool hint / prompt_label text (English lives
+# inline in TOOL_ATTACHMENTS above and is used as the lookup key / default).
+_HINT_RU = {
+    "Attach a Start Frame to continue — it's required for this model.":
+        "Прикрепите Start Frame, чтобы продолжить — для этой модели это обязательно.",
+    "Works best with videos created using Veo models":
+        "Лучше всего работает с видео, созданными моделями Veo",
+    "Sora 2 Pro is highly unstable. Switch to another model if it fails.":
+        "Sora 2 Pro работает нестабильно. Если генерация не удалась, попробуйте другую модель.",
+    "Upload an image reference and/or a motion reference video":
+        "Загрузите референс-изображение и/или референс-видео движения",
+    "Upload a character image and a voice recording to make your avatar talk":
+        "Загрузите изображение персонажа и аудиозапись голоса, чтобы аватар заговорил",
+    "Upload a video to translate it with AI lip-sync":
+        "Загрузите видео, чтобы перевести его с AI липсинком",
+    "Upload a video to dub it into another language":
+        "Загрузите видео, чтобы озвучить его на другом языке",
+    "Upload a video of a character and a voice recording to sync lips":
+        "Загрузите видео персонажа и аудиозапись голоса для синхронизации губ",
+    "Upload a character image and a voice recording to animate your avatar":
+        "Загрузите изображение персонажа и аудиозапись голоса, чтобы анимировать аватар",
+    "Upload a character image to generate an avatar video":
+        "Загрузите изображение персонажа, чтобы создать видео-аватар",
+}
+
+_PROMPT_LABEL_RU = {
+    "Upload a 2–30 second video and describe what happens next":
+        "Загрузите видео длительностью 2–30 секунд и опишите, что будет дальше",
+    "Upload a 3–10 second video and describe the edits you want to make":
+        "Загрузите видео длительностью 3–10 секунд и опишите, какие правки нужны",
+    "Describe your character's expressions and gestures (optional)":
+        "Опишите мимику и жесты персонажа (необязательно)",
+}
+
+_DEFAULT_HINT_RU = "Прикрепите референс-файлы (необязательно)\n  или сразу переходите к промпту."
+_DEFAULT_PROMPT_LABEL_RU = "Введите промпт:"
+
+
+def get_hint(tid: str, lang: str, default_en: str) -> str:
+    en = get_attach_config(tid).get("hint", default_en)
+    if lang == "ru":
+        return _HINT_RU.get(en, _DEFAULT_HINT_RU if en == default_en else en)
+    return en
+
+
+def get_prompt_label(tid: str, lang: str, default_en: str) -> str:
+    en = get_attach_config(tid).get("prompt_label", default_en)
+    if lang == "ru":
+        return _PROMPT_LABEL_RU.get(en, _DEFAULT_PROMPT_LABEL_RU if en == default_en else en)
+    return en
