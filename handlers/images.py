@@ -6,6 +6,7 @@ from config import IMAGE_TOOLS, usd_to_coins
 from database import get_coins, spend_coins, create_order, get_lang
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
+from handlers.attachments import file_too_large
 import math
 
 router = Router()
@@ -345,6 +346,9 @@ async def img_collect_ref(msg: Message, state: FSMContext):
 
     if len(refs) >= max_refs:
         await msg.answer(t("img_ref_max_alert", lang, max=max_refs))
+        return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
         return
 
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
