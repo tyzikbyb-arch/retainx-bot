@@ -48,6 +48,18 @@ STR = {
         "btn_image_pricing": "▸  Image Pricing",
         "btn_video_pricing": "▸  Video Pricing",
 
+        "price_images_title": "◎  <b>Image Pricing</b>",
+        "price_video_title": "◎  <b>Video Pricing</b>",
+        "price_video_body": (
+            "  Prices vary by model, resolution & duration.\n"
+            "  Select a model in Video Generation\n"
+            "  to see exact coin costs per option.\n\n"
+            "  <b>Sample rates:</b>\n"
+            "  Kling 3.0   720p  5s  —  6◈\n"
+            "  Veo 3.1     4K    8s  —  58◈\n"
+            "  Seedance   1080p 10s  —  60◈\n"
+        ),
+
         "menu_main_menu": "⌂  Main Menu",
         "menu_wallet": "◈  Wallet",
         "menu_video": "▸  Video",
@@ -451,6 +463,18 @@ STR = {
         "pricing_body": "  1 монета  =  <b>$0.05</b>\n\n  Выберите категорию для просмотра цен:",
         "btn_image_pricing": "▸  Цены на изображения",
         "btn_video_pricing": "▸  Цены на видео",
+
+        "price_images_title": "◎  <b>Цены на изображения</b>",
+        "price_video_title": "◎  <b>Цены на видео</b>",
+        "price_video_body": (
+            "  Цены зависят от модели, разрешения и длительности.\n"
+            "  Выберите модель в разделе «Генерация видео»,\n"
+            "  чтобы увидеть точную стоимость в монетах.\n\n"
+            "  <b>Примерные тарифы:</b>\n"
+            "  Kling 3.0   720p  5s  —  6◈\n"
+            "  Veo 3.1     4K    8s  —  58◈\n"
+            "  Seedance   1080p 10s  —  60◈\n"
+        ),
 
         "menu_main_menu": "⌂  Главное меню",
         "menu_wallet": "◈  Кошелёк",
