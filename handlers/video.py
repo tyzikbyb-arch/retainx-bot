@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from keyboards import kb, back_btn, menu_btn, chunked
-from handlers.attachments import get_attach_config, has_attachments, get_hint, get_prompt_label
+from handlers.attachments import get_attach_config, has_attachments, get_hint, get_prompt_label, file_too_large
 from database import get_coins, spend_coins, create_order, get_lang
 from i18n import t
 from config import (
@@ -619,6 +619,9 @@ async def video_uploaded(msg: Message, state: FSMContext):
     if not (msg.video or msg.document or msg.animation):
         await msg.answer(t("vid_please_send_video", ui_lang))
         return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", ui_lang))
+        return
 
     if msg.video:
         file_id = msg.video.file_id
@@ -911,6 +914,9 @@ async def sd_collect_start(msg: Message, state: FSMContext):
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
         await msg.answer(t("vid_please_send_image", lang))
         return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
+        return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
     await state.update_data(sd_start={"file_id": file_id, "type": ftype})
@@ -939,6 +945,9 @@ async def sd_collect_end(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
         await msg.answer(t("vid_please_send_image", lang))
+        return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
         return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
@@ -974,6 +983,9 @@ async def sd_collect_img(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
         await msg.answer(t("vid_please_send_image", lang))
+        return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
         return
     data = await state.get_data()
     imgs = data.get("sd_imgs", [])
@@ -1017,6 +1029,9 @@ async def sd_collect_vid(msg: Message, state: FSMContext):
     if not (msg.video or msg.animation or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("video/"))):
         await msg.answer(t("vid_please_send_video_short", lang))
         return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
+        return
     data = await state.get_data()
     vids = data.get("sd_vids", [])
     if len(vids) >= 3:
@@ -1058,6 +1073,9 @@ async def sd_collect_aud(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
     if not (msg.audio or msg.voice or (msg.document and msg.document.mime_type and (msg.document.mime_type.startswith("audio/") or msg.document.mime_type == "application/ogg"))):
         await msg.answer(t("vid_please_send_audio", lang))
+        return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
         return
     data = await state.get_data()
     auds = data.get("sd_auds", [])
@@ -1286,6 +1304,9 @@ async def att_collect_start(msg: Message, state: FSMContext):
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
         await msg.answer(t("vid_please_send_image", lang))
         return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
+        return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
     await state.update_data(att_start={"file_id": file_id, "type": ftype})
@@ -1309,6 +1330,9 @@ async def att_collect_end(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
         await msg.answer(t("vid_please_send_image", lang))
+        return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
         return
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype = "photo" if msg.photo else "document"
@@ -1338,6 +1362,9 @@ async def att_collect_img(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
     if not (msg.photo or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"))):
         await msg.answer(t("vid_please_send_image", lang))
+        return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
         return
     data = await state.get_data()
     tid = data.get("v_tid", "")
@@ -1378,6 +1405,9 @@ async def att_collect_vid(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
     if not (msg.video or msg.animation or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("video/"))):
         await msg.answer(t("vid_please_send_video_short", lang))
+        return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
         return
     data = await state.get_data()
     tid = data.get("v_tid", "")
@@ -1422,6 +1452,9 @@ async def att_collect_aud(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
     if not (msg.audio or msg.voice or (msg.document and msg.document.mime_type and (msg.document.mime_type.startswith("audio/") or msg.document.mime_type == "application/ogg"))):
         await msg.answer(t("vid_please_send_audio", lang))
+        return
+    if file_too_large(msg):
+        await msg.answer(t("err_file_too_large", lang))
         return
     data = await state.get_data()
     tid = data.get("v_tid", "")

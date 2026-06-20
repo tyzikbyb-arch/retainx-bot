@@ -228,6 +228,7 @@ STR = {
         "vid_please_send_image": "◈  Please send an image file (JPG, PNG, WEBP etc.)",
         "vid_please_send_video_short": "◈  Please send a video file (MP4, MOV, AVI etc.)",
         "vid_please_send_audio": "◈  Please send an audio file (MP3, OGG, WAV, M4A etc.)",
+        "err_file_too_large": "⚠️  This file is too large — Telegram bots can only download files up to 20MB. Please compress it or send a smaller file.",
         "vid_start_frame_saved": "✓  Start frame saved.\n\nNow set the End Frame or write your prompt.",
         "vid_end_frame_saved": "✓  End frame saved.\n\nWrite your prompt when ready.",
 
@@ -644,6 +645,7 @@ STR = {
         "vid_please_send_image": "◈  Отправьте файл изображения (JPG, PNG, WEBP и т.д.)",
         "vid_please_send_video_short": "◈  Отправьте видеофайл (MP4, MOV, AVI и т.д.)",
         "vid_please_send_audio": "◈  Отправьте аудиофайл (MP3, OGG, WAV, M4A и т.д.)",
+        "err_file_too_large": "⚠️  Файл слишком большой — Telegram-боты могут скачивать файлы только до 20МБ. Сожмите файл или отправьте файл меньшего размера.",
         "vid_start_frame_saved": "✓  Стартовый кадр сохранён.\n\nТеперь укажите финальный кадр или напишите промпт.",
         "vid_end_frame_saved": "✓  Финальный кадр сохранён.\n\nНапишите промпт, когда будете готовы.",
 

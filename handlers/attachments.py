@@ -167,6 +167,26 @@ def has_attachments(tid: str) -> bool:
     )
 
 
+# Telegram's Bot API hard-caps file downloads via getFile() at 20MB,
+# regardless of our code — the worker later calls getFile() to fetch the
+# file by file_id before uploading it to Artlist, and that call fails
+# outright for anything bigger (order #299: video ref upload accepted
+# here, queued, then failed in the worker 30+s later with "file is too
+# big"). Checking file_size up front lets us reject it immediately with a
+# clear reason instead of silently queueing a doomed order.
+TELEGRAM_MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
+
+
+def file_too_large(msg) -> bool:
+    for media in (msg.video, msg.document, msg.audio, msg.voice, msg.animation):
+        if media is not None:
+            return bool(media.file_size) and media.file_size > TELEGRAM_MAX_DOWNLOAD_BYTES
+    if msg.photo:
+        largest = msg.photo[-1]
+        return bool(largest.file_size) and largest.file_size > TELEGRAM_MAX_DOWNLOAD_BYTES
+    return False
+
+
 # Russian translations for per-tool hint / prompt_label text (English lives
 # inline in TOOL_ATTACHMENTS above and is used as the lookup key / default).
 _HINT_RU = {
