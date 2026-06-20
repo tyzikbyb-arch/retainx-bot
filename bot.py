@@ -2,7 +2,7 @@ import asyncio, logging
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
-    Message, CallbackQuery, InlineKeyboardButton,
+    Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup,
     ReplyKeyboardMarkup, KeyboardButton
 )
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -23,8 +23,9 @@ except Exception:
 from aiogram.fsm.context import FSMContext
 
 from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS
-from database import is_new_user, add_coins, get_coins, set_referred_by
-from keyboards import kb, menu_btn
+from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang
+from keyboards import kb, menu_btn, client_kb
+from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
 from handlers import credits, images, video, admin as admin_handler, orders as orders_handler
 
 logging.basicConfig(level=logging.INFO)
@@ -38,16 +39,6 @@ dp.include_router(admin_handler.router)
 dp.include_router(orders_handler.router)
 
 # ── Keyboards ─────────────────────────────────────────────────
-CLIENT_KB = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="⌂  Main Menu"), KeyboardButton(text="◈  Wallet")],
-        [KeyboardButton(text="▸  Video"),      KeyboardButton(text="▸  Images"),   KeyboardButton(text="▸  Audio")],
-        [KeyboardButton(text="≡  Orders"),     KeyboardButton(text="◌  Support")],
-    ],
-    resize_keyboard=True,
-    persistent=True,
-)
-
 ADMIN_KB = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="≡  All Orders"),  KeyboardButton(text="◈  Users")],
@@ -59,8 +50,28 @@ ADMIN_KB = ReplyKeyboardMarkup(
     persistent=True,
 )
 
-def get_kb(uid: int):
-    return ADMIN_KB if uid == ADMIN_ID else CLIENT_KB
+def get_kb(uid: int, lang: str = "en"):
+    return ADMIN_KB if uid == ADMIN_ID else client_kb(lang)
+
+# ── Shared main-menu builders ────────────────────────────────
+def build_main_menu_text(coins: int, lang: str) -> str:
+    return (
+        f"{t('main_menu_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('main_menu_balance', lang, coins=coins)}\n\n"
+        f"{t('main_menu_desc', lang)}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━"
+    )
+
+def build_main_menu_kb(coins: int, lang: str) -> InlineKeyboardMarkup:
+    return kb(
+        [InlineKeyboardButton(text=t("btn_video_generation", lang), callback_data="cat_video")],
+        [InlineKeyboardButton(text=t("btn_image_generation", lang), callback_data="cat_images")],
+        [InlineKeyboardButton(text=t("btn_audio_voice", lang),      callback_data="cat_audio")],
+        [InlineKeyboardButton(text=t("btn_wallet_coins", lang, coins=coins), callback_data="wallet")],
+        [InlineKeyboardButton(text=t("btn_pricing", lang),  callback_data="pricing_menu")],
+        [InlineKeyboardButton(text=t("btn_language", lang), callback_data="lang_menu")],
+        [InlineKeyboardButton(text=t("btn_support", lang),  url="https://t.me/RetainXStudio")],
+    )
 
 # ── /start ────────────────────────────────────────────────────
 @dp.message(CommandStart())
@@ -81,120 +92,91 @@ async def start(msg: Message, state: FSMContext):
         add_coins(uid, WELCOME_BONUS)
 
     coins = get_coins(uid)
+    lang = get_lang(uid)
 
     if new:
         # New user welcome
         welcome_text = (
-            "◈  <b>Welcome to RetainX Studio</b>\n"
+            f"{t('welcome_title', lang)}\n"
             "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "  The fastest and most affordable way\n"
-            "  to generate AI video, images & audio.\n\n"
-            "  ◉  Kling 3.0  ·  Veo 3.1  ·  Sora 2\n"
-            "  ◉  Midjourney  ·  Flux  ·  Seedance\n"
-            "  ◉  HeyGen  ·  ElevenLabs  ·  LTX\n\n"
-            "  Up to <b>3× cheaper</b> than any competitor.\n"
-            "  Results delivered in <b>~2 minutes.</b>\n\n"
+            f"{t('welcome_body', lang)}\n\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            f"  🎁  <b>{WELCOME_BONUS} free coins</b> added to your account.\n"
-            f"  Balance   <b>{coins} coins</b>"
+            f"{t('welcome_bonus', lang, bonus=WELCOME_BONUS, coins=coins)}"
         )
         keyboard = kb(
-            [InlineKeyboardButton(text="▸  Start Generating", callback_data="cat_video")],
-            [InlineKeyboardButton(text="◎  View Pricing",     callback_data="pricing_menu")],
-            [InlineKeyboardButton(text="◌  Support",          url="https://t.me/RetainXStudio")],
+            [InlineKeyboardButton(text=t("btn_start_generating", lang), callback_data="cat_video")],
+            [InlineKeyboardButton(text=t("btn_view_pricing", lang),     callback_data="pricing_menu")],
+            [InlineKeyboardButton(text=t("btn_language", lang),         callback_data="lang_menu")],
+            [InlineKeyboardButton(text=t("btn_support", lang),          url="https://t.me/RetainXStudio")],
         )
-        await msg.answer(welcome_text, reply_markup=get_kb(uid), parse_mode="HTML")
-        await msg.answer("What would you like to create?", reply_markup=keyboard, parse_mode="HTML")
+        await msg.answer(welcome_text, reply_markup=get_kb(uid, lang), parse_mode="HTML")
+        await msg.answer(t("what_create", lang), reply_markup=keyboard, parse_mode="HTML")
     else:
         # Returning user
-        text = (
-            "◈  <b>RetainX Studio</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"  Balance   <b>{coins} coins</b>\n\n"
-            "  Generate AI video, images & audio\n"
-            "  at the most competitive rates.\n\n"
-            "━━━━━━━━━━━━━━━━━━━━"
-        )
-        keyboard = kb(
-            [InlineKeyboardButton(text="▸  Video Generation", callback_data="cat_video")],
-            [InlineKeyboardButton(text="▸  Image Generation", callback_data="cat_images")],
-            [InlineKeyboardButton(text="▸  Audio & Voice",    callback_data="cat_audio")],
-            [InlineKeyboardButton(text="◈  Wallet  ·  " + str(coins) + " coins", callback_data="wallet")],
-            [InlineKeyboardButton(text="◎  Pricing",          callback_data="pricing_menu")],
-            [InlineKeyboardButton(text="◌  Support",          url="https://t.me/RetainXStudio")],
-        )
-        await msg.answer(text, reply_markup=get_kb(uid), parse_mode="HTML")
-        await msg.answer("Choose an option:", reply_markup=keyboard, parse_mode="HTML")
+        text = build_main_menu_text(coins, lang)
+        keyboard = build_main_menu_kb(coins, lang)
+        await msg.answer(text, reply_markup=get_kb(uid, lang), parse_mode="HTML")
+        await msg.answer(t("choose_option", lang), reply_markup=keyboard, parse_mode="HTML")
 
 # ── Panel button router ───────────────────────────────────────
-PANEL_BUTTONS = {
-    "⌂  Main Menu", "◈  Wallet", "▸  Video", "▸  Images",
-    "▸  Audio", "≡  Orders", "◌  Support",
+ADMIN_PANEL_BUTTONS = {
     "≡  All Orders", "✉  Msg User", "＋  Add Coins",
     "📤  Deliver", "✕  Cancel Order", "◌  Admin Help", "◈  Users", "◌  Commands",
 }
+PANEL_BUTTONS = CLIENT_TEXTS | ADMIN_PANEL_BUTTONS
 
 @dp.message(F.text.in_(PANEL_BUTTONS))
 async def panel_router(msg: Message, state: FSMContext):
     uid = msg.from_user.id
     text = msg.text
+    action = CLIENT_ACTION_BY_TEXT.get(text)
+    lang = get_lang(uid) if action else "en"
 
     # Client buttons
-    if text == "⌂  Main Menu":
+    if action == "main_menu":
         await state.clear()
         coins = get_coins(uid)
-        keyboard = kb(
-            [InlineKeyboardButton(text="▸  Video Generation", callback_data="cat_video")],
-            [InlineKeyboardButton(text="▸  Image Generation", callback_data="cat_images")],
-            [InlineKeyboardButton(text="▸  Audio & Voice",    callback_data="cat_audio")],
-            [InlineKeyboardButton(text="◈  Wallet  ·  " + str(coins) + " coins", callback_data="wallet")],
-            [InlineKeyboardButton(text="◎  Pricing",          callback_data="pricing_menu")],
-            [InlineKeyboardButton(text="◌  Support",          url="https://t.me/RetainXStudio")],
-        )
         await msg.answer(
-            f"◈  <b>RetainX Studio</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"  Balance   <b>{coins} coins</b>\n\n"
-            "  Generate AI video, images & audio\n"
-            "  at the most competitive rates.",
-            reply_markup=keyboard, parse_mode="HTML"
+            build_main_menu_text(coins, lang),
+            reply_markup=build_main_menu_kb(coins, lang), parse_mode="HTML"
         )
-    elif text == "◈  Wallet":
+    elif action == "wallet":
         from handlers.credits import show_wallet
         await show_wallet(msg, state)
-    elif text == "▸  Video":
+    elif action == "video":
         await state.clear()
         buttons = [
             [InlineKeyboardButton(text="▸  Standard Video",   callback_data="vsub_Standard")],
             [InlineKeyboardButton(text="▸  Premium Video",    callback_data="vsub_Premium")],
             [InlineKeyboardButton(text="▸  Kling Video",      callback_data="vsub_Kling")],
             [InlineKeyboardButton(text="▸  Avatar & Dubbing", callback_data="vsub_Avatar")],
-            [InlineKeyboardButton(text="⌂  Main Menu",        callback_data="main_menu")],
+            [InlineKeyboardButton(text=t("btn_back", lang),   callback_data="main_menu")],
         ]
         await msg.answer(
-            "◈  <b>Video Generation</b>\n━━━━━━━━━━━━━━━━━━━━\n\nSelect a category:",
+            f"{t('video_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('select_category', lang)}",
             reply_markup=kb(*buttons), parse_mode="HTML"
         )
-    elif text == "▸  Images":
+    elif action == "images":
         await state.clear()
         from config import IMAGE_TOOLS
         buttons = [[InlineKeyboardButton(text=f"{info['emoji']}  {name}", callback_data=f"img_{name}")] for name, info in IMAGE_TOOLS.items()]
-        buttons.append([InlineKeyboardButton(text="⌂  Main Menu", callback_data="main_menu")])
+        buttons.append([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")])
         await msg.answer(
-            "◈  <b>Image Generation</b>\n━━━━━━━━━━━━━━━━━━━━\n\nSelect a model:",
+            f"{t('images_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('select_model', lang)}",
             reply_markup=kb(*buttons), parse_mode="HTML"
         )
-    elif text == "▸  Audio":
+    elif action == "audio":
         await msg.answer(
-            "◌  <b>Audio & Voice</b>\n━━━━━━━━━━━━━━━━━━━━\n\n  Coming soon.\n\n  Stay tuned.",
-            reply_markup=kb([InlineKeyboardButton(text="⌂  Main Menu", callback_data="main_menu")]),
+            f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_body', lang)}",
+            reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
             parse_mode="HTML"
         )
-    elif text == "≡  Orders":
+    elif action == "orders":
         from handlers.orders import show_orders
         await show_orders(msg, uid)
-    elif text == "◌  Support":
+    elif action == "support":
         await msg.answer(
-            "◌  <b>Support</b>\n━━━━━━━━━━━━━━━━━━━━\n\n  Contact us: @RetainXStudio",
+            f"{t('support_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('support_body', lang)}",
             parse_mode="HTML"
         )
 
@@ -299,47 +281,60 @@ async def main_menu_cb(cb: CallbackQuery, state: FSMContext):
     await state.clear()
     uid = cb.from_user.id
     coins = get_coins(uid)
-    keyboard = kb(
-        [InlineKeyboardButton(text="▸  Video Generation", callback_data="cat_video")],
-        [InlineKeyboardButton(text="▸  Image Generation", callback_data="cat_images")],
-        [InlineKeyboardButton(text="▸  Audio & Voice",    callback_data="cat_audio")],
-        [InlineKeyboardButton(text="◈  Wallet  ·  " + str(coins) + " coins", callback_data="wallet")],
-        [InlineKeyboardButton(text="◎  Pricing",          callback_data="pricing_menu")],
-        [InlineKeyboardButton(text="◌  Support",          url="https://t.me/RetainXStudio")],
-    )
+    lang = get_lang(uid)
     await cb.message.edit_text(
-        f"◈  <b>RetainX Studio</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Balance   <b>{coins} coins</b>\n\n"
-        "  Generate AI video, images & audio\n"
-        "  at the most competitive rates.\n\n"
-        "━━━━━━━━━━━━━━━━━━━━",
-        reply_markup=keyboard, parse_mode="HTML"
+        build_main_menu_text(coins, lang),
+        reply_markup=build_main_menu_kb(coins, lang), parse_mode="HTML"
     )
+
+# ── Language switch ───────────────────────────────────────────
+@dp.callback_query(F.data == "lang_menu")
+async def lang_menu_cb(cb: CallbackQuery):
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    await cb.message.edit_text(
+        f"{t('lang_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('lang_desc', lang)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text=("✓  " if lang == "en" else "○  ") + "English",  callback_data="lang_set_en")],
+            [InlineKeyboardButton(text=("✓  " if lang == "ru" else "○  ") + "Русский",  callback_data="lang_set_ru")],
+            [InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")],
+        ),
+        parse_mode="HTML"
+    )
+
+@dp.callback_query(F.data.in_({"lang_set_en", "lang_set_ru"}))
+async def lang_set_cb(cb: CallbackQuery):
+    uid = cb.from_user.id
+    new_lang = "en" if cb.data == "lang_set_en" else "ru"
+    set_lang(uid, new_lang)
+    coins = get_coins(uid)
+    await cb.message.edit_text(
+        build_main_menu_text(coins, new_lang),
+        reply_markup=build_main_menu_kb(coins, new_lang), parse_mode="HTML"
+    )
+    await cb.message.answer(t("lang_changed", new_lang), reply_markup=get_kb(uid, new_lang))
+    await cb.answer()
 
 # ── Audio placeholder ─────────────────────────────────────────
 @dp.callback_query(F.data == "cat_audio")
 async def audio_coming_soon(cb: CallbackQuery):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "◌  <b>Audio & Voice</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Coming soon.\n\n"
-        "  We are integrating voice synthesis\n"
-        "  and music generation tools.\n\n"
-        "  Stay tuned.",
-        reply_markup=kb([InlineKeyboardButton(text="⌂  Main Menu", callback_data="main_menu")]),
+        f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_body', lang)}",
+        reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
         parse_mode="HTML"
     )
 
 # ── Pricing ───────────────────────────────────────────────────
 @dp.callback_query(F.data == "pricing_menu")
 async def pricing_menu(cb: CallbackQuery):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "◎  <b>Pricing</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  1 coin  =  <b>$0.05</b>\n\n"
-        "  Select a category to view rates:",
+        f"{t('pricing_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('pricing_body', lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="▸  Image Pricing", callback_data="price_images")],
-            [InlineKeyboardButton(text="▸  Video Pricing", callback_data="price_video")],
-            [InlineKeyboardButton(text="⌂  Main Menu",     callback_data="main_menu")],
+            [InlineKeyboardButton(text=t("btn_image_pricing", lang), callback_data="price_images")],
+            [InlineKeyboardButton(text=t("btn_video_pricing", lang), callback_data="price_video")],
+            [InlineKeyboardButton(text=t("btn_back", lang),          callback_data="main_menu")],
         ),
         parse_mode="HTML"
     )

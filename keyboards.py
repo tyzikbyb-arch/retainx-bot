@@ -1,10 +1,14 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
 def back_btn(callback: str, label: str = "← Back") -> InlineKeyboardButton:
     return InlineKeyboardButton(text=label, callback_data=callback)
 
 def menu_btn() -> InlineKeyboardButton:
     return InlineKeyboardButton(text="⌂  Main Menu", callback_data="main_menu")
+
+def lang_btn(lang: str = "en") -> InlineKeyboardButton:
+    from i18n import t
+    return InlineKeyboardButton(text=t("btn_language", lang), callback_data="lang_menu")
 
 def kb(*rows) -> InlineKeyboardMarkup:
     """Helper: pass lists of InlineKeyboardButton as positional args."""
@@ -16,3 +20,16 @@ def kb_back_menu(back_cb: str) -> InlineKeyboardMarkup:
 def chunked(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i+n]
+
+def client_kb(lang: str = "en") -> ReplyKeyboardMarkup:
+    from i18n import CLIENT_BUTTONS
+    b = CLIENT_BUTTONS
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=b["main_menu"][lang]), KeyboardButton(text=b["wallet"][lang])],
+            [KeyboardButton(text=b["video"][lang]), KeyboardButton(text=b["images"][lang]), KeyboardButton(text=b["audio"][lang])],
+            [KeyboardButton(text=b["orders"][lang]), KeyboardButton(text=b["support"][lang])],
+        ],
+        resize_keyboard=True,
+        persistent=True,
+    )

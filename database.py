@@ -19,7 +19,8 @@ def init_db():
                     uid BIGINT PRIMARY KEY,
                     coins INTEGER DEFAULT 0,
                     referred_by BIGINT DEFAULT NULL,
-                    joined INTEGER DEFAULT 0
+                    joined INTEGER DEFAULT 0,
+                    lang TEXT DEFAULT 'en'
                 )
             """)
             cur.execute("""
@@ -41,6 +42,10 @@ def init_db():
             try:
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS file_id TEXT DEFAULT NULL")
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS file_type TEXT DEFAULT NULL")
+            except Exception:
+                pass
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'en'")
             except Exception:
                 pass
             cur.execute("""
@@ -126,6 +131,23 @@ def get_referred_by(uid: int):
             cur.execute("SELECT referred_by FROM users WHERE uid = %s", (uid,))
             row = cur.fetchone()
             return row[0] if row else None
+
+def get_lang(uid: int) -> str:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT lang FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return row[0] if row and row[0] else "en"
+
+def set_lang(uid: int, lang: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (uid, coins, lang, joined)
+                VALUES (%s, 0, %s, %s)
+                ON CONFLICT (uid) DO UPDATE SET lang = %s
+            """, (uid, lang, int(time.time()), lang))
+        conn.commit()
 
 # ── Order functions ───────────────────────────────────────────
 def create_order(user_id, username, tool, params, coins, price_usd) -> int:
