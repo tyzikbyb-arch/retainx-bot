@@ -3,8 +3,9 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from keyboards import kb, back_btn, menu_btn, chunked
-from handlers.attachments import get_attach_config, has_attachments
-from database import get_coins, spend_coins, create_order
+from handlers.attachments import get_attach_config, has_attachments, get_hint, get_prompt_label
+from database import get_coins, spend_coins, create_order, get_lang
+from i18n import t
 from config import (
     usd_to_coins,
     SEEDANCE_20_PRICES, SEEDANCE_20_FAST_PRICES, HAPPY_HORSE_PRICES,
@@ -99,12 +100,13 @@ VIDEO_SUBCATS = {
     "Kling":     ["kl30","kl03","klmc","klve"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
-SUBCAT_LABELS = {
-    "Standard": "▸  Standard Video",
-    "Premium":  "▸  Premium Video",
-    "Kling":    "▸  Kling Video",
-    "Avatar":   "▸  Avatar & Dubbing",
-}
+def subcat_label(sub: str, lang: str = "en") -> str:
+    return {
+        "Standard": t("vid_sub_standard", lang),
+        "Premium":  t("vid_sub_premium", lang),
+        "Kling":    t("vid_sub_kling", lang),
+        "Avatar":   t("vid_sub_avatar", lang),
+    }.get(sub, sub)
 
 def get_price_table(tid: str):
     return {
@@ -172,41 +174,41 @@ HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl
 @router.callback_query(F.data == "cat_video")
 async def video_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
-    buttons = [[InlineKeyboardButton(text=SUBCAT_LABELS[s], callback_data=f"vsub_{s}")] for s in VIDEO_SUBCATS]
-    buttons.append([back_btn("main_menu", "⌂  Main Menu")])
+    lang = get_lang(cb.from_user.id)
+    buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in VIDEO_SUBCATS]
+    buttons.append([back_btn("main_menu", t("menu_main_menu", lang))])
     await cb.message.edit_text(
-        "◈  <b>Video Generation</b>\n"
+        f"{t('vid_menu_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Select a category:",
+        f"{t('vid_select_category', lang)}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vsub_"))
 async def video_subcat(cb: CallbackQuery, state: FSMContext):
     sub = cb.data[5:]
+    lang = get_lang(cb.from_user.id)
     tids = VIDEO_SUBCATS.get(sub, [])
-    buttons = [[InlineKeyboardButton(text=TOOL_IDS[t], callback_data=f"vt_{t}")] for t in tids]
-    buttons.append([back_btn("cat_video"), menu_btn()])
+    buttons = [[InlineKeyboardButton(text=TOOL_IDS[tid], callback_data=f"vt_{tid}")] for tid in tids]
+    buttons.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        f"▸  <b>{SUBCAT_LABELS.get(sub, sub)}</b>\n"
+        f"▸  <b>{subcat_label(sub, lang)}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Select a model:",
+        f"{t('vid_select_model', lang)}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
     await state.update_data(v_sub=sub)
 
 # ── Tool selected ─────────────────────────────────────────────
-def _sd_attach_menu(coins: int = 0) -> str:
+def _sd_attach_menu(coins: int = 0, lang: str = "en") -> str:
     return (
         "◈  <b>Seedance 2.0</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Attach reference files (optional)\n"
-        "  or skip directly to your prompt.\n\n"
-        "  ⚠️  Start/End Frame cannot be combined\n"
-        "  with other attachment types."
+        f"  {t('vid_attach_optional_inline', lang)}\n\n"
+        f"{t('vid_sd_attach_warning', lang)}"
     )
 
-def _sd_attach_kb(data: dict) -> list:
+def _sd_attach_kb(data: dict, lang: str = "en") -> list:
     mode = data.get("sd_mode", "free")  # "startend" or "free"
     imgs = data.get("sd_imgs", [])
     vids = data.get("sd_vids", [])
@@ -217,42 +219,43 @@ def _sd_attach_kb(data: dict) -> list:
     buttons = []
     if mode != "free":
         # Start/End mode active
-        s_label = f"✓ Start Frame" if start else "◈  Start Frame"
-        e_label = f"✓ End Frame" if end else "◈  End Frame"
+        s_label = f"✓ {t('vid_btn_start_frame', lang)}" if start else f"◈  {t('vid_btn_start_frame', lang)}"
+        e_label = f"✓ {t('vid_btn_end_frame', lang)}" if end else f"◈  {t('vid_btn_end_frame', lang)}"
         buttons.append([InlineKeyboardButton(text=s_label, callback_data="sd_set_start")])
         buttons.append([InlineKeyboardButton(text=e_label, callback_data="sd_set_end")])
-        buttons.append([InlineKeyboardButton(text="✕  Clear Start/End", callback_data="sd_clear_startend")])
+        buttons.append([InlineKeyboardButton(text=t("vid_btn_clear_startend", lang), callback_data="sd_clear_startend")])
     else:
         # Free mode
-        img_label = f"◈  Image Ref  ({len(imgs)}/9)" if imgs else "◈  Image Reference"
-        vid_label = f"◈  Video Ref  ({len(vids)}/3)" if vids else "◈  Video Reference"
-        aud_label = f"◈  Audio File  ({len(auds)}/3)" if auds else "◈  Audio File"
+        img_label = t("vid_btn_image_ref", lang, count=len(imgs), max=9) if imgs else t("vid_btn_image_reference", lang)
+        vid_label = t("vid_btn_video_ref", lang, count=len(vids), max=3) if vids else t("vid_btn_video_reference", lang)
+        aud_label = t("vid_btn_audio_file", lang, count=len(auds), max=3) if auds else t("vid_btn_audio_file_plain", lang)
         buttons.append([InlineKeyboardButton(text=img_label, callback_data="sd_add_imgs")])
         buttons.append([InlineKeyboardButton(text=vid_label, callback_data="sd_add_vids")])
         buttons.append([InlineKeyboardButton(text=aud_label, callback_data="sd_add_auds")])
         if not (imgs or vids or auds):
-            buttons.append([InlineKeyboardButton(text="◈  Start & End Frame", callback_data="sd_startend_mode")])
+            buttons.append([InlineKeyboardButton(text=t("vid_btn_start_end_frame", lang), callback_data="sd_startend_mode")])
 
     has_any = start or end or imgs or vids or auds
-    prompt_label = f"✓  Write Prompt →" if has_any else "▸  Skip — Write Prompt"
+    prompt_label = t("vid_btn_write_prompt", lang) if has_any else t("vid_btn_skip_write_prompt", lang)
     buttons.append([InlineKeyboardButton(text=prompt_label, callback_data="sd_to_prompt")])
-    buttons.append([back_btn("vt_sd20"), menu_btn()])  # sd20/sd20f share same menu
+    buttons.append([back_btn("vt_sd20", lang=lang), menu_btn(lang)])  # sd20/sd20f share same menu
     return buttons
 
 @router.callback_query(F.data.startswith("vt_"))
 async def tool_selected(cb: CallbackQuery, state: FSMContext):
     tid = cb.data[3:]
+    lang = get_lang(cb.from_user.id)
     if tid not in TOOL_IDS:
-        await cb.answer("Unknown tool")
+        await cb.answer(t("vid_unknown_tool_alert", lang))
         return
     name = TOOL_IDS[tid]
     await state.update_data(v_tid=tid, v_tool=name)
 
     # Fixed price tools
     fixed = {
-        "klmc": ({"Resolution":"1080p","Duration":"30 sec"}, 1.00),
-        "klve": ({"Resolution":"1080p","Duration":"10 sec"}, 0.25),
-        "fab1": ({"Type":"Avatar Video"}, 0.90),
+        "klmc": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"30 {t('vid_sec_word', lang)}"}, 1.00),
+        "klve": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"10 {t('vid_sec_word', lang)}"}, 0.25),
+        "fab1": ({t("vid_type_word", lang): t("vid_avatar_video_word", lang)}, 0.90),
         # omni, aur1 handled separately
     }
     if tid in fixed:
@@ -272,9 +275,9 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
                 f"━━━━━━━━━━━━━━━━━━━━\n\n"
                 f"  {TOOL_DESCS.get(name,'')}\n\n"
                 f"{lines}\n"
-                f"  Cost           <b>{coins} coins</b>\n\n"
-                "Enter your prompt:",
-                reply_markup=kb([back_btn(f"vsub_{sub}"), menu_btn()]), parse_mode="HTML"
+                f"  {t('vid_cost_label_short', lang, coins=coins)}\n\n"
+                f"{t('vid_enter_prompt', lang)}",
+                reply_markup=kb([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)]), parse_mode="HTML"
             )
             await state.set_state(VideoStates.entering_prompt)
         return
@@ -320,18 +323,19 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
     resolutions = get_resolutions(tid)
     sub = (await state.get_data()).get("v_sub","cat_video")
     buttons = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in resolutions]
-    buttons.append([back_btn(f"vsub_{sub}"), menu_btn()])
+    buttons.append([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {TOOL_DESCS.get(name,'')}\n\n"
-        "  Select resolution:",
+        f"{t('vid_select_resolution', lang)}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vr_"))
 async def res_selected(cb: CallbackQuery, state: FSMContext):
     res = cb.data[3:]
+    lang = get_lang(cb.from_user.id)
     await state.update_data(v_res=res)
     data = await state.get_data()
     tid = data.get("v_tid","")
@@ -339,11 +343,11 @@ async def res_selected(cb: CallbackQuery, state: FSMContext):
     ars = get_aspect_ratios(tid)
     buttons = [InlineKeyboardButton(text=ar, callback_data=f"va_{ar.replace(':','x')}") for ar in ars]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn(f"vt_{tid}"), menu_btn()])
+    rows.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{name}</b>  —  {res}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select aspect ratio:",
+        f"{t('vid_select_aspect_ratio', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
@@ -358,6 +362,7 @@ async def ar_selected(cb: CallbackQuery, state: FSMContext):
     await show_duration(cb, state, tid, res, ar, name)
 
 async def show_duration(cb, state, tid, res, ar, name):
+    lang = get_lang(cb.from_user.id)
     price_table = get_price_table(tid)
     durations = get_durations(tid)
     buttons = []
@@ -369,17 +374,18 @@ async def show_duration(cb, state, tid, res, ar, name):
             callback_data=f"vd_{d}"
         ))
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn(f"vr_{res}"), menu_btn()])
+    rows.append([back_btn(f"vr_{res}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{name}</b>  —  {res}  {ar}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Select duration:",
+        f"{t('vid_select_duration', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vd_"))
 async def dur_selected(cb: CallbackQuery, state: FSMContext):
     dur = int(cb.data[3:])
+    lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     tid  = data.get("v_tid","")
     res  = data.get("v_res","")
@@ -395,12 +401,12 @@ async def dur_selected(cb: CallbackQuery, state: FSMContext):
         await cb.message.edit_text(
             f"◈  <b>{name}</b>  —  {res}  {dur}s\n"
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"  Cost   <b>{coins} coins</b>\n\n"
-            "  Include audio in the video?",
+            f"{t('vid_cost_label_short', lang, coins=coins)}\n\n"
+            f"{t('vid_include_audio', lang)}",
             reply_markup=kb(
-                [InlineKeyboardButton(text="🔊 With Audio", callback_data="vaud_yes"),
-                 InlineKeyboardButton(text="🔇 No Audio",   callback_data="vaud_no")],
-                [back_btn(f"va_{ar.replace(':','x')}"), menu_btn()],
+                [InlineKeyboardButton(text=t("vid_btn_with_audio", lang), callback_data="vaud_yes"),
+                 InlineKeyboardButton(text=t("vid_btn_no_audio", lang),   callback_data="vaud_no")],
+                [back_btn(f"va_{ar.replace(':','x')}", lang=lang), menu_btn(lang)],
             ), parse_mode="HTML"
         )
         return
@@ -423,31 +429,33 @@ async def audio_selected(cb: CallbackQuery, state: FSMContext):
     )
 
 async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
+    lang = get_lang(cb.from_user.id)
+    audio_word = t("vid_audio_yes", lang) if audio else t("vid_audio_no", lang)
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Resolution    {res}\n"
-        f"  Aspect ratio  {ar}\n"
-        f"  Duration       {dur} sec\n"
-        f"  Audio            {'Yes' if audio else 'No'}\n"
-        f"  Cost              <b>{coins} coins</b>\n\n"
-        "Enter your prompt:",
-        reply_markup=kb([back_btn(f"va_{str(ar).replace(':','x')}"), menu_btn()]),
+        f"{t('vid_resolution_label', lang, res=res)}\n"
+        f"{t('vid_aspect_ratio_label', lang, ar=ar)}\n"
+        f"{t('vid_duration_label', lang, dur=dur)}\n"
+        f"{t('vid_audio_label', lang, audio=audio_word)}\n"
+        f"{t('vid_cost_label', lang, coins=coins)}\n\n"
+        f"{t('vid_enter_prompt', lang)}",
+        reply_markup=kb([back_btn(f"va_{str(ar).replace(':','x')}", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.entering_prompt)
 
 # ── Veo Extend ────────────────────────────────────────────────
 async def show_veo_extend(cb, state):
+    lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
-        "◈  <b>Veo 3.1 Extend Video</b>\n"
+        f"{t('vid_extend_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Extend any video clip by 7 seconds.\n\n"
-        "  Select mode:",
+        f"{t('vid_extend_desc', lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text="Fast  —  14◈  (7 sec)", callback_data="vext_Fast")],
-            [InlineKeyboardButton(text="Premium  —  30◈  (7 sec)", callback_data="vext_Premium")],
-            [back_btn("vsub_Premium"), menu_btn()],
+            [InlineKeyboardButton(text=t("vid_extend_fast", lang), callback_data="vext_Fast")],
+            [InlineKeyboardButton(text=t("vid_extend_premium", lang), callback_data="vext_Premium")],
+            [back_btn("vsub_Premium", lang=lang), menu_btn(lang)],
         ), parse_mode="HTML"
     )
 
