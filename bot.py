@@ -5,19 +5,22 @@ from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup,
     ReplyKeyboardMarkup, KeyboardButton
 )
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.memory import MemoryStorage, SimpleEventIsolation
 try:
     from aiogram.fsm.storage.redis import RedisStorage
     import os
     REDIS_URL = os.environ.get("REDIS_URL", "")
     if REDIS_URL:
         storage = RedisStorage.from_url(REDIS_URL)
+        events_isolation = storage.create_isolation()
         print("Using Redis storage")
     else:
         storage = MemoryStorage()
+        events_isolation = SimpleEventIsolation()
         print("Using Memory storage")
 except Exception:
     storage = MemoryStorage()
+    events_isolation = SimpleEventIsolation()
     print("Redis unavailable, using Memory storage")
 
 from aiogram.fsm.context import FSMContext
@@ -30,7 +33,7 @@ from handlers import credits, images, video, admin as admin_handler, orders as o
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(storage=storage)
+dp = Dispatcher(storage=storage, events_isolation=events_isolation)
 
 dp.include_router(credits.router)
 dp.include_router(images.router)
