@@ -1,10 +1,14 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
-def back_btn(callback: str, label: str = "← Back") -> InlineKeyboardButton:
+def back_btn(callback: str, label: str = None, lang: str = "en") -> InlineKeyboardButton:
+    if label is None:
+        from i18n import t
+        label = t("btn_back", lang)
     return InlineKeyboardButton(text=label, callback_data=callback)
 
-def menu_btn() -> InlineKeyboardButton:
-    return InlineKeyboardButton(text="⌂  Main Menu", callback_data="main_menu")
+def menu_btn(lang: str = "en") -> InlineKeyboardButton:
+    from i18n import t
+    return InlineKeyboardButton(text=t("menu_main_menu", lang), callback_data="main_menu")
 
 def lang_btn(lang: str = "en") -> InlineKeyboardButton:
     from i18n import t
