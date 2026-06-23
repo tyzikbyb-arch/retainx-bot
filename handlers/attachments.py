@@ -41,8 +41,12 @@ TOOL_ATTACHMENTS = {
     "wan27": {  # Wan 2.7 — Artlist's UI doesn't expose Image Reference for
                 # this model (confirmed live, order #368: button rendered
                 # as disabled and never becomes selectable), so the bot
-                # offers Audio File instead of img_refs.
-        "start_frame": True, "end_frame": True,
+                # offers Audio File instead of img_refs. Same story for End
+                # Frame (order #369: Start Frame attached fine, but the End
+                # Frame toolbar placeholder stayed aria-disabled and the
+                # worker correctly refused to click it) — Wan 2.7 only
+                # supports a single Start Frame, no End Frame.
+        "start_frame": True, "end_frame": False,
         "aud_refs": 1,
         "exclusive_startend": True,
     },
