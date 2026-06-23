@@ -65,14 +65,14 @@ TOOL_ATTACHMENTS = {
         "start_frame": True, "end_frame": True,
         "exclusive_startend": True,
     },
-    "veo31f": { # Veo 3.1 Fast
+    "veo31f": { # Veo 3.1 Fast — no Image Reference tab in Artlist's UI
+                # (confirmed live by hand, same as veo31/#373).
         "start_frame": True, "end_frame": True,
-        "img_refs": 3,
         "exclusive_startend": True,
     },
-    "veo31l": { # Veo 3.1 Lite
+    "veo31l": { # Veo 3.1 Lite — no Image Reference tab in Artlist's UI
+                # (confirmed live by hand, same as veo31/#373).
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
         "exclusive_startend": True,
     },
     "veo31e": { # Veo 3.1 Extend — requires video
