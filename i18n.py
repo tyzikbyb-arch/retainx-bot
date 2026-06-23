@@ -162,11 +162,6 @@ STR = {
         "vid_estimated_delivery": "  Estimated delivery  ~2 minutes",
         "vid_will_deliver": "  Your result will be sent here.",
 
-        "vid_extend_title": "◈  <b>Veo 3.1 Extend Video</b>",
-        "vid_extend_desc": "  Extend any video clip by 7 seconds.\n\n  Select mode:",
-        "vid_extend_fast": "Fast  —  14◈  (7 sec)",
-        "vid_extend_premium": "Premium  —  30◈  (7 sec)",
-
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  Resolution: 720p\n\n  Select duration:",
 
@@ -578,11 +573,6 @@ STR = {
         "vid_coins_deducted": "  Монеты      <b>{coins} списано</b>",
         "vid_estimated_delivery": "  Ожидаемое время  ~2 минуты",
         "vid_will_deliver": "  Результат будет отправлен сюда.",
-
-        "vid_extend_title": "◈  <b>Veo 3.1 Extend Video</b>",
-        "vid_extend_desc": "  Продлите любой видеоклип на 7 секунд.\n\n  Выберите режим:",
-        "vid_extend_fast": "Fast  —  14◈  (7 сек)",
-        "vid_extend_premium": "Premium  —  30◈  (7 сек)",
 
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  Разрешение: 720p\n\n  Выберите длительность:",

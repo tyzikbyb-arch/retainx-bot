@@ -75,11 +75,6 @@ TOOL_ATTACHMENTS = {
         "start_frame": True, "end_frame": True,
         "exclusive_startend": True,
     },
-    "veo31e": { # Veo 3.1 Extend — requires video
-        "vid_refs": 1, "vid_ref_required": True,
-        "prompt_label": "Upload a 2–30 second video and describe what happens next",
-        "hint": "Works best with videos created using Veo models",
-    },
     "sora2": {  # Sora 2 Pro — no End Frame button for this tool
         "start_frame": True, "end_frame": False,
         "hint": "Sora 2 Pro is highly unstable. Switch to another model if it fails.",
@@ -196,8 +191,6 @@ def file_too_large(msg) -> bool:
 _HINT_RU = {
     "Attach a Start Frame to continue — it's required for this model.":
         "Прикрепите Start Frame, чтобы продолжить — для этой модели это обязательно.",
-    "Works best with videos created using Veo models":
-        "Лучше всего работает с видео, созданными моделями Veo",
     "Sora 2 Pro is highly unstable. Switch to another model if it fails.":
         "Sora 2 Pro работает нестабильно. Если генерация не удалась, попробуйте другую модель.",
     "Upload an image reference and/or a motion reference video":
@@ -217,8 +210,6 @@ _HINT_RU = {
 }
 
 _PROMPT_LABEL_RU = {
-    "Upload a 2–30 second video and describe what happens next":
-        "Загрузите видео длительностью 2–30 секунд и опишите, что будет дальше",
     "Upload a 3–10 second video and describe the edits you want to make":
         "Загрузите видео длительностью 3–10 секунд и опишите, какие правки нужны",
     "Describe your character's expressions and gestures (optional)":

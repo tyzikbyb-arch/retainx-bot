@@ -51,7 +51,6 @@ TOOL_IDS = {
     "veo31":  "Veo 3.1",
     "veo31f": "Veo 3.1 Fast",
     "veo31l": "Veo 3.1 Lite",
-    "veo31e": "Veo 3.1 Extend Video",
     "sora2":  "Sora 2 Pro",
     "ltx23":  "LTX 2.3 Pro",
     "kl30":   "Kling 3.0",
@@ -77,7 +76,6 @@ TOOL_DESCS = {
     "Veo 3.1":                 "Google's flagship video model — cinematic quality up to 4K with audio.",
     "Veo 3.1 Fast":            "Veo 3.1 express mode — same quality, faster render times.",
     "Veo 3.1 Lite":            "Lightweight Veo model for quick, cost-effective generation.",
-    "Veo 3.1 Extend":          "Extend any existing video clip by 7 seconds using Veo.",
     "Sora 2 Pro":              "OpenAI's advanced video generation model with premium realism.",
     "LTX 2.3 Pro":             "High-framerate professional video — up to 4K at 50fps.",
     "Kling 3.0":               "One of the most powerful AI video models of 2026. Realistic motion, character consistency, built-in audio, image-to-video, up to 4K.",
@@ -96,7 +94,7 @@ TOOL_DESCS = {
 
 VIDEO_SUBCATS = {
     "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
-    "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
+    "Premium":   ["veo31","veo31f","veo31l","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc","klve"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
@@ -282,10 +280,6 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
             await state.set_state(VideoStates.entering_prompt)
         return
 
-    if tid == "veo31e":
-        await show_veo_extend(cb, state)
-        return
-
     if tid == "grok":
         await show_grok(cb, state)
         return
@@ -444,31 +438,6 @@ async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.entering_prompt)
-
-# ── Veo Extend ────────────────────────────────────────────────
-async def show_veo_extend(cb, state):
-    lang = get_lang(cb.from_user.id)
-    await cb.message.edit_text(
-        f"{t('vid_extend_title', lang)}\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('vid_extend_desc', lang)}",
-        reply_markup=kb(
-            [InlineKeyboardButton(text=t("vid_extend_fast", lang), callback_data="vext_Fast")],
-            [InlineKeyboardButton(text=t("vid_extend_premium", lang), callback_data="vext_Premium")],
-            [back_btn("vsub_Premium", lang=lang), menu_btn(lang)],
-        ), parse_mode="HTML"
-    )
-
-@router.callback_query(F.data.startswith("vext_"))
-async def veo_extend(cb: CallbackQuery, state: FSMContext):
-    mode = cb.data[5:]
-    usd = 0.70 if mode == "Fast" else 1.50
-    coins = usd_to_coins(usd)
-    await state.update_data(v_tool="Veo 3.1 Extend", v_tid="veo31e", v_coins=coins, v_usd=usd, v_ext_mode=mode,
-                            att_mode="free", att_start=None, att_end=None,
-                            att_imgs=[], att_vids=[], att_auds=[])
-    await _show_attach_menu(cb, state)
-    await state.set_state(VideoStates.attach_mode)
 
 # ── Grok ─────────────────────────────────────────────────────
 async def show_grok(cb, state):
