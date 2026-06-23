@@ -59,9 +59,10 @@ TOOL_ATTACHMENTS = {
 
     # ── Premium video ─────────────────────────────────────────────────────────
 
-    "veo31": {  # Veo 3.1
+    "veo31": {  # Veo 3.1 — Artlist's UI doesn't expose Image Reference for
+                # this model (confirmed live by hand, order #373: button
+                # rendered as disabled in the panel), so don't offer it.
         "start_frame": True, "end_frame": True,
-        "img_refs": 3,
         "exclusive_startend": True,
     },
     "veo31f": { # Veo 3.1 Fast
