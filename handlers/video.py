@@ -46,7 +46,7 @@ class VideoStates(StatesGroup):
 TOOL_IDS = {
     "sd20":   "Seedance 2.0",
     "sd20f":  "Seedance 2.0 Fast",
-    "hh10":   "Happy Horse 1.0",
+    "hh10":   "Happy Horse 1.1",
     "wan27":  "Wan 2.7",
     "veo31":  "Veo 3.1",
     "veo31f": "Veo 3.1 Fast",
@@ -72,7 +72,7 @@ ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 TOOL_DESCS = {
     "Seedance 2.0":            "High-quality cinematic video generation up to 1080p with optional audio.",
     "Seedance 2.0 Fast":       "Faster variant of Seedance 2.0 — up to 720p, quicker turnaround.",
-    "Happy Horse 1.0":         "Smooth motion video generation with natural movement, up to 1080p.",
+    "Happy Horse 1.1":         "Smooth motion video generation with natural movement, up to 1080p.",
     "Wan 2.7":                 "Versatile multi-ratio video model with wide format support.",
     "Veo 3.1":                 "Google's flagship video model — cinematic quality up to 4K with audio.",
     "Veo 3.1 Fast":            "Veo 3.1 express mode — same quality, faster render times.",

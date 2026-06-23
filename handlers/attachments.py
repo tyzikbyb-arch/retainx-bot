@@ -33,7 +33,7 @@ TOOL_ATTACHMENTS = {
         "img_refs": 9, "vid_refs": 3, "aud_refs": 3,
         "exclusive_startend": True,
     },
-    "hh10": {   # Happy Horse 1.0 — no End Frame button for this tool
+    "hh10": {   # Happy Horse 1.1 — no End Frame button for this tool
         "start_frame": True, "end_frame": False,
         "img_refs": 1,
         "exclusive_startend": True,
