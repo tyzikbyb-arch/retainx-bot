@@ -1203,10 +1203,22 @@ def _build_attach_buttons(tid: str, data: dict, lang: str = "en") -> list:
         if exclusive and (start or end_):
             buttons.append([InlineKeyboardButton(text=t("vid_btn_clear", lang), callback_data="att_clear_startend")])
 
-    # For exclusive tools, show img/vid/aud only if not in startend mode
+    # Audio File doesn't conflict with Start & End Frame the way Image/Video
+    # Reference do (those genuinely share one exclusive Artlist input slot
+    # with Start&End Frame — see the #310/#339/#340/#363 investigations).
+    # So Audio stays visible/addable in both modes, and no longer blocks the
+    # "Start & End Frame" entry point from showing once attached.
     if exclusive and mode == "startend":
-        pass  # hide other options
+        if max_auds > 0:
+            aud_label = t("vid_btn_audio_file", lang, count=len(auds), max=max_auds) if auds else t("vid_btn_audio_file_max", lang, max=max_auds)
+            buttons.append([InlineKeyboardButton(text=aud_label, callback_data="att_add_auds")])
     else:
+        # Start & End Frame entry listed first so Audio File renders below it.
+        if start_frame and exclusive and not (imgs or vids):
+            se_text = t("vid_btn_start_end_frame", lang) if end_frame else t("vid_btn_start_frame_only", lang)
+            se_label = se_text.replace("◈", "✓", 1) if (start or end_) else se_text
+            buttons.append([InlineKeyboardButton(text=se_label, callback_data="att_startend_mode")])
+
         if max_imgs > 0 and not (exclusive and (start or end_)):
             img_label = t("vid_btn_image_ref", lang, count=len(imgs), max=max_imgs) if imgs else t("vid_btn_image_reference_max", lang, max=max_imgs)
             buttons.append([InlineKeyboardButton(text=img_label, callback_data="att_add_imgs")])
@@ -1217,12 +1229,6 @@ def _build_attach_buttons(tid: str, data: dict, lang: str = "en") -> list:
         if max_auds > 0:
             aud_label = t("vid_btn_audio_file", lang, count=len(auds), max=max_auds) if auds else t("vid_btn_audio_file_max", lang, max=max_auds)
             buttons.append([InlineKeyboardButton(text=aud_label, callback_data="att_add_auds")])
-
-        # Show startend option only if nothing else attached
-        if start_frame and exclusive and not (imgs or vids or auds):
-            se_text = t("vid_btn_start_end_frame", lang) if end_frame else t("vid_btn_start_frame_only", lang)
-            se_label = se_text.replace("◈", "✓", 1) if (start or end_) else se_text
-            buttons.append([InlineKeyboardButton(text=se_label, callback_data="att_startend_mode")])
 
     # Proceed button
     has_any = start or end_ or imgs or vids or auds
