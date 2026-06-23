@@ -38,9 +38,12 @@ TOOL_ATTACHMENTS = {
         "img_refs": 1,
         "exclusive_startend": True,
     },
-    "wan27": {  # Wan 2.7
+    "wan27": {  # Wan 2.7 — Artlist's UI doesn't expose Image Reference for
+                # this model (confirmed live, order #368: button rendered
+                # as disabled and never becomes selectable), so the bot
+                # offers Audio File instead of img_refs.
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
+        "aud_refs": 1,
         "exclusive_startend": True,
     },
     "grok": {   # Grok Imagine 1.5 — Start Frame only, mandatory. No End Frame
