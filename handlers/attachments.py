@@ -92,9 +92,9 @@ TOOL_ATTACHMENTS = {
         "img_refs": 1,
         "exclusive_startend": True,
     },
-    "kl03": {   # Kling 0.3
+    "kl03": {   # Kling 0.3 — Artlist's UI shows Image Reference as disabled
+                # for this model (confirmed live, order #401), so don't offer it.
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
         "exclusive_startend": True,
     },
     "klmc": {   # Kling 3.0 Motion Control
