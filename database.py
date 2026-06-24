@@ -49,6 +49,15 @@ def init_db():
             except Exception:
                 pass
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS yoomoney_payments (
+                    operation_id TEXT PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    amount_rub REAL NOT NULL,
+                    coins INTEGER NOT NULL,
+                    created INTEGER NOT NULL
+                )
+            """)
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS artlist_accounts (
                     id SERIAL PRIMARY KEY,
                     label TEXT,
@@ -308,6 +317,23 @@ def remove_artlist_account(account_id: int):
         with conn.cursor() as cur:
             cur.execute("DELETE FROM artlist_accounts WHERE id = %s", (account_id,))
         conn.commit()
+
+def record_yoomoney_payment(operation_id: str, user_id: int, amount_rub: float, coins: int) -> bool:
+    """Insert payment record. Returns True if new, False if duplicate operation_id."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            try:
+                cur.execute(
+                    "INSERT INTO yoomoney_payments (operation_id, user_id, amount_rub, coins, created) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    (operation_id, user_id, amount_rub, coins, int(time.time()))
+                )
+                conn.commit()
+                return True
+            except Exception:
+                conn.rollback()
+                return False
+
 
 # Initialize on import
 try:

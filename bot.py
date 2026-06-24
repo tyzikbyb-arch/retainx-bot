@@ -1,5 +1,6 @@
-import asyncio, logging
+import asyncio, logging, os
 from aiogram import Bot, Dispatcher, F
+from aiohttp import web
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup,
@@ -553,6 +554,16 @@ async def send_result_cmd(msg: Message, state: FSMContext):
 async def main():
     print("RetainX Studio — started ◈")
     await bot.delete_webhook(drop_pending_updates=True)
+
+    from handlers.yoomoney import yoomoney_webhook
+    app = web.Application()
+    app.router.add_post("/yoomoney/webhook", yoomoney_webhook)
+    port = int(os.environ.get("PORT", 8080))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    await web.TCPSite(runner, "0.0.0.0", port).start()
+    print(f"YooMoney webhook server on :{port}")
+
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 if __name__ == "__main__":

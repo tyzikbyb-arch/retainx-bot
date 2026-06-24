@@ -2,9 +2,13 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = 5613493357
 USDT_WALLET = "TGZu7K7kfqtNMTqCABfByLceuA49qRvLgo"
+YOOMONEY_WALLET = "4100119559974790"
+YOOMONEY_SECRET = os.environ.get("YOOMONEY_SECRET", "")
 
 COIN_TO_USD = 0.05        # 1 coin = $0.05
 USD_TO_COINS = 20         # $1 = 20 coins
+COIN_TO_RUB = 3.70        # 1 coin = 3.70 ₽
+MIN_TOPUP_RUB = 185.0     # minimum 50 coins
 WELCOME_BONUS = 20        # coins on first start
 MIN_TOPUP_USD = 2.0       # minimum top-up
 REFERRAL_PERCENT = 20     # 20% of referral top-up

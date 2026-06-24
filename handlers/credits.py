@@ -4,7 +4,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN
+from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, YOOMONEY_WALLET, COIN_TO_RUB, MIN_TOPUP_RUB
 from database import get_coins, add_coins, get_referred_by, get_lang
 from keyboards import kb, back_btn, menu_btn
 from i18n import t
@@ -16,6 +16,7 @@ TRON_API = "https://apilist.tronscanapi.com/api/transaction-info"
 class TopupStates(StatesGroup):
     entering_amount = State()
     entering_tx = State()
+    entering_rub_amount = State()
 
 # ── Wallet ────────────────────────────────────────────────────
 async def show_wallet(target, state: FSMContext = None):
@@ -66,6 +67,7 @@ async def topup_start(cb: CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text=t("wallet_btn_10", lang), callback_data="topup_amount_10"),
          InlineKeyboardButton(text=t("wallet_btn_20", lang), callback_data="topup_amount_20")],
         [InlineKeyboardButton(text=t("wallet_btn_custom", lang), callback_data="topup_custom")],
+        [InlineKeyboardButton(text=t("wallet_btn_yoomoney", lang), callback_data="topup_yoomoney")],
         [back_btn("wallet", lang=lang), menu_btn(lang)],
     )
     await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
@@ -291,6 +293,62 @@ async def successful_stars_payment(msg: Message):
     await msg.answer(
         f"{t('wallet_stars_success_title', lang)}\n\n"
         f"{t('wallet_stars_success_body', lang, coins=coins, coins2=get_coins(uid))}",
+        parse_mode="HTML"
+    )
+
+# ── YooMoney (RUB) flow ───────────────────────────────────────
+@router.callback_query(F.data == "topup_yoomoney")
+async def topup_yoomoney_start(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await cb.message.edit_text(
+        f"{t('wallet_yoomoney_title', lang)}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('wallet_yoomoney_rate_line', lang)}\n"
+        f"{t('wallet_yoomoney_min_line', lang)}\n\n"
+        f"{t('wallet_yoomoney_prompt', lang)}",
+        reply_markup=kb([back_btn("topup_start", lang=lang), menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+    await state.set_state(TopupStates.entering_rub_amount)
+
+@router.message(TopupStates.entering_rub_amount)
+async def receive_rub_amount(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
+    text = msg.text.strip().replace(",", ".").replace("₽", "").replace(" ", "")
+    try:
+        amount_rub = float(text)
+    except ValueError:
+        await msg.answer(t("wallet_enter_number_error", lang))
+        return
+
+    if amount_rub < MIN_TOPUP_RUB:
+        await msg.answer(t("wallet_yoomoney_min_error", lang, min=int(MIN_TOPUP_RUB)))
+        return
+
+    coins = math.floor(amount_rub / COIN_TO_RUB)
+    uid = msg.from_user.id
+    pay_url = (
+        f"https://yoomoney.ru/quickpay/confirm.xml"
+        f"?receiver={YOOMONEY_WALLET}"
+        f"&quickpay-form=shop"
+        f"&sum={amount_rub:.2f}"
+        f"&label={uid}"
+        f"&targets=RetainX+пополнение"
+    )
+    await state.clear()
+    await msg.answer(
+        f"{t('wallet_yoomoney_confirm_title', lang)}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('wallet_yoomoney_confirm_amount', lang, amount=f'{amount_rub:.2f}')}\n"
+        f"{t('wallet_yoomoney_confirm_coins', lang, coins=coins)}\n\n"
+        f"{t('wallet_yoomoney_confirm_note', lang)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(
+                text=t("wallet_btn_pay_yoomoney", lang, amount=f"{amount_rub:.0f}"),
+                url=pay_url,
+            )],
+            [menu_btn(lang)],
+        ),
         parse_mode="HTML"
     )
 
