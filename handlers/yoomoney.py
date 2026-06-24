@@ -61,7 +61,7 @@ async def yoomoney_webhook(request: web.Request) -> web.Response:
 
         try:
             from handlers.credits import _handle_referral_bonus
-            asyncio.create_task(_handle_referral_bonus(user_id, coins))
+            asyncio.create_task(_handle_referral_bonus(user_id, coins, payment_type="yoomoney"))
         except Exception as e:
             log.warning(f"Referral bonus failed: {e}")
 

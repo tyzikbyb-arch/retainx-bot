@@ -48,6 +48,33 @@ def init_db():
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'en'")
             except Exception:
                 pass
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_balance REAL DEFAULT 0")
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS topup_count INTEGER DEFAULT 0")
+            except Exception:
+                pass
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS referral_earnings (
+                    id SERIAL PRIMARY KEY,
+                    referrer_id BIGINT NOT NULL,
+                    from_user_id BIGINT NOT NULL,
+                    amount_rub REAL NOT NULL,
+                    percentage INTEGER NOT NULL,
+                    payment_type TEXT NOT NULL,
+                    created INTEGER NOT NULL
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS withdrawal_requests (
+                    id SERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    amount_rub REAL NOT NULL,
+                    requisites TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    created INTEGER NOT NULL,
+                    processed INTEGER DEFAULT NULL
+                )
+            """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS yoomoney_payments (
                     operation_id TEXT PRIMARY KEY,
@@ -317,6 +344,111 @@ def remove_artlist_account(account_id: int):
         with conn.cursor() as cur:
             cur.execute("DELETE FROM artlist_accounts WHERE id = %s", (account_id,))
         conn.commit()
+
+def get_referral_balance(uid: int) -> float:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT referral_balance FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return float(row[0]) if row and row[0] else 0.0
+
+def add_referral_balance(uid: int, amount_rub: float):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (uid, coins, joined, referral_balance)
+                VALUES (%s, 0, %s, %s)
+                ON CONFLICT (uid) DO UPDATE SET referral_balance = users.referral_balance + %s
+            """, (uid, int(time.time()), amount_rub, amount_rub))
+        conn.commit()
+
+def deduct_referral_balance(uid: int, amount_rub: float):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE users SET referral_balance = GREATEST(0, referral_balance - %s) WHERE uid = %s",
+                (amount_rub, uid)
+            )
+        conn.commit()
+
+def increment_topup_count(uid: int) -> int:
+    """Increment topup_count and return the value BEFORE incrementing (0 = first topup)."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT topup_count FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            count = row[0] if row and row[0] else 0
+            cur.execute(
+                "UPDATE users SET topup_count = topup_count + 1 WHERE uid = %s",
+                (uid,)
+            )
+        conn.commit()
+        return count
+
+def add_referral_earning(referrer_id: int, from_user_id: int, amount_rub: float, percentage: int, payment_type: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO referral_earnings (referrer_id, from_user_id, amount_rub, percentage, payment_type, created)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (referrer_id, from_user_id, amount_rub, percentage, payment_type, int(time.time())))
+        conn.commit()
+
+def create_withdrawal_request(uid: int, amount_rub: float, requisites: str) -> int:
+    """Creates request, deducts balance, returns request id."""
+    deduct_referral_balance(uid, amount_rub)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO withdrawal_requests (user_id, amount_rub, requisites, created)
+                VALUES (%s, %s, %s, %s) RETURNING id
+            """, (uid, amount_rub, requisites, int(time.time())))
+            req_id = cur.fetchone()[0]
+        conn.commit()
+        return req_id
+
+def process_withdrawal(req_id: int, status: str):
+    """Mark withdrawal as paid or rejected. On rejection, refunds balance."""
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM withdrawal_requests WHERE id = %s", (req_id,))
+            req = cur.fetchone()
+            if not req:
+                return None
+            cur.execute(
+                "UPDATE withdrawal_requests SET status = %s, processed = %s WHERE id = %s",
+                (status, int(time.time()), req_id)
+            )
+            if status == "rejected":
+                cur.execute(
+                    "UPDATE users SET referral_balance = referral_balance + %s WHERE uid = %s",
+                    (req["amount_rub"], req["user_id"])
+                )
+        conn.commit()
+        return dict(req)
+
+def get_referral_stats(uid: int) -> dict:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT referral_balance FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            balance = float(row[0]) if row and row[0] else 0.0
+            cur.execute(
+                "SELECT COALESCE(SUM(amount_rub), 0) FROM referral_earnings WHERE referrer_id = %s",
+                (uid,)
+            )
+            total_earned = float(cur.fetchone()[0])
+            cur.execute(
+                "SELECT COUNT(*) FROM withdrawal_requests WHERE user_id = %s AND status = 'pending'",
+                (uid,)
+            )
+            pending_withdrawals = cur.fetchone()[0]
+        return {
+            "balance": balance,
+            "total_earned": total_earned,
+            "pending_withdrawals": pending_withdrawals,
+        }
+
 
 def record_yoomoney_payment(operation_id: str, user_id: int, amount_rub: float, coins: int) -> bool:
     """Insert payment record. Returns True if new, False if duplicate operation_id."""

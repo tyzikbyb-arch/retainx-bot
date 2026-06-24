@@ -5,7 +5,9 @@ from aiogram.types import Message, CallbackQuery, LabeledPrice, InlineKeyboardMa
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, YOOMONEY_WALLET, COIN_TO_RUB, MIN_TOPUP_RUB
-from database import get_coins, add_coins, get_referred_by, get_lang
+from database import (get_coins, add_coins, get_referred_by, get_lang,
+                       add_referral_balance, add_referral_earning, increment_topup_count,
+                       get_referral_stats, create_withdrawal_request, process_withdrawal)
 from keyboards import kb, back_btn, menu_btn
 from i18n import t
 
@@ -17,6 +19,11 @@ class TopupStates(StatesGroup):
     entering_amount = State()
     entering_tx = State()
     entering_rub_amount = State()
+
+class WithdrawalStates(StatesGroup):
+    entering_requisites = State()
+
+MIN_WITHDRAWAL_RUB = 300.0
 
 # ── Wallet ────────────────────────────────────────────────────
 async def show_wallet(target, state: FSMContext = None):
@@ -185,7 +192,7 @@ async def receive_tx_hash(msg: Message, state: FSMContext):
         if verified:
             # Auto-credit coins
             add_coins(uid, coins)
-            await _handle_referral_bonus(uid, coins)
+            await _handle_referral_bonus(uid, coins, payment_type="usdt")
             await msg.answer(
                 f"{t('wallet_verified_title', lang)}\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -289,7 +296,7 @@ async def successful_stars_payment(msg: Message):
     coins = int(parts[1])
     uid = msg.from_user.id
     add_coins(uid, coins)
-    await _handle_referral_bonus(uid, coins)
+    await _handle_referral_bonus(uid, coins, payment_type="stars")
     await msg.answer(
         f"{t('wallet_stars_success_title', lang)}\n\n"
         f"{t('wallet_stars_success_body', lang, coins=coins, coins2=get_coins(uid))}",
@@ -362,7 +369,7 @@ async def admin_confirm_topup(cb: CallbackQuery):
     uid = int(uid_str)
     coins = int(coins_str)
     add_coins(uid, coins)
-    await _handle_referral_bonus(uid, coins)
+    await _handle_referral_bonus(uid, coins, payment_type="usdt")
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
     user_lang = get_lang(uid)
@@ -386,38 +393,171 @@ async def admin_reject_topup(cb: CallbackQuery):
     await bot.send_message(uid, t("wallet_topup_rejected", user_lang))
     await cb.message.edit_text(f"✕  Rejected — user {uid}")
 
-async def _handle_referral_bonus(uid: int, coins_added: int):
+async def _handle_referral_bonus(uid: int, coins_added: int, payment_type: str = "unknown"):
+    topup_index = increment_topup_count(uid)  # 0 = first topup, 1+ = subsequent
+    percentage = 20 if topup_index == 0 else 10
     ref_uid = get_referred_by(uid)
     if ref_uid:
-        bonus = round(coins_added * REFERRAL_PERCENT / 100)
-        if bonus > 0:
-            add_coins(ref_uid, bonus)
+        bonus_rub = round(coins_added * COIN_TO_RUB * percentage / 100, 2)
+        if bonus_rub > 0:
+            add_referral_balance(ref_uid, bonus_rub)
+            add_referral_earning(ref_uid, uid, bonus_rub, percentage, payment_type)
             from aiogram import Bot
             bot = Bot(token=BOT_TOKEN)
             ref_lang = get_lang(ref_uid)
             await bot.send_message(
                 ref_uid,
                 f"{t('wallet_referral_bonus_title', ref_lang)}\n\n"
-                f"{t('wallet_referral_bonus_body', ref_lang, bonus=bonus)}",
+                f"{t('wallet_referral_bonus_body', ref_lang, bonus=f'{bonus_rub:.2f}', percentage=percentage)}",
                 parse_mode="HTML"
             )
 
 # ── Referral info ─────────────────────────────────────────────
 @router.callback_query(F.data == "referral_info")
 async def referral_info(cb: CallbackQuery):
-    lang = get_lang(cb.from_user.id)
-    bot_username = "RetainXStudio"
-    link = f"https://t.me/{bot_username}?start=ref_{cb.from_user.id}"
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    bot_username = "RetainXStudioBot"
+    link = f"https://t.me/{bot_username}?start=ref_{uid}"
+    stats = get_referral_stats(uid)
+    balance = stats["balance"]
+    total_earned = stats["total_earned"]
+    pending = stats["pending_withdrawals"]
     text = (
         f"{t('wallet_referral_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('wallet_referral_desc', lang)}\n\n"
+        f"{t('wallet_referral_balance_line', lang, balance=f'{balance:.2f}')}\n"
+        f"{t('wallet_referral_total_line', lang, total=f'{total_earned:.2f}')}\n\n"
         f"{t('wallet_referral_link_label', lang)}\n"
         f"<code>{link}</code>\n\n"
         f"{t('wallet_referral_share', lang)}"
     )
+    buttons = []
+    if balance >= MIN_WITHDRAWAL_RUB and pending == 0:
+        buttons.append([InlineKeyboardButton(
+            text=t("wallet_referral_withdraw_btn", lang, amount=f"{balance:.2f}"),
+            callback_data="referral_withdraw"
+        )])
+    elif balance > 0 and balance < MIN_WITHDRAWAL_RUB:
+        buttons.append([InlineKeyboardButton(
+            text=t("wallet_referral_withdraw_unavailable", lang, min=int(MIN_WITHDRAWAL_RUB)),
+            callback_data="referral_withdraw_low"
+        )])
+    elif pending > 0:
+        buttons.append([InlineKeyboardButton(
+            text=t("wallet_referral_withdraw_pending", lang),
+            callback_data="referral_withdraw_low"
+        )])
+    buttons.append([back_btn("wallet", lang=lang), menu_btn(lang)])
+    await cb.message.edit_text(text, reply_markup=kb(*buttons), parse_mode="HTML")
+
+
+@router.callback_query(F.data == "referral_withdraw_low")
+async def referral_withdraw_low(cb: CallbackQuery):
+    await cb.answer()
+
+
+@router.callback_query(F.data == "referral_withdraw")
+async def referral_withdraw_start(cb: CallbackQuery, state: FSMContext):
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    stats = get_referral_stats(uid)
+    balance = stats["balance"]
+    if balance < MIN_WITHDRAWAL_RUB:
+        await cb.answer(t("wallet_referral_withdraw_low_alert", lang, min=int(MIN_WITHDRAWAL_RUB)), show_alert=True)
+        return
     await cb.message.edit_text(
-        text,
-        reply_markup=kb([back_btn("wallet", lang=lang), menu_btn(lang)]),
+        f"{t('wallet_referral_withdraw_title', lang)}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('wallet_referral_withdraw_amount', lang, amount=f'{balance:.2f}')}\n\n"
+        f"{t('wallet_referral_enter_requisites', lang)}",
+        reply_markup=kb([back_btn("referral_info", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
+    await state.set_state(WithdrawalStates.entering_requisites)
+    await state.update_data(withdrawal_amount=balance)
+
+
+@router.message(WithdrawalStates.entering_requisites)
+async def receive_requisites(msg: Message, state: FSMContext):
+    uid = msg.from_user.id
+    lang = get_lang(uid)
+    requisites = msg.text.strip() if msg.text else ""
+    if not requisites or len(requisites) < 5:
+        await msg.answer(t("wallet_referral_requisites_invalid", lang))
+        return
+    data = await state.get_data()
+    amount = float(data.get("withdrawal_amount", 0))
+    req_id = create_withdrawal_request(uid, amount, requisites)
+    await state.clear()
+    from config import ADMIN_ID
+    from aiogram import Bot
+    bot = Bot(token=BOT_TOKEN)
+    await bot.send_message(
+        ADMIN_ID,
+        f"◈  <b>Withdrawal Request #{req_id}</b>\n\n"
+        f"  User: <code>{uid}</code>\n"
+        f"  Amount: <b>{amount:.2f} ₽</b>\n\n"
+        f"  Requisites:\n{requisites}",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="✓  Paid", callback_data=f"withdrawal_paid_{req_id}"),
+            InlineKeyboardButton(text="✕  Reject", callback_data=f"withdrawal_reject_{req_id}_{uid}"),
+        ]]),
+        parse_mode="HTML"
+    )
+    await msg.answer(
+        f"{t('wallet_referral_withdraw_submitted_title', lang)}\n\n"
+        f"{t('wallet_referral_withdraw_submitted_body', lang, amount=f'{amount:.2f}')}",
+        reply_markup=kb([menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+
+
+@router.callback_query(F.data.startswith("withdrawal_paid_"))
+async def withdrawal_paid(cb: CallbackQuery):
+    from config import ADMIN_ID
+    if cb.from_user.id != ADMIN_ID:
+        return
+    req_id = int(cb.data.replace("withdrawal_paid_", ""))
+    req = process_withdrawal(req_id, "paid")
+    if not req:
+        await cb.answer("Not found")
+        return
+    uid = req["user_id"]
+    amount = req["amount_rub"]
+    from aiogram import Bot
+    bot = Bot(token=BOT_TOKEN)
+    user_lang = get_lang(uid)
+    await bot.send_message(
+        uid,
+        f"{t('wallet_referral_withdraw_paid_title', user_lang)}\n\n"
+        f"{t('wallet_referral_withdraw_paid_body', user_lang, amount=f'{amount:.2f}')}",
+        parse_mode="HTML"
+    )
+    await cb.message.edit_text(f"✓  Withdrawal #{req_id} marked as paid — {amount:.2f} ₽ to user {uid}")
+
+
+@router.callback_query(F.data.startswith("withdrawal_reject_"))
+async def withdrawal_rejected(cb: CallbackQuery):
+    from config import ADMIN_ID
+    if cb.from_user.id != ADMIN_ID:
+        return
+    parts = cb.data.split("_")
+    req_id = int(parts[2])
+    uid = int(parts[3])
+    req = process_withdrawal(req_id, "rejected")
+    if not req:
+        await cb.answer("Not found")
+        return
+    amount = req["amount_rub"]
+    from aiogram import Bot
+    bot = Bot(token=BOT_TOKEN)
+    user_lang = get_lang(uid)
+    await bot.send_message(
+        uid,
+        f"{t('wallet_referral_withdraw_rejected_title', user_lang)}\n\n"
+        f"{t('wallet_referral_withdraw_rejected_body', user_lang, amount=f'{amount:.2f}')}",
+        parse_mode="HTML"
+    )
+    await cb.message.edit_text(f"✕  Withdrawal #{req_id} rejected — {amount:.2f} ₽ refunded to user {uid}")
