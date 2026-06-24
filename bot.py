@@ -408,7 +408,10 @@ async def add_coins_cmd(msg: Message):
         add_coins(uid, amount)
         new_balance = get_coins(uid)
         await msg.answer(f"✓  Added <b>{amount} coins</b> to user <code>{uid}</code>\nBalance: <b>{new_balance} coins</b>", parse_mode="HTML")
-        await bot.send_message(uid, f"◈  <b>{amount} coins</b> added to your wallet.\nBalance: <b>{new_balance} coins</b>", parse_mode="HTML")
+        try:
+            await bot.send_message(uid, f"◈  <b>{amount} coins</b> added to your wallet.\nBalance: <b>{new_balance} coins</b>", parse_mode="HTML")
+        except Exception:
+            await msg.answer("⚠️  Coins credited, but user hasn't started the bot yet — notification not sent.")
     except Exception as e:
         await msg.answer(f"Error: {e}")
 
