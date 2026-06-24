@@ -370,7 +370,7 @@ STR = {
         "wallet_topup_confirmed_body": "  <b>{coins} coins</b> added to your wallet.\n  Balance: <b>{balance} coins</b>",
         "wallet_topup_rejected": "✕  Your top-up was not confirmed. Please contact support.",
 
-        "wallet_btn_yoomoney": "₽  Pay with YooMoney",
+        "wallet_btn_yoomoney": "₽  Оплатить картой РФ",
         "wallet_yoomoney_title": "₽  <b>YooMoney Top-up</b>",
         "wallet_yoomoney_rate_line": "  1 coin  =  <b>3.70 ₽</b>",
         "wallet_yoomoney_min_line": "  185 ₽   =  <b>50 coins</b>  ← minimum",
@@ -796,7 +796,7 @@ STR = {
         "wallet_topup_confirmed_body": "  <b>{coins} монет</b> добавлено на ваш счёт.\n  Баланс: <b>{balance} монет</b>",
         "wallet_topup_rejected": "✕  Ваше пополнение не было подтверждено. Свяжитесь с поддержкой.",
 
-        "wallet_btn_yoomoney": "₽  Оплатить через ЮMoney",
+        "wallet_btn_yoomoney": "₽  Оплатить картой РФ",
         "wallet_yoomoney_title": "₽  <b>Пополнение через ЮMoney</b>",
         "wallet_yoomoney_rate_line": "  1 монета  =  <b>3.70 ₽</b>",
         "wallet_yoomoney_min_line": "  185 ₽   =  <b>50 монет</b>  ← минимум",
