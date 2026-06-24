@@ -83,6 +83,11 @@ async def start(msg: Message, state: FSMContext):
     await state.clear()
     uid = msg.from_user.id
     args = msg.text.split()
+
+    new = is_new_user(uid)
+    if new:
+        add_coins(uid, WELCOME_BONUS)
+
     if len(args) > 1 and args[1].startswith("ref_"):
         try:
             ref_id = int(args[1].replace("ref_", ""))
@@ -90,10 +95,6 @@ async def start(msg: Message, state: FSMContext):
                 set_referred_by(uid, ref_id)
         except ValueError:
             pass
-
-    new = is_new_user(uid)
-    if new:
-        add_coins(uid, WELCOME_BONUS)
 
     coins = get_coins(uid)
     lang = get_lang(uid)
