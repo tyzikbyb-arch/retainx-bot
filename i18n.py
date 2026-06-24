@@ -380,7 +380,7 @@ STR = {
         "wallet_yoomoney_confirm_amount": "  Amount      <b>{amount} ₽</b>",
         "wallet_yoomoney_confirm_coins": "  You receive  <b>{coins} coins</b>",
         "wallet_yoomoney_confirm_note": "Tap the button below to pay. Coins are credited automatically after payment.",
-        "wallet_btn_pay_yoomoney": "₽  Pay {amount} ₽ via YooMoney",
+        "wallet_btn_pay_yoomoney": "₽  Оплатить {amount} ₽ картой РФ",
         "wallet_yoomoney_success_title": "✓  <b>Payment Received</b>",
         "wallet_yoomoney_success_body": "  <b>{coins} coins</b> added to your wallet.\n  Payment: <b>{amount} ₽</b>",
 
@@ -806,7 +806,7 @@ STR = {
         "wallet_yoomoney_confirm_amount": "  Сумма       <b>{amount} ₽</b>",
         "wallet_yoomoney_confirm_coins": "  Вы получите  <b>{coins} монет</b>",
         "wallet_yoomoney_confirm_note": "Нажмите кнопку ниже для оплаты. Монеты зачислятся автоматически после платежа.",
-        "wallet_btn_pay_yoomoney": "₽  Оплатить {amount} ₽ через ЮMoney",
+        "wallet_btn_pay_yoomoney": "₽  Оплатить {amount} ₽ картой РФ",
         "wallet_yoomoney_success_title": "✓  <b>Платёж получен</b>",
         "wallet_yoomoney_success_body": "  <b>{coins} монет</b> добавлено на ваш счёт.\n  Оплата: <b>{amount} ₽</b>",
 
