@@ -79,9 +79,9 @@ TOOL_ATTACHMENTS = {
         "start_frame": True, "end_frame": False,
         "hint": "Sora 2 Pro is highly unstable. Switch to another model if it fails.",
     },
-    "ltx23": {  # LTX 2.3 Pro
+    "ltx23": {  # LTX 2.3 Pro — Artlist's UI shows Image Reference as disabled
+                # for this model (confirmed live, order #398), so don't offer it.
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
         "exclusive_startend": True,
     },
 
