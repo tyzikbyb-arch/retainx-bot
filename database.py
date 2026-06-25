@@ -443,12 +443,38 @@ def get_referral_stats(uid: int) -> dict:
                 (uid,)
             )
             pending_withdrawals = cur.fetchone()[0]
+            cur.execute(
+                "SELECT COUNT(*) FROM users WHERE referred_by = %s",
+                (uid,)
+            )
+            referral_count = cur.fetchone()[0]
+            cur.execute(
+                "SELECT COUNT(DISTINCT from_user_id) FROM referral_earnings WHERE referrer_id = %s",
+                (uid,)
+            )
+            buyers_count = cur.fetchone()[0]
         return {
             "balance": balance,
             "total_earned": total_earned,
             "pending_withdrawals": pending_withdrawals,
+            "referral_count": referral_count,
+            "buyers_count": buyers_count,
         }
 
+def get_referral_list(uid: int) -> list:
+    """Returns list of users referred by uid: uid, joined, topup_count, username."""
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT u.uid, u.joined, u.topup_count,
+                       (SELECT o.username FROM orders o
+                        WHERE o.user_id = u.uid AND o.username IS NOT NULL AND o.username != ''
+                        LIMIT 1) as username
+                FROM users u
+                WHERE u.referred_by = %s
+                ORDER BY u.joined DESC
+            """, (uid,))
+            return [dict(r) for r in cur.fetchall()]
 
 def record_yoomoney_payment(operation_id: str, user_id: int, amount_rub: float, coins: int) -> bool:
     """Insert payment record. Returns True if new, False if duplicate operation_id."""
