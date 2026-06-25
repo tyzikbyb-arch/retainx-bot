@@ -46,7 +46,10 @@ async def cancel_order_admin(cb: CallbackQuery):
         f"  We apologise for the inconvenience.",
         parse_mode="HTML"
     )
-    await cb.message.edit_text(f"✕  Order #{oid} cancelled — {order['coins']} coins refunded.")
+    try:
+        await cb.message.edit_text(f"✕  Order #{oid} cancelled — {order['coins']} coins refunded.")
+    except Exception:
+        await cb.message.edit_caption(caption=f"✕  Order #{oid} cancelled — {order['coins']} coins refunded.")
     await cb.answer()
 
 @router.callback_query(F.data.startswith("delivered_"))
