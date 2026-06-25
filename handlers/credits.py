@@ -1,4 +1,5 @@
 import math
+import time
 import aiohttp
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
@@ -7,7 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, YOOMONEY_WALLET, COIN_TO_RUB, MIN_TOPUP_RUB
 from database import (get_coins, add_coins, get_referred_by, get_lang,
                        add_referral_balance, add_referral_earning, increment_topup_count,
-                       get_referral_stats, create_withdrawal_request, process_withdrawal)
+                       get_referral_stats, get_referral_list, create_withdrawal_request, process_withdrawal)
 from keyboards import kb, back_btn, menu_btn
 from i18n import t
 
@@ -25,7 +26,7 @@ class WithdrawalStates(StatesGroup):
 
 MIN_WITHDRAWAL_RUB = 300.0
 
-# ── Wallet ────────────────────────────────────────────────────
+# ── Wallet ────────────────────────────────────────────
 async def show_wallet(target, state: FSMContext = None):
     if state:
         await state.clear()
@@ -55,7 +56,7 @@ async def show_wallet(target, state: FSMContext = None):
 async def wallet_cb(cb: CallbackQuery, state: FSMContext):
     await show_wallet(cb, state)
 
-# ── Top-up start ──────────────────────────────────────────────
+# ── Top-up start ──────────────────────────────────────────
 @router.callback_query(F.data == "topup_start")
 async def topup_start(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
@@ -150,7 +151,7 @@ async def show_payment_options_msg(msg: Message, state: FSMContext, amount: floa
     await msg.answer(text, reply_markup=keyboard, parse_mode="HTML")
     await state.update_data(topup_amount=amount)
 
-# ── USDT payment ──────────────────────────────────────────────
+# ── USDT payment ──────────────────────────────────────────
 @router.callback_query(F.data.startswith("pay_usdt_"))
 async def pay_usdt(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
@@ -174,7 +175,7 @@ async def pay_usdt(cb: CallbackQuery, state: FSMContext):
     )
     await state.set_state(TopupStates.entering_tx)
 
-# ── Auto-verify TX hash ───────────────────────────────────────
+# ── Auto-verify TX hash ────────────────────────────────────────
 @router.message(TopupStates.entering_tx)
 async def receive_tx_hash(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
@@ -268,7 +269,7 @@ async def _send_for_manual_review(msg: Message, tx_hash: str, amount: float, coi
         parse_mode="HTML"
     )
 
-# ── Stars payment ─────────────────────────────────────────────
+# ── Stars payment ─────────────────────────────────────────
 @router.callback_query(F.data.startswith("pay_stars_"))
 async def pay_stars(cb: CallbackQuery, state: FSMContext):
     from aiogram import Bot
@@ -303,7 +304,7 @@ async def successful_stars_payment(msg: Message):
         parse_mode="HTML"
     )
 
-# ── YooMoney (RUB) flow ───────────────────────────────────────
+# ── YooMoney (RUB) flow ─────────────────────────────────────
 @router.callback_query(F.data == "topup_yoomoney")
 async def topup_yoomoney_start(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
@@ -359,7 +360,7 @@ async def receive_rub_amount(msg: Message, state: FSMContext):
         parse_mode="HTML"
     )
 
-# ── Admin confirm/reject ──────────────────────────────────────
+# ── Admin confirm/reject ───────────────────────────────────────
 @router.callback_query(F.data.startswith("confirm_topup_"))
 async def admin_confirm_topup(cb: CallbackQuery):
     from config import ADMIN_ID
@@ -412,7 +413,7 @@ async def _handle_referral_bonus(uid: int, coins_added: int, payment_type: str =
                 parse_mode="HTML"
             )
 
-# ── Referral info ─────────────────────────────────────────────
+# ── Referral info ─────────────────────────────────────────
 @router.callback_query(F.data == "referral_info")
 async def referral_info(cb: CallbackQuery):
     uid = cb.from_user.id
@@ -423,10 +424,13 @@ async def referral_info(cb: CallbackQuery):
     balance = stats["balance"]
     total_earned = stats["total_earned"]
     pending = stats["pending_withdrawals"]
+    referral_count = stats.get("referral_count", 0)
+    buyers_count = stats.get("buyers_count", 0)
     text = (
         f"{t('wallet_referral_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('wallet_referral_desc', lang)}\n\n"
+        f"{t('wallet_referral_stats_line', lang, count=referral_count, buyers=buyers_count)}\n"
         f"{t('wallet_referral_balance_line', lang, balance=f'{balance:.2f}')}\n"
         f"{t('wallet_referral_total_line', lang, total=f'{total_earned:.2f}')}\n\n"
         f"{t('wallet_referral_link_label', lang)}\n"
@@ -434,6 +438,10 @@ async def referral_info(cb: CallbackQuery):
         f"{t('wallet_referral_share', lang)}"
     )
     buttons = []
+    buttons.append([InlineKeyboardButton(
+        text=t("wallet_referral_my_list_btn", lang, count=referral_count),
+        callback_data="referral_list"
+    )])
     if balance >= MIN_WITHDRAWAL_RUB and pending == 0:
         buttons.append([InlineKeyboardButton(
             text=t("wallet_referral_withdraw_btn", lang, amount=f"{balance:.2f}"),
@@ -451,6 +459,42 @@ async def referral_info(cb: CallbackQuery):
         )])
     buttons.append([back_btn("wallet", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(text, reply_markup=kb(*buttons), parse_mode="HTML")
+
+
+@router.callback_query(F.data == "referral_list")
+async def referral_list_handler(cb: CallbackQuery):
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    referrals = get_referral_list(uid)
+
+    if not referrals:
+        text = (
+            f"{t('wallet_referral_list_title', lang)}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"{t('wallet_referral_list_empty', lang)}"
+        )
+    else:
+        buyers = sum(1 for r in referrals if (r.get("topup_count") or 0) > 0)
+        lines = []
+        for r in referrals[:30]:
+            username = f"@{r['username']}" if r.get("username") else f"ID {r['uid']}"
+            joined_ts = r.get("joined") or 0
+            joined_date = time.strftime("%d.%m.%Y", time.localtime(joined_ts)) if joined_ts else "—"
+            icon = "✅" if (r.get("topup_count") or 0) > 0 else "◌"
+            lines.append(f"  {icon}  {username}  ·  {joined_date}")
+        header = t("wallet_referral_list_header", lang, count=len(referrals), buyers=buyers)
+        text = (
+            f"{t('wallet_referral_list_title', lang)}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"{header}\n\n"
+            + "\n".join(lines)
+        )
+
+    await cb.message.edit_text(
+        text,
+        reply_markup=kb([back_btn("referral_info", lang=lang), menu_btn(lang)]),
+        parse_mode="HTML"
+    )
 
 
 @router.callback_query(F.data == "referral_withdraw_low")
