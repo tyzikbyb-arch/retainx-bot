@@ -467,6 +467,26 @@ def record_yoomoney_payment(operation_id: str, user_id: int, amount_rub: float, 
                 return False
 
 
+def get_stale_orders(min_age_seconds: int = 900) -> list:
+    """Return processing orders older than min_age_seconds seconds."""
+    cutoff = int(time.time()) - min_age_seconds
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM orders WHERE status = 'processing' AND created < %s ORDER BY created ASC",
+                (cutoff,)
+            )
+            rows = cur.fetchall()
+            result = []
+            for row in rows:
+                d = dict(row)
+                if isinstance(d.get("params"), str):
+                    import json
+                    d["params"] = json.loads(d["params"])
+                result.append(d)
+            return result
+
+
 # Initialize on import
 try:
     init_db()

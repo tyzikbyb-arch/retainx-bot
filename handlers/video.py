@@ -738,7 +738,7 @@ async def _vid_confirm_legacy(cb: CallbackQuery, state: FSMContext):
     oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
 
     # Push to Redis queue for auto-generation
-    await _push_to_queue(oid, uid, tid, tool, params, coins, usd)
+    await _push_to_queue(oid, uid, tid, tool, params, coins, usd, username=cb.from_user.username or cb.from_user.first_name or "")
 
     await notify_admin(cb, oid, tool, params, coins, usd)
 
@@ -1540,7 +1540,7 @@ async def att_confirm_no_prompt(cb: CallbackQuery, state: FSMContext):
     await state.update_data(v_prompt="—")
     await _do_confirm(cb, state)
 
-async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float):
+async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float, username: str = ""):
     """Push order to Redis queue for auto-generation worker."""
     import logging
     log = logging.getLogger(__name__)
@@ -1564,8 +1564,15 @@ async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, 
             "usd": usd,
         }
         await r.rpush("retainx:orders", json.dumps(order_data))
-        await r.aclose()
         log.info(f"[QUEUE] Order #{oid} pushed successfully to retainx:orders")
+        from worker_monitor import check_workers_alive, send_no_workers_alert
+        if not await check_workers_alive(redis_url):
+            log.warning(f"[QUEUE] No live workers — sending manual alert for order #{oid}")
+            await send_no_workers_alert(
+                order_id=oid, user_id=uid, username=username,
+                tool=tool, params=params, coins=coins, redis_url=redis_url,
+            )
+        await r.aclose()
     except Exception as e:
         log.error(f"[QUEUE] Failed to push order #{oid} to Redis: {e}")
 
@@ -1619,7 +1626,7 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
 
     # Push to Redis queue for auto-generation
-    await _push_to_queue(oid, uid, tid, tool, params, coins, usd)
+    await _push_to_queue(oid, uid, tid, tool, params, coins, usd, username=cb.from_user.username or cb.from_user.first_name or "")
 
     await notify_admin(cb, oid, tool, params, coins, usd)
 

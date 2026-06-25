@@ -568,6 +568,12 @@ async def main():
     await web.TCPSite(runner, "0.0.0.0", port).start()
     print(f"YooMoney webhook server on :{port}")
 
+    import os as _os
+    from worker_monitor import stale_order_monitor
+    _redis_url = _os.environ.get("REDIS_URL", "")
+    if _redis_url:
+        asyncio.create_task(stale_order_monitor(bot, _redis_url))
+
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 if __name__ == "__main__":

@@ -85,7 +85,7 @@ async def image_ar_selected(cb: CallbackQuery, state: FSMContext):
     qualities = tool.get("quality", [])
 
     if not qualities:
-        # No quality step — go to prompt
+        # No quality step -- go to prompt
         await state.update_data(img_quality=None)
         await ask_prompt(cb, state, name, tool)
         return
@@ -232,7 +232,7 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
     oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, name, params, coins, price_usd)
 
     # Push to Redis queue for auto-generation
-    await _push_to_queue(oid, uid, tid, name, params, coins, price_usd)
+    await _push_to_queue(oid, uid, tid, name, params, coins, price_usd, username=cb.from_user.username or cb.from_user.first_name or "")
 
     await _notify_admin(cb, oid, name, params, coins, price_usd)
 
@@ -248,7 +248,7 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
     )
     await state.clear()
 
-async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float):
+async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float, username: str = ""):
     import logging, os, json
     log = logging.getLogger(__name__)
     try:
@@ -268,8 +268,15 @@ async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, 
             "type": "image",
         }
         await r.rpush("retainx:orders", json.dumps(order_data))
-        await r.aclose()
         log.info(f"[QUEUE] Image order #{oid} pushed to queue")
+        from worker_monitor import check_workers_alive, send_no_workers_alert
+        if not await check_workers_alive(redis_url):
+            log.warning(f"[QUEUE] No live workers -- sending manual alert for image order #{oid}")
+            await send_no_workers_alert(
+                order_id=oid, user_id=uid, username=username,
+                tool=tool, params=params, coins=coins, redis_url=redis_url,
+            )
+        await r.aclose()
     except Exception as e:
         log.error(f"[QUEUE] Failed to push image order #{oid}: {e}")
 
