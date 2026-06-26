@@ -102,6 +102,7 @@ TOOL_ATTACHMENTS = {
                 # never starts generation without it; times out after 20 min)
         "vid_refs": 1,
         "vid_ref_required": True,
+        "max_vid_duration": 10,
         "prompt_label": "Upload a 3–10 second video and describe the edits you want to make",
     },
 

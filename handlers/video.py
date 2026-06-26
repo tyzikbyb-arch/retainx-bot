@@ -1383,6 +1383,21 @@ async def att_collect_vid(msg: Message, state: FSMContext):
     data = await state.get_data()
     tid = data.get("v_tid", "")
     cfg = get_attach_config(tid)
+    max_dur = cfg.get("max_vid_duration")
+    if max_dur and msg.video and msg.video.duration and msg.video.duration > max_dur:
+        if lang == "ru":
+            await msg.answer(
+                f"❌ Видео слишком длинное ({msg.video.duration} сек).\n"
+                f"Для этой модели максимум — {max_dur} секунд.\n"
+                f"Загрузите более короткий клип."
+            )
+        else:
+            await msg.answer(
+                f"❌ Video is too long ({msg.video.duration}s).\n"
+                f"This model supports up to {max_dur} seconds.\n"
+                f"Please upload a shorter clip."
+            )
+        return
     max_vids = cfg.get("vid_refs", 3)
     vids = data.get("att_vids", [])
     if len(vids) >= max_vids:
