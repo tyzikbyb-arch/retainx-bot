@@ -588,6 +588,26 @@ async def video_uploaded(msg: Message, state: FSMContext):
         await msg.answer(t("err_file_too_large", ui_lang))
         return
 
+    if msg.video and msg.video.duration:
+        _d = await state.get_data()
+        v_dur = _d.get("v_dur")
+        if v_dur:
+            max_sec = v_dur * 60
+            if msg.video.duration > max_sec:
+                if ui_lang == "ru":
+                    await msg.answer(
+                        f"❌ Видео слишком длинное ({msg.video.duration} сек).\n"
+                        f"Вы выбрали {v_dur} мин — максимум {max_sec} сек.\n"
+                        f"Загрузите более короткий файл."
+                    )
+                else:
+                    await msg.answer(
+                        f"❌ Video is too long ({msg.video.duration}s).\n"
+                        f"You selected {v_dur} min — max is {max_sec}s.\n"
+                        f"Please upload a shorter file."
+                    )
+                return
+
     if msg.video:
         file_id = msg.video.file_id
         ftype = "video"
@@ -1398,6 +1418,23 @@ async def att_collect_vid(msg: Message, state: FSMContext):
                 f"Please upload a shorter clip."
             )
         return
+    if tid in {"lips"}:
+        v_dur = data.get("v_dur")
+        if v_dur and msg.video and msg.video.duration and msg.video.duration > v_dur * 60:
+            max_sec = v_dur * 60
+            if lang == "ru":
+                await msg.answer(
+                    f"❌ Видео слишком длинное ({msg.video.duration} сек).\n"
+                    f"Вы выбрали {v_dur} мин — максимум {max_sec} сек.\n"
+                    f"Загрузите более короткий файл."
+                )
+            else:
+                await msg.answer(
+                    f"❌ Video is too long ({msg.video.duration}s).\n"
+                    f"You selected {v_dur} min — max is {max_sec}s.\n"
+                    f"Please upload a shorter file."
+                )
+            return
     max_vids = cfg.get("vid_refs", 3)
     vids = data.get("att_vids", [])
     if len(vids) >= max_vids:
@@ -1446,6 +1483,28 @@ async def att_collect_aud(msg: Message, state: FSMContext):
     tid = data.get("v_tid", "")
     cfg = get_attach_config(tid)
     max_auds = cfg.get("aud_refs", 3)
+    if tid in {"hga4", "omni", "aur1"}:
+        v_dur = data.get("v_dur")
+        aud_duration = None
+        if msg.audio:
+            aud_duration = msg.audio.duration
+        elif msg.voice:
+            aud_duration = msg.voice.duration
+        if v_dur and aud_duration and aud_duration > v_dur * 60:
+            max_sec = v_dur * 60
+            if lang == "ru":
+                await msg.answer(
+                    f"❌ Аудио слишком длинное ({aud_duration} сек).\n"
+                    f"Вы выбрали {v_dur} мин — максимум {max_sec} сек.\n"
+                    f"Загрузите более короткую запись."
+                )
+            else:
+                await msg.answer(
+                    f"❌ Audio is too long ({aud_duration}s).\n"
+                    f"You selected {v_dur} min — max is {max_sec}s.\n"
+                    f"Please upload a shorter recording."
+                )
+            return
     auds = data.get("att_auds", [])
     if len(auds) >= max_auds:
         await msg.answer(t("vid_aud_max_reached_short", lang, max=max_auds))
