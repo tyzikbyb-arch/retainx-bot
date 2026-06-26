@@ -142,10 +142,11 @@ TOOL_ATTACHMENTS = {
         "aud_required": True,
         "hint": "Upload a character image and a voice recording to animate your avatar",
     },
-    "fab1": {   # Fabric 1.0 Avatar — requires image
-        "img_refs": 1,
-        "img_required": True,
-        "hint": "Upload a character image to generate an avatar video",
+    "fab1": {   # Fabric 1.0 Avatar — requires audio (no Image Reference slot in Artlist UI)
+        "aud_refs": 1,
+        "aud_required": True,
+        "no_prompt": True,
+        "hint": "Upload a voice recording to generate your avatar video",
     },
     "aur1": {   # Aurora Avatar — requires image + audio
         "img_refs": 1, "aud_refs": 1,
@@ -208,8 +209,8 @@ _HINT_RU = {
         "Загрузите видео персонажа и аудиозапись голоса для синхронизации губ",
     "Upload a character image and a voice recording to animate your avatar":
         "Загрузите изображение персонажа и аудиозапись голоса, чтобы анимировать аватар",
-    "Upload a character image to generate an avatar video":
-        "Загрузите изображение персонажа, чтобы создать видео-аватар",
+    "Upload a voice recording to generate your avatar video":
+        "Загрузите аудиозапись голоса, чтобы создать видео-аватар",
 }
 
 _PROMPT_LABEL_RU = {
