@@ -26,7 +26,7 @@ except Exception:
 
 from aiogram.fsm.context import FSMContext
 
-from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS
+from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
 from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang
 from keyboards import kb, menu_btn, client_kb
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
@@ -85,28 +85,48 @@ async def start(msg: Message, state: FSMContext):
     args = msg.text.split()
 
     new = is_new_user(uid)
-    if new:
-        add_coins(uid, WELCOME_BONUS)
 
+    # Process referral link BEFORE add_coins so we know the total bonus upfront
+    ref_id_val = None
     if len(args) > 1 and args[1].startswith("ref_"):
         try:
-            ref_id = int(args[1].replace("ref_", ""))
-            if ref_id != uid:
-                set_referred_by(uid, ref_id)
+            rid = int(args[1].replace("ref_", ""))
+            if rid != uid:
+                ref_id_val = rid
+                set_referred_by(uid, rid)
         except ValueError:
             pass
+
+    if new:
+        bonus = WELCOME_BONUS + (REFERRAL_JOIN_BONUS if ref_id_val else 0)
+        add_coins(uid, bonus)
+        # Notify referrer that their friend just joined
+        if ref_id_val:
+            async def _notify_referrer():
+                try:
+                    ref_lang = get_lang(ref_id_val)
+                    uname = f"@{msg.from_user.username}" if msg.from_user.username else f"ID {uid}"
+                    await bot.send_message(
+                        ref_id_val,
+                        t("referral_friend_joined", ref_lang, username=uname),
+                        parse_mode="HTML"
+                    )
+                except Exception:
+                    pass
+            asyncio.create_task(_notify_referrer())
 
     coins = get_coins(uid)
     lang = get_lang(uid)
 
     if new:
+        total_bonus = WELCOME_BONUS + (REFERRAL_JOIN_BONUS if ref_id_val else 0)
         # New user welcome
         welcome_text = (
             f"{t('welcome_title', lang)}\n"
             "━━━━━━━━━━━━━━━━━━━━\n\n"
             f"{t('welcome_body', lang)}\n\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            f"{t('welcome_bonus', lang, bonus=WELCOME_BONUS, coins=coins)}"
+            f"{t('welcome_bonus', lang, bonus=total_bonus, coins=coins)}"
         )
         keyboard = kb(
             [InlineKeyboardButton(text=t("btn_start_generating", lang), callback_data="cat_video")],

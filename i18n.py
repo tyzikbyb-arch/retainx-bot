@@ -387,7 +387,20 @@ STR = {
         "wallet_referral_bonus_title": "◈  <b>Referral Bonus</b>",
         "wallet_referral_bonus_body": "  Your referral made a payment.\n  You received <b>{bonus} ₽</b> ({percentage}%) to your referral balance.",
 
+        "referral_friend_joined": "👤  <b>New referral!</b>\n\n  {username} joined via your link.\n  You'll earn a bonus when they make their first purchase.",
+
         "wallet_referral_title": "◈  <b>Referral Program</b>",
+        "wallet_referral_tier_line": "  ◉  <b>{name}</b>  →  {next}",
+        "wallet_referral_tier_max": "  ★  <b>{name}</b>  ·  Max Level",
+        "wallet_referral_rate": "  Earn  <b>{first}%</b> first payment  ·  <b>{repeat}%</b> repeat",
+        "wallet_referral_stat_invited": "Friends invited",
+        "wallet_referral_stat_buyers": "Made a purchase",
+        "wallet_referral_stat_balance": "Referral balance",
+        "wallet_referral_stat_total": "Total earned",
+        "wallet_referral_join_bonus_note": "🎁  Each friend gets +{bonus} bonus coins on join!",
+        "wallet_referral_share_btn": "📤  Share my link",
+        "wallet_referral_share_text": "I use @RetainXStudioBot for AI video & image generation — Sora 2, Grok, Seedance, HeyGen and more. Join via my link and get +10 bonus coins! 🎁\n",
+
         "wallet_referral_desc": "  Earn <b>20%</b> from your referral's first payment\n  and <b>10%</b> from every subsequent one.\n  Earnings go to your referral balance in ₽.",
         "wallet_referral_balance_line": "  Referral balance   <b>{balance} ₽</b>",
         "wallet_referral_total_line": "  Total earned         <b>{total} ₽</b>",
@@ -397,7 +410,7 @@ STR = {
         "wallet_referral_list_empty": "  No referrals yet.\n  Share your link to start earning!",
         "wallet_referral_list_header": "  <b>{count} total</b>  ·  {buyers} made a purchase",
 
-        "wallet_referral_link_label": "  Your referral link:",
+        "wallet_referral_link_label": "Your link:",
         "wallet_referral_share": "  Share it and earn passively.",
         "wallet_referral_withdraw_btn": "₽  Withdraw {amount} ₽",
         "wallet_referral_withdraw_unavailable": "◌  Min withdrawal: {min} ₽",
@@ -835,7 +848,20 @@ STR = {
         "wallet_referral_bonus_title": "◈  <b>Реферальный бонус</b>",
         "wallet_referral_bonus_body": "  Ваш реферал совершил платёж.\n  Вам начислено <b>{bonus} ₽</b> ({percentage}%) на реферальный баланс.",
 
+        "referral_friend_joined": "👤  <b>Новый реферал!</b>\n\n  {username} перешёл по вашей ссылке.\n  Вы получите бонус когда он совершит первую покупку.",
+
         "wallet_referral_title": "◈  <b>Реферальная программа</b>",
+        "wallet_referral_tier_line": "  ◉  <b>{name}</b>  →  {next}",
+        "wallet_referral_tier_max": "  ★  <b>{name}</b>  ·  Максимальный уровень",
+        "wallet_referral_rate": "  Вы получаете  <b>{first}%</b> первый платёж  ·  <b>{repeat}%</b> повторный",
+        "wallet_referral_stat_invited": "Приглашено друзей",
+        "wallet_referral_stat_buyers": "Совершили покупку",
+        "wallet_referral_stat_balance": "Реферальный баланс",
+        "wallet_referral_stat_total": "Всего заработано",
+        "wallet_referral_join_bonus_note": "🎁  Каждый друг получает +{bonus} монет бонусом при регистрации!",
+        "wallet_referral_share_btn": "📤  Поделиться ссылкой",
+        "wallet_referral_share_text": "Использую @RetainXStudioBot для AI-генерации видео и изображений — Sora 2, Grok, Seedance, HeyGen и другие. Переходи по моей ссылке и получи +10 монет бонусом! 🎁\n",
+
         "wallet_referral_desc": "  Получайте <b>20%</b> с первого платежа вашего реферала\n  и <b>10%</b> с каждого последующего.\n  Начисления поступают на реферальный баланс в ₽.",
         "wallet_referral_balance_line": "  Реферальный баланс   <b>{balance} ₽</b>",
         "wallet_referral_total_line": "  Всего заработано       <b>{total} ₽</b>",
@@ -845,7 +871,7 @@ STR = {
         "wallet_referral_list_empty": "  Рефералов пока нет.\n  Поделитесь ссылкой, чтобы начать зарабатывать!",
         "wallet_referral_list_header": "  <b>Всего {count}</b>  ·  {buyers} совершили покупку",
 
-        "wallet_referral_link_label": "  Ваша реферальная ссылка:",
+        "wallet_referral_link_label": "Ваша ссылка:",
         "wallet_referral_share": "  Поделитесь ей и зарабатывайте пассивно.",
         "wallet_referral_withdraw_btn": "₽  Вывести {amount} ₽",
         "wallet_referral_withdraw_unavailable": "◌  Мин. вывод: {min} ₽",

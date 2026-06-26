@@ -5,7 +5,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, YOOMONEY_WALLET, COIN_TO_RUB, MIN_TOPUP_RUB
+from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, YOOMONEY_WALLET, COIN_TO_RUB, MIN_TOPUP_RUB, REFERRAL_TIERS, REFERRAL_JOIN_BONUS
 from database import (get_coins, add_coins, get_referred_by, get_lang,
                        add_referral_balance, add_referral_earning, increment_topup_count,
                        get_referral_stats, get_referral_list, create_withdrawal_request, process_withdrawal)
@@ -394,11 +394,34 @@ async def admin_reject_topup(cb: CallbackQuery):
     await bot.send_message(uid, t("wallet_topup_rejected", user_lang))
     await cb.message.edit_text(f"✕  Rejected — user {uid}")
 
+def _get_tier(referral_count: int) -> dict:
+    for tier in reversed(REFERRAL_TIERS):
+        if referral_count >= tier["min"]:
+            return tier
+    return REFERRAL_TIERS[0]
+
+def _tier_progress_bar(referral_count: int) -> tuple[dict, str, str]:
+    tier = _get_tier(referral_count)
+    if tier["next"] is None:
+        bar = "████████████"
+        label = "MAX"
+    else:
+        width = 12
+        progress = referral_count - tier["min"]
+        total = tier["next"] - tier["min"]
+        filled = min(width, round(progress / total * width))
+        bar = "█" * filled + "░" * (width - filled)
+        label = f"{referral_count} / {tier['next']}"
+    return tier, bar, label
+
 async def _handle_referral_bonus(uid: int, coins_added: int, payment_type: str = "unknown"):
     topup_index = increment_topup_count(uid)  # 0 = first topup, 1+ = subsequent
-    percentage = 20 if topup_index == 0 else 10
     ref_uid = get_referred_by(uid)
     if ref_uid:
+        # Determine referrer's tier by their total referral count
+        ref_stats = get_referral_stats(ref_uid)
+        tier = _get_tier(ref_stats.get("referral_count", 0))
+        percentage = tier["first"] if topup_index == 0 else tier["repeat"]
         bonus_rub = round(coins_added * COIN_TO_RUB * percentage / 100, 2)
         if bonus_rub > 0:
             add_referral_balance(ref_uid, bonus_rub)
@@ -416,6 +439,7 @@ async def _handle_referral_bonus(uid: int, coins_added: int, payment_type: str =
 # ── Referral info ─────────────────────────────────────────
 @router.callback_query(F.data == "referral_info")
 async def referral_info(cb: CallbackQuery):
+    import urllib.parse
     uid = cb.from_user.id
     lang = get_lang(uid)
     bot_username = "RetainXStudioBot"
@@ -426,18 +450,52 @@ async def referral_info(cb: CallbackQuery):
     pending = stats["pending_withdrawals"]
     referral_count = stats.get("referral_count", 0)
     buyers_count = stats.get("buyers_count", 0)
+
+    tier, bar, bar_label = _tier_progress_bar(referral_count)
+    tier_name = tier["name_ru"] if lang == "ru" else tier["name_en"]
+    next_tier = None
+    for i, t_ in enumerate(REFERRAL_TIERS):
+        if t_["min"] == tier["min"] and i + 1 < len(REFERRAL_TIERS):
+            next_tier = REFERRAL_TIERS[i + 1]
+            break
+
+    # Tier header line
+    if tier["next"] is None:
+        tier_header = t("wallet_referral_tier_max", lang, name=tier_name)
+    elif next_tier:
+        next_name = next_tier["name_ru"] if lang == "ru" else next_tier["name_en"]
+        tier_header = t("wallet_referral_tier_line", lang, name=tier_name, next=next_name)
+    else:
+        tier_header = tier_name
+
+    # Format numbers with spaces for thousands
+    def fmt(n): return f"{n:,.2f}".replace(",", " ")
+
     text = (
         f"{t('wallet_referral_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('wallet_referral_desc', lang)}\n\n"
-        f"{t('wallet_referral_stats_line', lang, count=referral_count, buyers=buyers_count)}\n"
-        f"{t('wallet_referral_balance_line', lang, balance=f'{balance:.2f}')}\n"
-        f"{t('wallet_referral_total_line', lang, total=f'{total_earned:.2f}')}\n\n"
-        f"{t('wallet_referral_link_label', lang)}\n"
-        f"<code>{link}</code>\n\n"
-        f"{t('wallet_referral_share', lang)}"
+        f"  {tier_header}\n"
+        f"  {bar}  {bar_label}\n\n"
+        f"  {t('wallet_referral_rate', lang, first=tier['first'], repeat=tier['repeat'])}\n\n"
+        "  ─────────────────────\n"
+        f"  {t('wallet_referral_stat_invited', lang)}   <b>{referral_count}</b>\n"
+        f"  {t('wallet_referral_stat_buyers', lang)}   <b>{buyers_count}</b>\n"
+        f"  {t('wallet_referral_stat_balance', lang)}   <b>{fmt(balance)} ₽</b>\n"
+        f"  {t('wallet_referral_stat_total', lang)}   <b>{fmt(total_earned)} ₽</b>\n"
+        "  ─────────────────────\n\n"
+        f"  {t('wallet_referral_join_bonus_note', lang, bonus=REFERRAL_JOIN_BONUS)}\n\n"
+        f"  {t('wallet_referral_link_label', lang)}\n"
+        f"  <code>{link}</code>"
     )
+
+    share_text = urllib.parse.quote(t("wallet_referral_share_text", lang, link=link))
+    share_url = f"https://t.me/share/url?url={urllib.parse.quote(link)}&text={share_text}"
+
     buttons = []
+    buttons.append([InlineKeyboardButton(
+        text=t("wallet_referral_share_btn", lang),
+        url=share_url
+    )])
     buttons.append([InlineKeyboardButton(
         text=t("wallet_referral_my_list_btn", lang, count=referral_count),
         callback_data="referral_list"
