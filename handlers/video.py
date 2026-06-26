@@ -55,7 +55,6 @@ TOOL_IDS = {
     "ltx23":  "LTX 2.3 Pro",
     "kl30":   "Kling 3.0",
     "kl03":   "Kling O3",
-    "klmc":   "Kling 3.0 Motion Control",
     "klve":   "Kling O3 Video Edit",
     "hga4":   "HeyGen Avatar 4",
     "hgtr":   "HeyGen Translate",
@@ -94,7 +93,7 @@ TOOL_DESCS = {
 VIDEO_SUBCATS = {
     "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
     "Premium":   ["veo31","veo31f","veo31l","sora2","ltx23"],
-    "Kling":     ["kl30","kl03","klmc","klve"],
+    "Kling":     ["kl30","kl03","klve"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1"],
 }
 def subcat_label(sub: str, lang: str = "en") -> str:
@@ -250,7 +249,6 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     # Fixed price tools
     fixed = {
-        "klmc": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"30 {t('vid_sec_word', lang)}"}, 1.00),
         "klve": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"10 {t('vid_sec_word', lang)}"}, 0.25),
         # omni, aur1 handled separately
     }

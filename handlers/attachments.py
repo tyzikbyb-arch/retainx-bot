@@ -97,15 +97,11 @@ TOOL_ATTACHMENTS = {
         "start_frame": True, "end_frame": True,
         "exclusive_startend": True,
     },
-    "klmc": {   # Kling 3.0 Motion Control — video reference is mandatory
-                # (confirmed live, order #404: Artlist shows red warning and
+    "klve": {   # Kling O3 Video Edit — video reference is mandatory
+                # (confirmed live, order #521: Artlist shows red warning and
                 # never starts generation without it; times out after 20 min)
-        "img_refs": 1, "vid_refs": 1,
+        "vid_refs": 1,
         "vid_ref_required": True,
-        "hint": "Upload a motion reference video (required) and optionally an image reference",
-    },
-    "klve": {   # Kling 3.0 Video Edit
-        "img_refs": 4, "vid_refs": 1,
         "prompt_label": "Upload a 3–10 second video and describe the edits you want to make",
     },
 
@@ -191,8 +187,6 @@ _HINT_RU = {
         "Прикрепите Start Frame, чтобы продолжить — для этой модели это обязательно.",
     "Sora 2 Pro is highly unstable. Switch to another model if it fails.":
         "Sora 2 Pro работает нестабильно. Если генерация не удалась, попробуйте другую модель.",
-    "Upload a motion reference video (required) and optionally an image reference":
-        "Загрузите референс-видео движения (обязательно) и при желании референс-изображение",
     "Upload a character image and a voice recording to make your avatar talk":
         "Загрузите изображение персонажа и аудиозапись голоса, чтобы аватар заговорил",
     "Upload a video to translate it with AI lip-sync":
