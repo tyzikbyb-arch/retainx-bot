@@ -62,7 +62,6 @@ TOOL_IDS = {
     "eldb":   "ElevenLabs Dubbing",
     "lips":   "Lipsync v2 Pro",
     "omni":   "OmniHuman 1.5 Avatar",
-    "fab1":   "Fabric 1.0 Avatar",
     "aur1":   "Aurora Avatar",
     "grok":   "Grok Imagine 1.5",
 }
@@ -96,7 +95,7 @@ VIDEO_SUBCATS = {
     "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
     "Premium":   ["veo31","veo31f","veo31l","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc","klve"],
-    "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
+    "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1"],
 }
 def subcat_label(sub: str, lang: str = "en") -> str:
     return {
@@ -253,7 +252,6 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
     fixed = {
         "klmc": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"30 {t('vid_sec_word', lang)}"}, 1.00),
         "klve": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"10 {t('vid_sec_word', lang)}"}, 0.25),
-        "fab1": ({t("vid_type_word", lang): t("vid_avatar_video_word", lang)}, 0.90),
         # omni, aur1 handled separately
     }
     if tid in fixed:
