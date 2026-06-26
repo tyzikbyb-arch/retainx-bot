@@ -581,11 +581,48 @@ async def eleven_lang(cb: CallbackQuery, state: FSMContext):
 @router.message(VideoStates.uploading_video)
 async def video_uploaded(msg: Message, state: FSMContext):
     ui_lang = get_lang(msg.from_user.id)
+
+    # Accept a URL link as alternative to a file upload (for videos > 20 MB)
+    if msg.text:
+        url = msg.text.strip()
+        if url.startswith("http://") or url.startswith("https://"):
+            await state.update_data(v_upload_url=url, v_upload_file_id=None, v_upload_file_type="url")
+            data = await state.get_data()
+            tool = data.get("v_tool", "—")
+            dub_lang = data.get("v_lang", "—")
+            coins = data.get("v_coins", 0)
+            received = "✓  Ссылка получена" if ui_lang == "ru" else "✓  Link received"
+            await msg.answer(
+                f"{received}\n\n"
+                f"◈  <b>{tool}</b>  —  {dub_lang}\n"
+                f"{t('vid_cost_label_short', ui_lang, coins=coins)}\n\n"
+                f"{t('vid_add_notes_prompt', ui_lang)}",
+                reply_markup=kb(
+                    [InlineKeyboardButton(text=t("vid_btn_confirm", ui_lang, coins=coins), callback_data="vid_confirm")],
+                    [InlineKeyboardButton(text=t("vid_btn_add_notes", ui_lang), callback_data="vid_add_notes")],
+                    [menu_btn(ui_lang)],
+                ),
+                parse_mode="HTML"
+            )
+            await state.update_data(v_prompt="—")
+            return
+        await msg.answer(t("vid_please_send_video", ui_lang))
+        return
+
     if not (msg.video or msg.document or msg.animation):
         await msg.answer(t("vid_please_send_video", ui_lang))
         return
     if file_too_large(msg):
-        await msg.answer(t("err_file_too_large", ui_lang))
+        if ui_lang == "ru":
+            await msg.answer(
+                "⚠️  Видео слишком большое (лимит Telegram — 20 МБ).\n\n"
+                "Загрузите видео на Google Drive или Dropbox и пришлите ссылку — бот скачает его сам."
+            )
+        else:
+            await msg.answer(
+                "⚠️  Video is too large (Telegram limit is 20 MB).\n\n"
+                "Upload your video to Google Drive or Dropbox and send the link here — the bot will download it automatically."
+            )
         return
 
     if msg.video and msg.video.duration:
@@ -747,6 +784,7 @@ async def _vid_confirm_legacy(cb: CallbackQuery, state: FSMContext):
         "language":      data.get("v_lang"),
         "prompt":        prompt,
         "attachments":   attachments if attachments else None,
+        "upload_url":       data.get("v_upload_url"),
         "upload_file_id":   data.get("v_upload_file_id"),
         "upload_file_type": data.get("v_upload_file_type"),
     }
@@ -809,6 +847,9 @@ async def notify_admin(cb, oid, tool, params, coins, usd):
     # Send uploaded video (HeyGen/ElevenLabs)
     upload_fid = p.get("upload_file_id")
     upload_ftype = p.get("upload_file_type")
+    upload_url = p.get("upload_url")
+    if upload_url and not upload_fid:
+        await bot.send_message(ADMIN_ID, f"🔗  Source video link for Order #{oid}:\n{upload_url}")
     if upload_fid:
         try:
             caption = f"◈  Source video for Order #{oid}"
@@ -1394,11 +1435,53 @@ async def att_add_vids(cb: CallbackQuery, state: FSMContext):
 @router.message(VideoStates.collecting_vids)
 async def att_collect_vid(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
+
+    # Accept a URL link for minute-priced tools (lips) when video > 20 MB
+    if msg.text:
+        url = msg.text.strip()
+        if url.startswith("http://") or url.startswith("https://"):
+            data = await state.get_data()
+            tid = data.get("v_tid", "")
+            if tid in {"lips"}:
+                cfg = get_attach_config(tid)
+                max_vids = cfg.get("vid_refs", 3)
+                vids = data.get("att_vids", [])
+                if len(vids) >= max_vids:
+                    await msg.answer(t("vid_vid_max_reached_short", lang, max=max_vids))
+                    return
+                vids.append({"url": url, "type": "url", "ref": f"vid{len(vids)+1}"})
+                await state.update_data(att_vids=vids)
+                received = "✓  Ссылка получена" if lang == "ru" else "✓  Link received"
+                await msg.answer(
+                    f"{received} ({len(vids)}/{max_vids})",
+                    reply_markup=kb(
+                        [InlineKeyboardButton(text=t("btn_done", lang), callback_data="att_back")],
+                        [menu_btn(lang)]
+                    )
+                )
+                return
+        await msg.answer(t("vid_please_send_video_short", lang))
+        return
+
     if not (msg.video or msg.animation or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("video/"))):
         await msg.answer(t("vid_please_send_video_short", lang))
         return
     if file_too_large(msg):
-        await msg.answer(t("err_file_too_large", lang))
+        _d = await state.get_data()
+        _tid = _d.get("v_tid", "")
+        if _tid in {"lips"}:
+            if lang == "ru":
+                await msg.answer(
+                    "⚠️  Видео слишком большое (лимит Telegram — 20 МБ).\n\n"
+                    "Загрузите видео на Google Drive или Dropbox и пришлите ссылку — бот скачает его сам."
+                )
+            else:
+                await msg.answer(
+                    "⚠️  Video is too large (Telegram limit is 20 MB).\n\n"
+                    "Upload your video to Google Drive or Dropbox and send the link here — the bot will download it automatically."
+                )
+        else:
+            await msg.answer(t("err_file_too_large", lang))
         return
     data = await state.get_data()
     tid = data.get("v_tid", "")
@@ -1689,6 +1772,7 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         "language":      data.get("v_lang"),
         "prompt":        prompt,
         "attachments":   attachments if attachments else None,
+        "upload_url":       data.get("v_upload_url"),
         "upload_file_id":   data.get("v_upload_file_id"),
         "upload_file_type": data.get("v_upload_file_type"),
     }
