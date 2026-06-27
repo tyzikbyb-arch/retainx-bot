@@ -11,6 +11,7 @@ router = Router()
 
 class AdminStates(StatesGroup):
     sending_result = State()
+    cancelling_order = State()
 
 @router.callback_query(F.data.startswith("delivered_"))
 async def mark_delivered(cb: CallbackQuery, state: FSMContext):
@@ -26,7 +27,7 @@ async def mark_delivered(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 @router.callback_query(F.data.startswith("cancel_order_"))
-async def cancel_order_admin(cb: CallbackQuery):
+async def cancel_order_admin(cb: CallbackQuery, state: FSMContext):
     if cb.from_user.id != ADMIN_ID:
         return
     oid = int(cb.data.replace("cancel_order_", ""))
@@ -34,23 +35,52 @@ async def cancel_order_admin(cb: CallbackQuery):
     if not order:
         await cb.answer("Order not found")
         return
-    # Refund coins
+    await state.update_data(admin_cancel_oid=oid)
+    await state.set_state(AdminStates.cancelling_order)
+    await cb.message.answer(
+        f"✕  <b>Cancel Order #{oid}</b>\n\n"
+        f"Send the reason for cancellation — it will be shown to the user.\n"
+        f"Or send <code>-</code> to cancel without a reason.",
+        parse_mode="HTML"
+    )
+    await cb.answer()
+
+@router.message(AdminStates.cancelling_order, F.from_user.id == ADMIN_ID)
+async def admin_cancel_with_reason(msg: Message, state: FSMContext):
+    data = await state.get_data()
+    oid = data.get("admin_cancel_oid")
+    await state.clear()
+    if not oid:
+        await msg.answer("⚠️ No order ID in state.")
+        return
+    order = get_order(oid)
+    if not order:
+        await msg.answer(f"⚠️ Order #{oid} not found.")
+        return
+    reason = msg.text.strip() if msg.text else ""
+    if reason == "-":
+        reason = ""
     add_coins(order["user_id"], order["coins"])
     update_order_status(oid, "cancelled")
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
-    await bot.send_message(
-        order["user_id"],
-        f"◌  <b>Order #{oid} Cancelled</b>\n\n"
-        f"  <b>{order['coins']} coins</b> have been refunded to your wallet.\n"
-        f"  We apologise for the inconvenience.",
-        parse_mode="HTML"
-    )
-    try:
-        await cb.message.edit_text(f"✕  Order #{oid} cancelled — {order['coins']} coins refunded.")
-    except Exception:
-        await cb.message.edit_caption(caption=f"✕  Order #{oid} cancelled — {order['coins']} coins refunded.")
-    await cb.answer()
+    if reason:
+        user_text = (
+            f"◌  <b>Order #{oid} Cancelled</b>\n\n"
+            f"  <b>{order['coins']} coins</b> have been refunded to your wallet.\n\n"
+            f"  Reason: {reason}"
+        )
+    else:
+        user_text = (
+            f"◌  <b>Order #{oid} Cancelled</b>\n\n"
+            f"  <b>{order['coins']} coins</b> have been refunded to your wallet.\n"
+            f"  We apologise for the inconvenience."
+        )
+    await bot.send_message(order["user_id"], user_text, parse_mode="HTML")
+    admin_note = f"✕  Order #{oid} cancelled — {order['coins']} coins refunded."
+    if reason:
+        admin_note += f"\n  Reason sent: {reason}"
+    await msg.answer(admin_note)
 
 @router.callback_query(F.data.startswith("delivered_"))
 async def mark_delivered_quick(cb: CallbackQuery, state: FSMContext):
