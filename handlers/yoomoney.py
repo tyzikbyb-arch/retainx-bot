@@ -54,8 +54,16 @@ async def yoomoney_webhook(request: web.Request) -> web.Response:
 
         operation_id = data.get("operation_id", "")
         user_id = int(label)
-        amount_rub = float(data.get("amount", "0"))
+        # withdraw_amount = what the sender actually paid (before YooMoney fee)
+        # amount = what we received (after fee deducted by YooMoney)
+        # We calculate coins from withdraw_amount so the user gets exactly what
+        # they paid for, not less due to commission. Fall back to amount if absent.
+        withdraw_amount = data.get("withdraw_amount", "")
+        amount_received = float(data.get("amount", "0"))
+        amount_rub = float(withdraw_amount) if withdraw_amount else amount_received
         coins = math.floor(amount_rub / COIN_TO_RUB)
+        log.info(f"YooMoney: withdraw_amount={withdraw_amount!r} amount={amount_received} "
+                 f"→ using {amount_rub} RUB → {coins} coins for user {user_id}")
 
         if coins <= 0:
             log.warning(f"YooMoney: zero coins for {amount_rub} RUB (COIN_TO_RUB={COIN_TO_RUB})")
