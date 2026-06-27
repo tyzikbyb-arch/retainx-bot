@@ -478,8 +478,14 @@ def get_referral_list(uid: int) -> list:
 
 def record_yoomoney_payment(operation_id: str, user_id: int, amount_rub: float, coins: int) -> bool:
     """Insert payment record. Returns True if new, False if duplicate operation_id."""
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
     with get_conn() as conn:
         with conn.cursor() as cur:
+            # Check for duplicate first so we can distinguish it from a real DB error
+            cur.execute("SELECT 1 FROM yoomoney_payments WHERE operation_id = %s", (operation_id,))
+            if cur.fetchone():
+                return False
             try:
                 cur.execute(
                     "INSERT INTO yoomoney_payments (operation_id, user_id, amount_rub, coins, created) "
@@ -488,9 +494,10 @@ def record_yoomoney_payment(operation_id: str, user_id: int, amount_rub: float, 
                 )
                 conn.commit()
                 return True
-            except Exception:
+            except Exception as e:
                 conn.rollback()
-                return False
+                _log.error(f"record_yoomoney_payment DB error (op={operation_id} user={user_id}): {e}")
+                raise
 
 
 def get_stale_orders(min_age_seconds: int = 900) -> list:
