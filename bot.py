@@ -25,6 +25,10 @@ except Exception:
     print("Redis unavailable, using Memory storage")
 
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+
+class OnboardStates(StatesGroup):
+    selecting_lang = State()
 
 from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
 from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang
@@ -115,33 +119,54 @@ async def start(msg: Message, state: FSMContext):
                     pass
             asyncio.create_task(_notify_referrer())
 
-    coins = get_coins(uid)
-    lang = get_lang(uid)
-
-    if new:
-        total_bonus = WELCOME_BONUS + (REFERRAL_JOIN_BONUS if ref_id_val else 0)
-        # New user welcome
-        welcome_text = (
-            f"{t('welcome_title', lang)}\n"
+        total_bonus = bonus
+        await state.set_state(OnboardStates.selecting_lang)
+        await state.update_data(onboard_bonus=total_bonus)
+        await msg.answer(
+            "◐  Choose your language  ·  Выберите язык\n"
             "━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"{t('welcome_body', lang)}\n\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            f"{t('welcome_bonus', lang, bonus=total_bonus, coins=coins)}"
+            "  Select your preferred language to continue.\n"
+            "  Выберите язык, чтобы продолжить.",
+            reply_markup=kb(
+                [InlineKeyboardButton(text="🇬🇧  English", callback_data="onboard_lang_en")],
+                [InlineKeyboardButton(text="🇷🇺  Русский", callback_data="onboard_lang_ru")],
+            ),
+            parse_mode="HTML"
         )
-        keyboard = kb(
-            [InlineKeyboardButton(text=t("btn_start_generating", lang), callback_data="cat_video")],
-            [InlineKeyboardButton(text=t("btn_view_pricing", lang),     callback_data="pricing_menu")],
-            [InlineKeyboardButton(text=t("btn_language", lang),         callback_data="lang_menu")],
-            [InlineKeyboardButton(text=t("btn_support", lang),          url="https://t.me/RetainXStudio")],
-        )
-        await msg.answer(welcome_text, reply_markup=get_kb(uid, lang), parse_mode="HTML")
-        await msg.answer(t("what_create", lang), reply_markup=keyboard, parse_mode="HTML")
     else:
         # Returning user
+        coins = get_coins(uid)
+        lang = get_lang(uid)
         text = build_main_menu_text(coins, lang)
         keyboard = build_main_menu_kb(coins, lang)
         await msg.answer(text, reply_markup=get_kb(uid, lang), parse_mode="HTML")
         await msg.answer(t("choose_option", lang), reply_markup=keyboard, parse_mode="HTML")
+
+# ── Onboarding language selection ────────────────────────────
+@dp.callback_query(F.data.in_({"onboard_lang_en", "onboard_lang_ru"}), OnboardStates.selecting_lang)
+async def onboard_lang_cb(cb: CallbackQuery, state: FSMContext):
+    uid = cb.from_user.id
+    lang = "en" if cb.data == "onboard_lang_en" else "ru"
+    set_lang(uid, lang)
+    data = await state.get_data()
+    total_bonus = data.get("onboard_bonus", WELCOME_BONUS)
+    await state.clear()
+    coins = get_coins(uid)
+    welcome_text = (
+        f"{t('welcome_title', lang)}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('welcome_body', lang)}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"{t('welcome_bonus', lang, bonus=total_bonus, coins=coins)}"
+    )
+    keyboard = kb(
+        [InlineKeyboardButton(text=t("btn_start_generating", lang), callback_data="cat_video")],
+        [InlineKeyboardButton(text=t("btn_view_pricing", lang),     callback_data="pricing_menu")],
+        [InlineKeyboardButton(text=t("btn_support", lang),          url="https://t.me/RetainXStudio")],
+    )
+    await cb.message.edit_text(welcome_text, reply_markup=keyboard, parse_mode="HTML")
+    await cb.message.answer(t("what_create", lang), reply_markup=get_kb(uid, lang))
+    await cb.answer()
 
 # ── Panel button router ───────────────────────────────────────
 ADMIN_PANEL_BUTTONS = {
