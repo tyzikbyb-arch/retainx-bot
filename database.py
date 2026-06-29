@@ -150,6 +150,20 @@ def spend_coins(uid: int, amount: int) -> bool:
         conn.commit()
         return True
 
+def remove_coins(uid: int, amount: int) -> int:
+    """Deduct up to `amount` coins from user, clamped at 0. Returns actual amount deducted."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT coins FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            if not row:
+                return 0
+            actual = min(amount, row[0])
+            if actual > 0:
+                cur.execute("UPDATE users SET coins = coins - %s WHERE uid = %s", (actual, uid))
+        conn.commit()
+        return actual
+
 def set_referred_by(uid: int, ref_uid: int):
     with get_conn() as conn:
         with conn.cursor() as cur:

@@ -31,7 +31,7 @@ class OnboardStates(StatesGroup):
     selecting_lang = State()
 
 from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
-from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang
+from database import is_new_user, add_coins, get_coins, remove_coins, set_referred_by, get_lang, set_lang
 from keyboards import kb, menu_btn, client_kb
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
 from handlers import credits, images, video, admin as admin_handler, orders as orders_handler
@@ -49,10 +49,10 @@ dp.include_router(orders_handler.router)
 # ── Keyboards ─────────────────────────────────────────────────
 ADMIN_KB = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="≡  All Orders"),  KeyboardButton(text="◈  Users")],
-        [KeyboardButton(text="✉  Msg User"),    KeyboardButton(text="＋  Add Coins")],
-        [KeyboardButton(text="📤  Deliver"),     KeyboardButton(text="✕  Cancel Order")],
-        [KeyboardButton(text="◌  Commands")],
+        [KeyboardButton(text="≡  All Orders"),    KeyboardButton(text="◈  Users")],
+        [KeyboardButton(text="＋  Add Coins"),     KeyboardButton(text="－  Remove Coins")],
+        [KeyboardButton(text="📤  Deliver"),        KeyboardButton(text="✕  Cancel Order")],
+        [KeyboardButton(text="✉  Msg User"),       KeyboardButton(text="◌  Commands")],
     ],
     resize_keyboard=True,
     persistent=True,
@@ -170,7 +170,7 @@ async def onboard_lang_cb(cb: CallbackQuery, state: FSMContext):
 
 # ── Panel button router ───────────────────────────────────────
 ADMIN_PANEL_BUTTONS = {
-    "≡  All Orders", "✉  Msg User", "＋  Add Coins",
+    "≡  All Orders", "✉  Msg User", "＋  Add Coins", "－  Remove Coins",
     "📤  Deliver", "✕  Cancel Order", "◌  Admin Help", "◈  Users", "◌  Commands",
 }
 PANEL_BUTTONS = CLIENT_TEXTS | ADMIN_PANEL_BUTTONS
@@ -252,6 +252,13 @@ async def panel_router(msg: Message, state: FSMContext):
             "Example:\n<code>/addcoins 939285095 100</code>",
             parse_mode="HTML"
         )
+    elif text == "－  Remove Coins" and uid == ADMIN_ID:
+        await msg.answer(
+            "◈  <b>Remove Coins</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<code>/removecoins USER_ID AMOUNT</code>\n\n"
+            "Example:\n<code>/removecoins 939285095 100</code>",
+            parse_mode="HTML"
+        )
     elif text == "📤  Deliver" and uid == ADMIN_ID:
         await msg.answer(
             "◈  <b>Deliver File</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -300,6 +307,8 @@ async def panel_router(msg: Message, state: FSMContext):
             "  → Send message to user from bot\n\n"
             "  /addcoins <code>USER_ID AMOUNT</code>\n"
             "  → Add coins to user wallet\n\n"
+            "  /removecoins <code>USER_ID AMOUNT</code>\n"
+            "  → Deduct coins from user wallet\n\n"
             "  /deliver <code>USER_ID ORDER_ID</code>\n"
             "  → Attach file to deliver to user\n\n"
             "  /cancelorder <code>ORDER_ID</code>\n"
@@ -457,6 +466,42 @@ async def add_coins_cmd(msg: Message):
             await bot.send_message(uid, f"◈  <b>{amount} coins</b> added to your wallet.\nBalance: <b>{new_balance} coins</b>", parse_mode="HTML")
         except Exception:
             await msg.answer("⚠️  Coins credited, but user hasn't started the bot yet — notification not sent.")
+    except Exception as e:
+        await msg.answer(f"Error: {e}")
+
+@dp.message(Command("removecoins"))
+async def remove_coins_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split()
+    if len(parts) != 3:
+        await msg.answer("Usage: <code>/removecoins USER_ID AMOUNT</code>", parse_mode="HTML")
+        return
+    try:
+        uid = int(parts[1])
+        amount = int(parts[2])
+        if amount <= 0:
+            await msg.answer("Amount must be positive.")
+            return
+        deducted = remove_coins(uid, amount)
+        new_balance = get_coins(uid)
+        if deducted == 0:
+            await msg.answer(f"⚠️  User <code>{uid}</code> has 0 coins — nothing deducted.", parse_mode="HTML")
+            return
+        await msg.answer(
+            f"✓  Removed <b>{deducted} coins</b> from user <code>{uid}</code>\n"
+            f"New balance: <b>{new_balance} coins</b>",
+            parse_mode="HTML"
+        )
+        try:
+            await bot.send_message(
+                uid,
+                f"◌  <b>{deducted} coins</b> were deducted from your wallet.\n"
+                f"New balance: <b>{new_balance} coins</b>",
+                parse_mode="HTML"
+            )
+        except Exception:
+            await msg.answer("⚠️  Coins removed, but failed to notify the user.")
     except Exception as e:
         await msg.answer(f"Error: {e}")
 
