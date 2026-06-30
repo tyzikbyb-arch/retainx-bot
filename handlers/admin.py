@@ -22,7 +22,7 @@ async def mark_delivered(cb: CallbackQuery, state: FSMContext):
     await state.set_state(AdminStates.sending_result)
     await cb.message.answer(
         f"▸  Attach the file for Order #{oid}\n"
-        f"(Send video, image, or document)"
+        f"(Send video, image, audio, or document)"
     )
     await cb.answer()
 
@@ -94,8 +94,8 @@ async def mark_delivered_quick(cb: CallbackQuery, state: FSMContext):
 
 @router.message(AdminStates.sending_result, F.from_user.id == ADMIN_ID)
 async def admin_deliver_file(msg: Message, state: FSMContext):
-    if not (msg.video or msg.document or msg.photo or msg.animation):
-        await msg.answer("Please attach a video, image, or document.")
+    if not (msg.video or msg.document or msg.photo or msg.animation or msg.audio or msg.voice):
+        await msg.answer("Please attach a video, image, audio, or document.")
         return
     data = await state.get_data()
     oid = data.get("admin_oid")
@@ -158,6 +158,14 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
             file_id = msg.photo[-1].file_id
             file_type = "photo"
             await bot.send_photo(uid, file_id, caption=caption, parse_mode="HTML")
+        elif msg.audio or msg.voice:
+            # Sent via send_document (not send_audio) so it doesn't join
+            # Telegram's chat-wide continuous-playback queue, same fix
+            # already applied to voiceover previews in handlers/voiceover.py.
+            file_id = (msg.audio or msg.voice).file_id
+            file_type = "document"
+            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML",
+                                     disable_content_type_detection=True)
 
         if order and file_id:
             save_delivery(oid, file_id, file_type)
