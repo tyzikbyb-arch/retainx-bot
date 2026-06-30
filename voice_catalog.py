@@ -39,6 +39,17 @@ _DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "artlist_voices.jso
 with open(_DATA_PATH, encoding="utf-8") as _f:
     VOICE_CATALOG = json.load(_f)
 
+_EFFECTS_PATH = os.path.join(os.path.dirname(__file__), "data", "artlist_effects.json")
+with open(_EFFECTS_PATH, encoding="utf-8") as _f:
+    EFFECTS = {int(k): v for k, v in json.load(_f).items()}
+
+# Eleven v3 is the only model whose voice-stability control is exposed in
+# Artlist's UI; mirrored here as a runtime generation parameter (not catalog
+# data), in 10% steps as shown on the toolkit.artlist.io Eleven v3 panel.
+STABILITY_MODELS = {206}
+STABILITY_LEVELS = list(range(10, 101, 10))
+STABILITY_DEFAULT = 40
+
 _BY_ID = {v["id"]: v for v in VOICE_CATALOG}
 
 
@@ -112,3 +123,13 @@ def get_preview_url(voice_id: int, model_id: int, language_name: str | None = No
             return match["preview_url"]
     default = next((l for l in langs if l["is_default"]), None)
     return default["preview_url"] if default else None
+
+
+def list_effects(model_id: int) -> list[dict]:
+    """Voice-effect presets for a model (e.g. Cave, Phone Call), identical
+    across every voice of that model. "No Effect" has no preview."""
+    return EFFECTS.get(model_id, [])
+
+
+def get_effect(model_id: int, name: str) -> dict | None:
+    return next((e for e in list_effects(model_id) if e["name"] == name), None)

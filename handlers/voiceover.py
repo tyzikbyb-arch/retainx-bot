@@ -154,8 +154,8 @@ async def voiceover_age_selected(cb: CallbackQuery, state: FSMContext):
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
-def _voice_card_text(voice: dict, model_name: str, language: str, lang: str) -> str:
-    return (
+def _voice_card_text(voice: dict, model_name: str, language: str, lang: str, stability: int | None = None, effect: str | None = None) -> str:
+    text = (
         f"◈  <b>{voice['name']}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {voice['description']}\n\n"
         f"{t('vo_voice_model_label', lang, model=model_name)}\n"
@@ -163,14 +163,28 @@ def _voice_card_text(voice: dict, model_name: str, language: str, lang: str) -> 
         f"{t('vo_voice_age_label', lang, age=_age_label(voice['age'], lang))}\n"
         f"{t('vo_voice_language_label', lang, language=language)}"
     )
+    if stability is not None:
+        text += f"\n{t('vo_voice_stability_label', lang, pct=stability)}"
+    if effect:
+        text += f"\n{t('vo_voice_effect_label', lang, effect=effect)}"
+    return text
 
-def _voice_card_kb(voice_id: int, age: str, language: str, lang: str):
-    return kb(
+def _voice_card_kb(voice_id: int, model_id: int, age: str, language: str, stability: int | None, effect: str | None, lang: str):
+    rows = [
         [InlineKeyboardButton(text=t("vo_btn_listen", lang), callback_data="vo_listen")],
         [InlineKeyboardButton(text=t("vo_btn_change_language", lang, language=language), callback_data="vo_lang_menu")],
-        [InlineKeyboardButton(text=t("vo_btn_choose_voice", lang), callback_data="vo_pick")],
-        [back_btn(f"vo_age_{age}", lang=lang), menu_btn(lang)],
-    )
+    ]
+    if model_id in vc.STABILITY_MODELS:
+        rows.append([InlineKeyboardButton(text=t("vo_btn_stability", lang, pct=stability), callback_data="vo_stabmenu")])
+    if vc.list_effects(model_id):
+        rows.append([InlineKeyboardButton(text=t("vo_btn_effect", lang, effect=effect), callback_data="vo_fxmenu")])
+    rows.append([InlineKeyboardButton(text=t("vo_btn_choose_voice", lang), callback_data="vo_pick")])
+    rows.append([back_btn(f"vo_age_{age}", lang=lang), menu_btn(lang)])
+    return kb(*rows)
+
+def _stability_bar(pct: int) -> str:
+    filled = pct // 10
+    return "🟦" * filled + "⬜" * (10 - filled) + f"   {pct}%"
 
 # ── Voice selected → voice card + preview sample ────────────────
 @router.callback_query(F.data.startswith("vo_voice_"))
@@ -186,11 +200,16 @@ async def voiceover_voice_selected(cb: CallbackQuery, state: FSMContext):
     model_name = data.get("vo_model_name", "—")
     age = data.get("vo_age")
     language = _default_language(voice_id, model_id)
-    await state.update_data(vo_voice_id=voice_id, vo_voice_name=voice["name"], vo_lang=language)
+    stability = vc.STABILITY_DEFAULT if model_id in vc.STABILITY_MODELS else None
+    effect = "No Effect" if vc.list_effects(model_id) else None
+    await state.update_data(
+        vo_voice_id=voice_id, vo_voice_name=voice["name"], vo_lang=language,
+        vo_stability=stability, vo_effect=effect,
+    )
 
     await cb.message.edit_text(
-        _voice_card_text(voice, model_name, language, lang),
-        reply_markup=_voice_card_kb(voice_id, age, language, lang),
+        _voice_card_text(voice, model_name, language, lang, stability, effect),
+        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang),
         parse_mode="HTML"
     )
     await _send_preview(cb.message, voice["name"], voice_id, model_id, model_name, language, lang)
@@ -247,15 +266,129 @@ async def voiceover_language_selected(cb: CallbackQuery, state: FSMContext):
     match = next((l for l in languages if l["name"].startswith(language)), None)
     full_language = match["name"] if match else language
     await state.update_data(vo_lang=full_language)
+    stability = data.get("vo_stability")
+    effect = data.get("vo_effect")
 
     await cb.message.edit_text(
-        _voice_card_text(voice, model_name, full_language, lang),
-        reply_markup=_voice_card_kb(voice_id, age, full_language, lang),
+        _voice_card_text(voice, model_name, full_language, lang, stability, effect),
+        reply_markup=_voice_card_kb(voice_id, model_id, age, full_language, stability, effect, lang),
         parse_mode="HTML"
     )
     sent = await _send_preview(cb.message, voice["name"], voice_id, model_id, model_name, full_language, lang)
     if not sent:
         await cb.answer()
+
+# ── Stability slider (Eleven v3 only) ─────────────────────────────
+@router.callback_query(F.data == "vo_stabmenu")
+async def voiceover_stability_menu(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    voice_name = data.get("vo_voice_name", "—")
+    stability = data.get("vo_stability", vc.STABILITY_DEFAULT)
+    await cb.message.edit_text(
+        f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vo_select_stability', lang)}\n\n{_stability_bar(stability)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text="➖", callback_data="vo_stabdown"),
+             InlineKeyboardButton(text="➕", callback_data="vo_stabup")],
+            [InlineKeyboardButton(text=t("vo_btn_done", lang), callback_data="vo_stabdone")],
+        ),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.in_(["vo_stabup", "vo_stabdown"]))
+async def voiceover_stability_adjust(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    voice_name = data.get("vo_voice_name", "—")
+    stability = data.get("vo_stability", vc.STABILITY_DEFAULT)
+    step = 10 if cb.data == "vo_stabup" else -10
+    stability = max(min(stability + step, 100), 10)
+    await state.update_data(vo_stability=stability)
+    await cb.message.edit_text(
+        f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vo_select_stability', lang)}\n\n{_stability_bar(stability)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text="➖", callback_data="vo_stabdown"),
+             InlineKeyboardButton(text="➕", callback_data="vo_stabup")],
+            [InlineKeyboardButton(text=t("vo_btn_done", lang), callback_data="vo_stabdone")],
+        ),
+        parse_mode="HTML"
+    )
+    await cb.answer()
+
+@router.callback_query(F.data == "vo_stabdone")
+async def voiceover_stability_done(cb: CallbackQuery, state: FSMContext):
+    await _render_voice_card(cb, state)
+
+# ── Voice effects ──────────────────────────────────────────────────
+@router.callback_query(F.data == "vo_fxmenu")
+async def voiceover_effect_menu(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    model_id = data.get("vo_model")
+    voice_name = data.get("vo_voice_name", "—")
+    current_effect = data.get("vo_effect", "No Effect")
+    effects = vc.list_effects(model_id)
+    buttons = [
+        InlineKeyboardButton(
+            text=("✓ " if e["name"] == current_effect else "") + e["name"],
+            callback_data=f"vo_fx_{i}",
+        )
+        for i, e in enumerate(effects)
+    ]
+    rows = list(chunked(buttons, 2))
+    rows.append([InlineKeyboardButton(text=t("vo_btn_done", lang), callback_data="vo_fxdone")])
+    await cb.message.edit_text(
+        f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_effect', lang)}",
+        reply_markup=kb(*rows), parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("vo_fx_"))
+async def voiceover_effect_selected(cb: CallbackQuery, state: FSMContext):
+    idx = int(cb.data.replace("vo_fx_", "", 1))
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    model_id = data.get("vo_model")
+    effects = vc.list_effects(model_id)
+    if idx < 0 or idx >= len(effects):
+        await cb.answer("Effect not found")
+        return
+    effect = effects[idx]
+    await state.update_data(vo_effect=effect["name"])
+
+    if effect["preview_url"]:
+        await cb.message.answer_audio(
+            audio=effect["preview_url"],
+            title=effect["name"],
+            caption=t("vo_effect_preview_caption", lang, effect=effect["name"]),
+        )
+    await voiceover_effect_menu(cb, state)
+    await cb.answer()
+
+@router.callback_query(F.data == "vo_fxdone")
+async def voiceover_effect_done(cb: CallbackQuery, state: FSMContext):
+    await _render_voice_card(cb, state)
+
+async def _render_voice_card(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    voice_id = data.get("vo_voice_id")
+    model_id = data.get("vo_model")
+    model_name = data.get("vo_model_name", "—")
+    age = data.get("vo_age")
+    language = data.get("vo_lang", "—")
+    stability = data.get("vo_stability")
+    effect = data.get("vo_effect")
+    voice = vc.get_voice(voice_id)
+    if not voice:
+        await cb.answer("Voice not found")
+        return
+    await cb.message.edit_text(
+        _voice_card_text(voice, model_name, language, lang, stability, effect),
+        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang),
+        parse_mode="HTML"
+    )
 
 # ── Voice picked → ask for text ───────────────────────────────
 @router.callback_query(F.data == "vo_pick")
@@ -280,8 +413,16 @@ async def voiceover_text_received(msg: Message, state: FSMContext):
     voice_name = data.get("vo_voice_name", "—")
     model_name = data.get("vo_model_name", "—")
     language = data.get("vo_lang", "—")
+    stability = data.get("vo_stability")
+    effect = data.get("vo_effect")
     coins_word = t("coins_word", lang)
     user_coins = get_coins(msg.from_user.id)
+
+    extra_lines = ""
+    if stability is not None:
+        extra_lines += f"{t('vo_stability_label', lang, pct=stability)}\n"
+    if effect:
+        extra_lines += f"{t('vo_effect_label', lang, effect=effect)}\n"
 
     await msg.answer(
         f"{t('vo_order_summary_title', lang)}\n"
@@ -289,6 +430,7 @@ async def voiceover_text_received(msg: Message, state: FSMContext):
         f"{t('vo_voice_label', lang, name=voice_name)}\n"
         f"{t('vo_model_label', lang, model=model_name)}\n"
         f"{t('vo_language_label', lang, language=language)}\n"
+        f"{extra_lines}"
         f"{t('vo_cost_label', lang)}<b>{VOICEOVER_PRICE_COINS} {coins_word}</b>\n"
         f"{t('vo_balance_label', lang)}{user_coins} {coins_word}\n\n"
         f"{t('vo_text_label', lang)}\n<i>{msg.text}</i>\n\n"
@@ -341,6 +483,8 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
         "category": data.get("vo_cat"),
         "gender": data.get("vo_gender"),
         "age": data.get("vo_age"),
+        "stability": data.get("vo_stability"),
+        "effect": data.get("vo_effect"),
         "text": text,
     }
     tool_name = f"Voiceover — {voice_name} ({model_name})"
@@ -400,6 +544,11 @@ async def _notify_admin(cb: CallbackQuery, oid: int, tool: str, params: dict, co
         InlineKeyboardButton(text="✓  Delivered", callback_data=f"delivered_{oid}"),
         InlineKeyboardButton(text="✕  Cancel", callback_data=f"cancel_order_{oid}"),
     ]])
+    extra = ""
+    if params.get("stability") is not None:
+        extra += f"  Stability  {params['stability']}%\n"
+    if params.get("effect"):
+        extra += f"  Effect     {params['effect']}\n"
     await bot.send_message(
         ADMIN_ID,
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
@@ -412,6 +561,7 @@ async def _notify_admin(cb: CallbackQuery, oid: int, tool: str, params: dict, co
         f"  Category   {params.get('category')}\n"
         f"  Gender     {params.get('gender')}\n"
         f"  Age        {params.get('age')}\n"
+        f"{extra}"
         f"  Coins      <b>{coins}◈</b>  (${price_usd})",
         reply_markup=keyboard, parse_mode="HTML"
     )
