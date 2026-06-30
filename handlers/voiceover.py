@@ -154,7 +154,7 @@ async def voiceover_age_selected(cb: CallbackQuery, state: FSMContext):
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
-def _voice_card_text(voice: dict, model_name: str, language: str, lang: str, stability: int | None = None, effect: str | None = None) -> str:
+def _voice_card_text(voice: dict, model_name: str, language: str, lang: str, stability: int | None = None, effect: str | None = None, emotion: str | None = None, speed: float | None = None) -> str:
     text = (
         f"◈  <b>{voice['name']}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {voice['description']}\n\n"
@@ -167,9 +167,13 @@ def _voice_card_text(voice: dict, model_name: str, language: str, lang: str, sta
         text += f"\n{t('vo_voice_stability_label', lang, pct=stability)}"
     if effect:
         text += f"\n{t('vo_voice_effect_label', lang, effect=effect)}"
+    if emotion:
+        text += f"\n{t('vo_voice_emotion_label', lang, emotion=emotion)}"
+    if speed is not None:
+        text += f"\n{t('vo_voice_speed_label', lang, speed=speed)}"
     return text
 
-def _voice_card_kb(voice_id: int, model_id: int, age: str, language: str, stability: int | None, effect: str | None, lang: str):
+def _voice_card_kb(voice_id: int, model_id: int, age: str, language: str, stability: int | None, effect: str | None, lang: str, emotion: str | None = None, speed: float | None = None):
     rows = [
         [InlineKeyboardButton(text=t("vo_btn_listen", lang), callback_data="vo_listen")],
         [InlineKeyboardButton(text=t("vo_btn_change_language", lang, language=language), callback_data="vo_lang_menu")],
@@ -178,6 +182,10 @@ def _voice_card_kb(voice_id: int, model_id: int, age: str, language: str, stabil
         rows.append([InlineKeyboardButton(text=t("vo_btn_stability", lang, pct=stability), callback_data="vo_stabmenu")])
     if vc.list_effects(model_id):
         rows.append([InlineKeyboardButton(text=t("vo_btn_effect", lang, effect=effect), callback_data="vo_fxmenu")])
+    if vc.list_emotions(model_id):
+        rows.append([InlineKeyboardButton(text=t("vo_btn_emotion", lang, emotion=emotion), callback_data="vo_emomenu")])
+    if model_id in vc.SPEED_MODELS:
+        rows.append([InlineKeyboardButton(text=t("vo_btn_speed", lang, speed=speed), callback_data="vo_spdmenu")])
     rows.append([InlineKeyboardButton(text=t("vo_btn_choose_voice", lang), callback_data="vo_pick")])
     rows.append([back_btn(f"vo_age_{age}", lang=lang), menu_btn(lang)])
     return kb(*rows)
@@ -185,6 +193,10 @@ def _voice_card_kb(voice_id: int, model_id: int, age: str, language: str, stabil
 def _stability_bar(pct: int) -> str:
     filled = pct // 10
     return "🟦" * filled + "⬜" * (10 - filled) + f"   {pct}%"
+
+def _speed_bar(speed: float) -> str:
+    filled = round((speed - 0.5) / 0.1)
+    return "🟦" * filled + "⬜" * (10 - filled) + f"   {speed}x"
 
 # ── Voice selected → voice card + preview sample ────────────────
 @router.callback_query(F.data.startswith("vo_voice_"))
@@ -202,14 +214,17 @@ async def voiceover_voice_selected(cb: CallbackQuery, state: FSMContext):
     language = _default_language(voice_id, model_id)
     stability = vc.STABILITY_DEFAULT if model_id in vc.STABILITY_MODELS else None
     effect = "No Effect" if vc.list_effects(model_id) else None
+    emotions = vc.list_emotions(model_id)
+    emotion = next((e["name"] for e in emotions if e["is_default"]), emotions[0]["name"] if emotions else None)
+    speed = vc.SPEED_DEFAULT if model_id in vc.SPEED_MODELS else None
     await state.update_data(
         vo_voice_id=voice_id, vo_voice_name=voice["name"], vo_lang=language,
-        vo_stability=stability, vo_effect=effect,
+        vo_stability=stability, vo_effect=effect, vo_emotion=emotion, vo_speed=speed,
     )
 
     await cb.message.edit_text(
-        _voice_card_text(voice, model_name, language, lang, stability, effect),
-        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang),
+        _voice_card_text(voice, model_name, language, lang, stability, effect, emotion, speed),
+        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang, emotion, speed),
         parse_mode="HTML"
     )
     await _send_preview(cb.message, voice["name"], voice_id, model_id, model_name, language, lang)
@@ -268,10 +283,12 @@ async def voiceover_language_selected(cb: CallbackQuery, state: FSMContext):
     await state.update_data(vo_lang=full_language)
     stability = data.get("vo_stability")
     effect = data.get("vo_effect")
+    emotion = data.get("vo_emotion")
+    speed = data.get("vo_speed")
 
     await cb.message.edit_text(
-        _voice_card_text(voice, model_name, full_language, lang, stability, effect),
-        reply_markup=_voice_card_kb(voice_id, model_id, age, full_language, stability, effect, lang),
+        _voice_card_text(voice, model_name, full_language, lang, stability, effect, emotion, speed),
+        reply_markup=_voice_card_kb(voice_id, model_id, age, full_language, stability, effect, lang, emotion, speed),
         parse_mode="HTML"
     )
     sent = await _send_preview(cb.message, voice["name"], voice_id, model_id, model_name, full_language, lang)
@@ -372,6 +389,89 @@ async def voiceover_effect_selected(cb: CallbackQuery, state: FSMContext):
 async def voiceover_effect_done(cb: CallbackQuery, state: FSMContext):
     await _render_voice_card(cb, state)
 
+# ── Voice emotion (MiniMax 02 HD, Cartesia Sonic 2 only) ───────────
+@router.callback_query(F.data == "vo_emomenu")
+async def voiceover_emotion_menu(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    model_id = data.get("vo_model")
+    voice_name = data.get("vo_voice_name", "—")
+    current_emotion = data.get("vo_emotion")
+    emotions = vc.list_emotions(model_id)
+    buttons = [
+        InlineKeyboardButton(
+            text=("✓ " if e["name"] == current_emotion else "") + e["name"],
+            callback_data=f"vo_emo_{i}",
+        )
+        for i, e in enumerate(emotions)
+    ]
+    rows = list(chunked(buttons, 2))
+    rows.append([InlineKeyboardButton(text=t("vo_btn_done", lang), callback_data="vo_emodone")])
+    await cb.message.edit_text(
+        f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_emotion', lang)}",
+        reply_markup=kb(*rows), parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("vo_emo_"))
+async def voiceover_emotion_selected(cb: CallbackQuery, state: FSMContext):
+    idx = int(cb.data.replace("vo_emo_", "", 1))
+    data = await state.get_data()
+    model_id = data.get("vo_model")
+    emotions = vc.list_emotions(model_id)
+    if idx < 0 or idx >= len(emotions):
+        await cb.answer("Emotion not found")
+        return
+    await state.update_data(vo_emotion=emotions[idx]["name"])
+    await voiceover_emotion_menu(cb, state)
+    await cb.answer()
+
+@router.callback_query(F.data == "vo_emodone")
+async def voiceover_emotion_done(cb: CallbackQuery, state: FSMContext):
+    await _render_voice_card(cb, state)
+
+# ── Voice speed (all models) ────────────────────────────────────────
+@router.callback_query(F.data == "vo_spdmenu")
+async def voiceover_speed_menu(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    voice_name = data.get("vo_voice_name", "—")
+    speed = data.get("vo_speed", vc.SPEED_DEFAULT)
+    await cb.message.edit_text(
+        f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vo_select_speed', lang)}\n\n{_speed_bar(speed)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text="➖", callback_data="vo_spddown"),
+             InlineKeyboardButton(text="➕", callback_data="vo_spdup")],
+            [InlineKeyboardButton(text=t("vo_btn_done", lang), callback_data="vo_spddone")],
+        ),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.in_(["vo_spdup", "vo_spddown"]))
+async def voiceover_speed_adjust(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    voice_name = data.get("vo_voice_name", "—")
+    speed = data.get("vo_speed", vc.SPEED_DEFAULT)
+    step = 0.1 if cb.data == "vo_spdup" else -0.1
+    speed = round(max(min(speed + step, 1.5), 0.5), 1)
+    await state.update_data(vo_speed=speed)
+    await cb.message.edit_text(
+        f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vo_select_speed', lang)}\n\n{_speed_bar(speed)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text="➖", callback_data="vo_spddown"),
+             InlineKeyboardButton(text="➕", callback_data="vo_spdup")],
+            [InlineKeyboardButton(text=t("vo_btn_done", lang), callback_data="vo_spddone")],
+        ),
+        parse_mode="HTML"
+    )
+    await cb.answer()
+
+@router.callback_query(F.data == "vo_spddone")
+async def voiceover_speed_done(cb: CallbackQuery, state: FSMContext):
+    await _render_voice_card(cb, state)
+
 async def _render_voice_card(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
@@ -382,13 +482,15 @@ async def _render_voice_card(cb: CallbackQuery, state: FSMContext):
     language = data.get("vo_lang", "—")
     stability = data.get("vo_stability")
     effect = data.get("vo_effect")
+    emotion = data.get("vo_emotion")
+    speed = data.get("vo_speed")
     voice = vc.get_voice(voice_id)
     if not voice:
         await cb.answer("Voice not found")
         return
     await cb.message.edit_text(
-        _voice_card_text(voice, model_name, language, lang, stability, effect),
-        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang),
+        _voice_card_text(voice, model_name, language, lang, stability, effect, emotion, speed),
+        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang, emotion, speed),
         parse_mode="HTML"
     )
 
@@ -417,6 +519,8 @@ async def voiceover_text_received(msg: Message, state: FSMContext):
     language = data.get("vo_lang", "—")
     stability = data.get("vo_stability")
     effect = data.get("vo_effect")
+    emotion = data.get("vo_emotion")
+    speed = data.get("vo_speed")
     coins_word = t("coins_word", lang)
     user_coins = get_coins(msg.from_user.id)
 
@@ -425,6 +529,10 @@ async def voiceover_text_received(msg: Message, state: FSMContext):
         extra_lines += f"{t('vo_stability_label', lang, pct=stability)}\n"
     if effect:
         extra_lines += f"{t('vo_effect_label', lang, effect=effect)}\n"
+    if emotion:
+        extra_lines += f"{t('vo_emotion_label', lang, emotion=emotion)}\n"
+    if speed is not None:
+        extra_lines += f"{t('vo_speed_label', lang, speed=speed)}\n"
 
     await msg.answer(
         f"{t('vo_order_summary_title', lang)}\n"
@@ -487,6 +595,8 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
         "age": data.get("vo_age"),
         "stability": data.get("vo_stability"),
         "effect": data.get("vo_effect"),
+        "emotion": data.get("vo_emotion"),
+        "speed": data.get("vo_speed"),
         "text": text,
     }
     tool_name = f"Voiceover — {voice_name} ({model_name})"
@@ -551,6 +661,10 @@ async def _notify_admin(cb: CallbackQuery, oid: int, tool: str, params: dict, co
         extra += f"  Stability  {params['stability']}%\n"
     if params.get("effect"):
         extra += f"  Effect     {params['effect']}\n"
+    if params.get("emotion"):
+        extra += f"  Emotion    {params['emotion']}\n"
+    if params.get("speed") is not None:
+        extra += f"  Speed      {params['speed']}x\n"
     await bot.send_message(
         ADMIN_ID,
         f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"

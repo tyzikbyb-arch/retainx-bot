@@ -43,12 +43,21 @@ _EFFECTS_PATH = os.path.join(os.path.dirname(__file__), "data", "artlist_effects
 with open(_EFFECTS_PATH, encoding="utf-8") as _f:
     EFFECTS = {int(k): v for k, v in json.load(_f).items()}
 
+_EMOTIONS_PATH = os.path.join(os.path.dirname(__file__), "data", "artlist_emotions.json")
+with open(_EMOTIONS_PATH, encoding="utf-8") as _f:
+    EMOTIONS = {int(k): v for k, v in json.load(_f).items()}
+
 # Eleven v3 is the only model whose voice-stability control is exposed in
 # Artlist's UI; mirrored here as a runtime generation parameter (not catalog
 # data), in 10% steps as shown on the toolkit.artlist.io Eleven v3 panel.
 STABILITY_MODELS = {206}
 STABILITY_LEVELS = list(range(10, 101, 10))
 STABILITY_DEFAULT = 40
+
+# Every model exposes a Speed control, 0.5x-1.5x in 0.1 steps, default 1x.
+SPEED_MODELS = {206, 311, 6, 200}
+SPEED_LEVELS = [round(0.5 + 0.1 * i, 1) for i in range(11)]
+SPEED_DEFAULT = 1.0
 
 _BY_ID = {v["id"]: v for v in VOICE_CATALOG}
 
@@ -133,3 +142,9 @@ def list_effects(model_id: int) -> list[dict]:
 
 def get_effect(model_id: int, name: str) -> dict | None:
     return next((e for e in list_effects(model_id) if e["name"] == name), None)
+
+
+def list_emotions(model_id: int) -> list[dict]:
+    """Emotion presets for a model (e.g. Angry, Optimistic). Only MiniMax 02
+    HD and Cartesia Sonic 2 support this trait; Eleven models don't."""
+    return EMOTIONS.get(model_id, [])
