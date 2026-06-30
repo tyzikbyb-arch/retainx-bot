@@ -1,3 +1,4 @@
+import os
 import aiohttp
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, BufferedInputFile, InputMediaDocument
@@ -10,6 +11,15 @@ from i18n import t
 import voice_catalog as vc
 
 router = Router()
+
+# Cover shown in place of Telegram's generic grey file icon on every voice
+# preview document (mic + waveform, branded) — loaded once at import time.
+_THUMB_PATH = os.path.join(os.path.dirname(__file__), "..", "assets", "audio_thumb.jpg")
+with open(_THUMB_PATH, "rb") as _f:
+    _AUDIO_THUMB_BYTES = _f.read()
+
+def _audio_thumb() -> BufferedInputFile:
+    return BufferedInputFile(_AUDIO_THUMB_BYTES, filename="thumb.jpg")
 
 class VoiceoverStates(StatesGroup):
     entering_text = State()
@@ -356,6 +366,7 @@ async def _send_preview(message, voice_name: str, voice_id: int, model_id: int, 
     # neighboring audio messages after one finishes.
     await message.answer_document(
         document=BufferedInputFile(audio_bytes, filename=f"{voice_name}.m4a"),
+        thumbnail=_audio_thumb(),
         caption=t("vo_preview_caption", lang, voice=display_name, language=display_language, model=model_name),
     )
     return True
@@ -484,6 +495,7 @@ async def voiceover_listen_all(cb: CallbackQuery, state: FSMContext):
             # Telegram's chat-wide continuous-playback queue.
             media.append(InputMediaDocument(
                 media=BufferedInputFile(audio_bytes, filename=f"{voice['name']}.m4a"),
+                thumbnail=_audio_thumb(),
                 caption=display_name,
             ))
         if media:
@@ -747,6 +759,7 @@ async def voiceover_effect_selected(cb: CallbackQuery, state: FSMContext):
             # chat-wide continuous-playback queue.
             await cb.message.answer_document(
                 document=BufferedInputFile(audio_bytes, filename=f"{effect['name']}.m4a"),
+                thumbnail=_audio_thumb(),
                 caption=t("vo_effect_preview_caption", lang, effect=display_effect),
             )
     await voiceover_effect_menu(cb, state)

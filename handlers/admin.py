@@ -1,5 +1,6 @@
+import os
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import ADMIN_ID, BOT_TOKEN
@@ -8,6 +9,15 @@ from keyboards import kb, menu_btn
 from aiogram.types import InlineKeyboardButton
 
 router = Router()
+
+# Same branded cover used for voice previews in handlers/voiceover.py, shown
+# in place of Telegram's generic grey file icon when delivering an audio order.
+_THUMB_PATH = os.path.join(os.path.dirname(__file__), "..", "assets", "audio_thumb.jpg")
+with open(_THUMB_PATH, "rb") as _f:
+    _AUDIO_THUMB_BYTES = _f.read()
+
+def _audio_thumb() -> BufferedInputFile:
+    return BufferedInputFile(_AUDIO_THUMB_BYTES, filename="thumb.jpg")
 
 class AdminStates(StatesGroup):
     sending_result = State()
@@ -164,7 +174,7 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
             # already applied to voiceover previews in handlers/voiceover.py.
             file_id = (msg.audio or msg.voice).file_id
             file_type = "document"
-            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML",
+            await bot.send_document(uid, file_id, thumbnail=_audio_thumb(), caption=caption, parse_mode="HTML",
                                      disable_content_type_detection=True)
 
         if order and file_id:
