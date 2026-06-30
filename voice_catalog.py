@@ -56,8 +56,9 @@ STABILITY_MODELS = {206}
 STABILITY_LEVELS = list(range(10, 101, 10))
 STABILITY_DEFAULT = 40
 
-# Every model exposes a Speed control, 0.5x-1.5x in 0.1 steps, default 1x.
-SPEED_MODELS = {206, 311, 6, 200}
+# Speed control, 0.5x-1.5x in 0.1 steps, default 1x. Eleven v3 has no Speed
+# control on Artlist's UI (it only exposes Stability), so it's excluded here.
+SPEED_MODELS = {311, 6, 200}
 SPEED_LEVELS = [round(0.5 + 0.1 * i, 1) for i in range(11)]
 SPEED_DEFAULT = 1.0
 

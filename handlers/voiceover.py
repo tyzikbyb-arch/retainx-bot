@@ -1,6 +1,6 @@
 import aiohttp
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, BufferedInputFile, InputMediaAudio
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, BufferedInputFile, InputMediaDocument
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import coins_to_usd
@@ -224,6 +224,82 @@ VOICE_NAME_LABELS_RU = {
     "Wit": "Остроумие",
 }
 
+DESCRIPTION_LABELS_RU = {
+    "A dependable, friendly, and approachable everyman.": "Надёжный, дружелюбный и располагающий к себе образ простого человека.",
+    "Deeply resonant with a soulful, textured tone": "Глубокий, проникновенный голос с насыщенным, душевным тембром",
+    "Insightful and articulate with soulful depth": "Проницательный и красноречивый, с глубокой душевностью",
+    "A singsong warmth that sparks curiosity with a young audience": "Напевная теплота, пробуждающая любопытство у юной аудитории",
+    "Narrate with a friendly, welcoming voice": "Озвучивайте дружелюбным, располагающим голосом",
+    "A charismatic voice to sell your product": "Харизматичный голос для продажи вашего продукта",
+    "A steady voice to accompany every journey": "Уверенный голос — спутник в любом путешествии",
+    "Speak clearly and directly to your audience": "Говорите чётко и прямо со своей аудиторией",
+    "Engage and reassure your listeners": "Вовлекайте и успокаивайте своих слушателей",
+    "A distinct grit-meets-artisanal edge with a touch of stoicism": "Особая твёрдость с налётом мастерства и стоицизма",
+    "Communicate with clarity and optimism": "Общайтесь с ясностью и оптимизмом",
+    "Deliver information at eye level": "Подавайте информацию на равных, без снисходительности",
+    "Infuse your video with a young, clear and relatable voice.": "Наполните видео молодым, чётким и располагающим голосом.",
+    "Engage your audience with a down-to-earth British accent": "Увлеките аудиторию приземлённым британским акцентом",
+    "A bold and determined voice with a touch of empathy": "Смелый и решительный голос с ноткой эмпатии",
+    "Craft a sense of trust and wisdom": "Создайте ощущение доверия и мудрости",
+    "Spread your message with a trendy, friendly voice": "Донесите сообщение модным, дружелюбным голосом",
+    "A sweet, high-spirited voice that radiates a bubbly, bright energy": "Милый, жизнерадостный голос, излучающий искрящуюся, яркую энергию",
+    "A composed voice that reflects calm and sensibility": "Уравновешенный голос, отражающий спокойствие и здравомыслие",
+    "Spark wonder and childlike adventure in your video": "Пробудите в видео ощущение чуда и детского приключения",
+    "Relay facts with confident professionalism": "Излагайте факты с уверенным профессионализмом",
+    "Tell your story with childlike wonder": "Расскажите свою историю с детским удивлением",
+    "Excite your viewers with a young and energetic voice": "Воодушевите зрителей молодым, энергичным голосом",
+    "Narrate with warmth and wisdom": "Озвучивайте с теплотой и мудростью",
+    "Express empathy and raw emotion in your video": "Выразите в видео эмпатию и неприкрытые эмоции",
+    "Transport your audience with a raspy Southern drawl": "Перенесите аудиторию хрипловатым южным говором",
+    "Make complex ideas sound simple": "Сделайте сложные идеи простыми на слух",
+    "Clarity and elegance in every word": "Ясность и элегантность в каждом слове",
+    "A bold, sharp, and mischievous youthful British voice": "Дерзкий, острый и озорной юный британский голос",
+    "An approachable voice for any video": "Располагающий голос для любого видео",
+    "Educate and entertain with a voice that inspires curiosity": "Обучайте и развлекайте голосом, пробуждающим любопытство",
+    "Add depth with raspy hoarse tones": "Добавьте глубины хрипловатыми, сиплыми нотками",
+    "Soothe and calm your senses": "Успокойте и умиротворите чувства",
+    "Establish trust, authority, and a clear vision of the future": "Создайте доверие, авторитет и ясное видение будущего",
+    "Casual Gen Z style narration": "Непринуждённая озвучка в стиле поколения Z",
+    "A touch of cheekiness paired with sarcasm": "Нотка дерзости в сочетании с сарказмом",
+    "Bring a sense of enthusiasm to facts": "Привнесите воодушевление в подачу фактов",
+    "Uplift your audience with the sweet, innocent voice of a child": "Поднимите настроение аудитории милым, невинным детским голосом",
+    "A reassuring voice you can depend on": "Успокаивающий голос, на который можно положиться",
+    "A futuristic voice for guiding and educating users": "Футуристичный голос для навигации и обучения пользователей",
+    "Effortlessly delightful, with a fun and inviting energy": "Непринуждённо приятный, с весёлой и располагающей энергией",
+    "Tell epic stories with a deep, cinematic voice": "Рассказывайте эпичные истории глубоким, кинематографичным голосом",
+    "A bright and energetic tone to inspire your audience": "Яркий, энергичный тон, вдохновляющий аудиторию",
+    "Convey information with warmth": "Передавайте информацию с теплотой",
+    "Influence your audience with sassy confidence": "Влияйте на аудиторию дерзкой уверенностью",
+    "Create genuine and relatable content": "Создавайте искренний, близкий зрителю контент",
+    "Motivate and empower your audience": "Мотивируйте и вдохновляйте свою аудиторию",
+    "Lighten things up with an cool, energetic, optimistic voice": "Разрядите обстановку классным, энергичным, оптимистичным голосом",
+    "Street-wise, tough, with a threatening authority": "Уличная смекалка, жёсткость и угрожающий авторитет",
+    "Sell anything with enthusiasm": "Продавайте что угодно с энтузиазмом",
+    "A calm and understated voice to subtly inspire your audience.": "Спокойный, сдержанный голос, который тонко вдохновляет аудиторию.",
+    "Stir up emotions with a bold young voice": "Всколыхните эмоции смелым молодым голосом",
+    "Share your message with a raw voice": "Поделитесь своим посланием неприкрытым голосом",
+    "A high dosage of friendly enthusiasm": "Большая доза дружелюбного энтузиазма",
+    "Soft whispers to relax and unwind": "Тихий шёпот для расслабления и отдыха",
+    "Invigorate your audience with a booming, charismatic voice": "Взбодрите аудиторию мощным, харизматичным голосом",
+    "Give your video a refined touch with a young British accent": "Придайте видео изысканности молодым британским акцентом",
+    "Infuse your video with energy and excitement": "Наполните видео энергией и азартом",
+    "A grounded, confident voice to communicate with purpose": "Приземлённый, уверенный голос для целеустремлённого общения",
+    "A dreamy, delicate voice that brings a sense of peace and wonder": "Мечтательный, нежный голос, дарящий ощущение покоя и чуда",
+    "A composed voice with quiet strength and steady purpose": "Уравновешенный голос с тихой силой и устойчивой целеустремлённостью",
+    "Inspire audiences with a voice of knowledge": "Вдохновляйте аудиторию голосом знания",
+    "Raw and intimate authenticity": "Неприкрытая, интимная искренность",
+    "Steady, strong and quietly adventurous": "Уверенный, сильный и тихо авантюрный",
+    "Dive into an imaginative tale with wit and youthful curiosity": "Погрузитесь в фантазийную историю с остроумием и юным любопытством",
+    "Soothe your audience with a voice of tranquility": "Успокойте аудиторию голосом безмятежности",
+    "A cool, laidback voice with a touch of attitude": "Классный, непринуждённый голос с ноткой характера",
+    "Deliver thrilling, high-stakes energy with a booming British voice": "Передайте захватывающую, напряжённую энергию мощным британским голосом",
+    "A non-binary voice that's soft, calm and understated": "Небинарный голос — мягкий, спокойный и сдержанный",
+    "A rich, resonant voice full of warmth, wonder and timeless cheer": "Богатый, звучный голос, полный теплоты, чуда и неизменного веселья",
+    "An authentic, articulate voice that motivates viewers": "Искренний, чёткий голос, мотивирующий зрителей",
+    "A smooth, confident voice that's always ready for the spotlight": "Плавный, уверенный голос, всегда готовый к свету софитов",
+    "Graceful, composed and effortlessly confident": "Грациозный, уравновешенный и непринуждённо уверенный",
+}
+
 def _ru(value: str, table: dict, lang: str) -> str:
     return table.get(value, value) if lang == "ru" else value
 
@@ -241,6 +317,9 @@ def _emotion_label(emotion: str, lang: str) -> str:
 
 def _voice_name_label(name: str, lang: str) -> str:
     return _ru(name, VOICE_NAME_LABELS_RU, lang)
+
+def _description_label(description: str, lang: str) -> str:
+    return _ru(description, DESCRIPTION_LABELS_RU, lang)
 
 def _default_language(voice_id: int, model_id: int) -> str:
     langs = vc.list_languages(voice_id, model_id)
@@ -272,9 +351,11 @@ async def _send_preview(message, voice_name: str, voice_id: int, model_id: int, 
         return False
     display_name = _voice_name_label(voice_name, lang)
     display_language = _language_label(language, lang)
-    await message.answer_audio(
-        audio=BufferedInputFile(audio_bytes, filename=f"{voice_name}.m4a"),
-        title=display_name,
+    # Sent as a document (not sendAudio) so Telegram doesn't add this preview
+    # to its chat-wide continuous-playback queue, which auto-advances to
+    # neighboring audio messages after one finishes.
+    await message.answer_document(
+        document=BufferedInputFile(audio_bytes, filename=f"{voice_name}.m4a"),
         caption=t("vo_preview_caption", lang, voice=display_name, language=display_language, model=model_name),
     )
     return True
@@ -399,9 +480,10 @@ async def voiceover_listen_all(cb: CallbackQuery, state: FSMContext):
             if not audio_bytes:
                 continue
             display_name = _voice_name_label(voice["name"], lang)
-            media.append(InputMediaAudio(
+            # InputMediaDocument (not Audio) so these previews don't join
+            # Telegram's chat-wide continuous-playback queue.
+            media.append(InputMediaDocument(
                 media=BufferedInputFile(audio_bytes, filename=f"{voice['name']}.m4a"),
-                title=display_name,
                 caption=display_name,
             ))
         if media:
@@ -410,7 +492,7 @@ async def voiceover_listen_all(cb: CallbackQuery, state: FSMContext):
 def _voice_card_text(voice: dict, model_name: str, language: str, lang: str, stability: int | None = None, effect: str | None = None, emotion: str | None = None, speed: float | None = None) -> str:
     text = (
         f"◈  <b>{_voice_name_label(voice['name'], lang)}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  {voice['description']}\n\n"
+        f"  {_description_label(voice['description'], lang)}\n\n"
         f"{t('vo_voice_model_label', lang, model=model_name)}\n"
         f"{t('vo_voice_gender_label', lang, gender=_gender_label(voice['gender'], lang))}\n"
         f"{t('vo_voice_age_label', lang, age=_age_label(voice['age'], lang))}\n"
@@ -661,9 +743,10 @@ async def voiceover_effect_selected(cb: CallbackQuery, state: FSMContext):
         audio_bytes = await _fetch_preview_bytes(effect["preview_url"])
         if audio_bytes:
             display_effect = _effect_label(effect["name"], lang)
-            await cb.message.answer_audio(
-                audio=BufferedInputFile(audio_bytes, filename=f"{effect['name']}.m4a"),
-                title=display_effect,
+            # Document (not Audio) so this preview doesn't join Telegram's
+            # chat-wide continuous-playback queue.
+            await cb.message.answer_document(
+                document=BufferedInputFile(audio_bytes, filename=f"{effect['name']}.m4a"),
                 caption=t("vo_effect_preview_caption", lang, effect=display_effect),
             )
     await voiceover_effect_menu(cb, state)
