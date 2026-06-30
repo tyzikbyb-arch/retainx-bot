@@ -222,4 +222,9 @@ AURORA_AVATAR_PRICES = {
     11: 28.8, 12: 31.5, 13: 34.2, 14: 36.9, 15: 39.6,
 }
 
+# ─── VOICEOVER (Artlist Voice Catalog) ─────────────────────────
+# Flat price per voiceover order, regardless of text length.
+VOICEOVER_PRICE_USD = 0.25
+VOICEOVER_PRICE_COINS = usd_to_coins(VOICEOVER_PRICE_USD)  # 5 coins
+
 

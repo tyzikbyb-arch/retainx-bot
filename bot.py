@@ -32,9 +32,9 @@ class OnboardStates(StatesGroup):
 
 from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
 from database import is_new_user, add_coins, get_coins, remove_coins, set_referred_by, get_lang, set_lang
-from keyboards import kb, menu_btn, client_kb
+from keyboards import kb, menu_btn, client_kb, chunked
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
-from handlers import credits, images, video, admin as admin_handler, orders as orders_handler
+from handlers import credits, images, video, voiceover, admin as admin_handler, orders as orders_handler
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
@@ -43,6 +43,7 @@ dp = Dispatcher(storage=storage, events_isolation=events_isolation)
 dp.include_router(credits.router)
 dp.include_router(images.router)
 dp.include_router(video.router)
+dp.include_router(voiceover.router)
 dp.include_router(admin_handler.router)
 dp.include_router(orders_handler.router)
 
@@ -211,10 +212,14 @@ async def panel_router(msg: Message, state: FSMContext):
             reply_markup=kb(*buttons), parse_mode="HTML"
         )
     elif action == "audio":
+        await state.clear()
+        import voice_catalog as vc
+        buttons = [InlineKeyboardButton(text=cat, callback_data=f"vo_cat_{cat}") for cat in vc.CATEGORIES]
+        rows = list(chunked(buttons, 2))
+        rows.append([menu_btn(lang)])
         await msg.answer(
-            f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_body', lang)}",
-            reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
-            parse_mode="HTML"
+            f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_category', lang)}",
+            reply_markup=kb(*rows), parse_mode="HTML"
         )
     elif action == "orders":
         from handlers.orders import show_orders
@@ -368,16 +373,6 @@ async def lang_set_cb(cb: CallbackQuery):
     )
     await cb.message.answer(t("lang_changed", new_lang), reply_markup=get_kb(uid, new_lang))
     await cb.answer()
-
-# ── Audio placeholder ─────────────────────────────────────────
-@dp.callback_query(F.data == "cat_audio")
-async def audio_coming_soon(cb: CallbackQuery):
-    lang = get_lang(cb.from_user.id)
-    await cb.message.edit_text(
-        f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_body', lang)}",
-        reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
-        parse_mode="HTML"
-    )
 
 # ── Pricing ───────────────────────────────────────────────────
 @dp.callback_query(F.data == "pricing_menu")
