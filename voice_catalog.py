@@ -27,11 +27,13 @@ GENDERS = ["MALE", "FEMALE", "NEUTRAL"]
 AGE_ORDER = ["CHILD", "TEEN", "YOUNG_ADULT", "ADULT", "MIDDLE_AGED", "SENIOR"]
 
 # Model group id -> display info, in the order they should be offered.
+# "coins" is the flat per-order price regardless of text length; the Eleven
+# models charge more but place no cap on generated length ("unlimited").
 MODELS = {
-    206: {"name": "Eleven v3", "tags": ["Experimental", "Creative Control"]},
-    311: {"name": "Eleven Multilingual v2", "tags": ["Stable", "Professional"]},
-    6:   {"name": "MiniMax 02 HD", "tags": ["Consistent", "Cinematic"]},
-    200: {"name": "Cartesia Sonic 2", "tags": ["Expressive", "Lifelike"]},
+    206: {"name": "Eleven v3", "tags": ["Experimental", "Creative Control"], "coins": 4, "unlimited": True},
+    311: {"name": "Eleven Multilingual v2", "tags": ["Stable", "Professional"], "coins": 4, "unlimited": True},
+    6:   {"name": "MiniMax 02 HD", "tags": ["Consistent", "Cinematic"], "coins": 2, "unlimited": False},
+    200: {"name": "Cartesia Sonic 2", "tags": ["Expressive", "Lifelike"], "coins": 2, "unlimited": False},
 }
 MODEL_ORDER = [206, 311, 6, 200]
 

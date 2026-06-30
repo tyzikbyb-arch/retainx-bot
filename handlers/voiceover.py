@@ -3,7 +3,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from config import VOICEOVER_PRICE_COINS, VOICEOVER_PRICE_USD
+from config import coins_to_usd
 from database import get_coins, spend_coins, create_order, get_lang
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
@@ -68,12 +68,21 @@ async def _send_preview(message, voice_name: str, voice_id: int, model_id: int, 
     )
     return True
 
+def _model_price_badge(model: dict) -> str:
+    badge = f"{model['coins']}◈"
+    if model.get("unlimited"):
+        badge += " ♾️"
+    return badge
+
 # ── Model menu (entry point) ────────────────────────────────────
 @router.callback_query(F.data == "cat_audio")
 async def voiceover_model_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
     lang = get_lang(cb.from_user.id)
-    buttons = [InlineKeyboardButton(text=m["name"], callback_data=f"vo_model_{m['id']}") for m in vc.list_models()]
+    buttons = [
+        InlineKeyboardButton(text=f"{m['name']}   {_model_price_badge(m)}", callback_data=f"vo_model_{m['id']}")
+        for m in vc.list_models()
+    ]
     rows = list(chunked(buttons, 1))
     rows.append([menu_btn(lang)])
     await cb.message.edit_text(
@@ -90,7 +99,7 @@ async def voiceover_model_selected(cb: CallbackQuery, state: FSMContext):
     if not model:
         await cb.answer("Model not found")
         return
-    await state.update_data(vo_model=model_id, vo_model_name=model["name"])
+    await state.update_data(vo_model=model_id, vo_model_name=model["name"], vo_price_coins=model["coins"])
     buttons = [InlineKeyboardButton(text=cat, callback_data=f"vo_cat_{cat}") for cat in vc.list_categories(model_id)]
     rows = list(chunked(buttons, 2))
     rows.append([back_btn("cat_audio", lang=lang), menu_btn(lang)])
@@ -521,6 +530,7 @@ async def voiceover_text_received(msg: Message, state: FSMContext):
     effect = data.get("vo_effect")
     emotion = data.get("vo_emotion")
     speed = data.get("vo_speed")
+    price_coins = data.get("vo_price_coins", 5)
     coins_word = t("coins_word", lang)
     user_coins = get_coins(msg.from_user.id)
 
@@ -541,12 +551,12 @@ async def voiceover_text_received(msg: Message, state: FSMContext):
         f"{t('vo_model_label', lang, model=model_name)}\n"
         f"{t('vo_language_label', lang, language=language)}\n"
         f"{extra_lines}"
-        f"{t('vo_cost_label', lang)}<b>{VOICEOVER_PRICE_COINS} {coins_word}</b>\n"
+        f"{t('vo_cost_label', lang)}<b>{price_coins} {coins_word}</b>\n"
         f"{t('vo_balance_label', lang)}{user_coins} {coins_word}\n\n"
         f"{t('vo_text_label', lang)}\n<i>{msg.text}</i>\n\n"
         f"━━━━━━━━━━━━━━━━━━━━",
         reply_markup=kb(
-            [InlineKeyboardButton(text=t("vo_btn_confirm", lang, coins=VOICEOVER_PRICE_COINS), callback_data="vo_confirm")],
+            [InlineKeyboardButton(text=t("vo_btn_confirm", lang, coins=price_coins), callback_data="vo_confirm")],
             [InlineKeyboardButton(text=t("vo_btn_edit_text", lang), callback_data="vo_edit_text")],
             [menu_btn(lang)],
         ),
@@ -574,13 +584,15 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
     model_name = data.get("vo_model_name")
     language = data.get("vo_lang")
     text = data.get("vo_text")
+    price_coins = data.get("vo_price_coins", 5)
+    price_usd = coins_to_usd(price_coins)
 
     if not voice_id or not text:
         await cb.answer(t("vo_session_expired", lang), show_alert=True)
         await state.clear()
         return
 
-    if not spend_coins(uid, VOICEOVER_PRICE_COINS):
+    if not spend_coins(uid, price_coins):
         await cb.answer(t("vo_insufficient_coins", lang), show_alert=True)
         return
 
@@ -600,15 +612,15 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
         "text": text,
     }
     tool_name = f"Voiceover — {voice_name} ({model_name})"
-    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool_name, params, VOICEOVER_PRICE_COINS, VOICEOVER_PRICE_USD)
+    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool_name, params, price_coins, price_usd)
 
-    await _push_to_queue(oid, uid, voice_id, tool_name, params, VOICEOVER_PRICE_COINS, VOICEOVER_PRICE_USD, username=cb.from_user.username or cb.from_user.first_name or "")
-    await _notify_admin(cb, oid, tool_name, params, VOICEOVER_PRICE_COINS, VOICEOVER_PRICE_USD)
+    await _push_to_queue(oid, uid, voice_id, tool_name, params, price_coins, price_usd, username=cb.from_user.username or cb.from_user.first_name or "")
+    await _notify_admin(cb, oid, tool_name, params, price_coins, price_usd)
 
     await cb.message.edit_text(
         f"{t('vo_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vo_voice_row', lang, name=voice_name)}\n"
-        f"{t('vo_coins_deducted', lang, coins=VOICEOVER_PRICE_COINS)}\n\n"
+        f"{t('vo_coins_deducted', lang, coins=price_coins)}\n\n"
         f"{t('vo_estimated_delivery', lang)}\n\n"
         f"{t('vo_will_deliver', lang)}",
         reply_markup=kb([menu_btn(lang)]), parse_mode="HTML"
