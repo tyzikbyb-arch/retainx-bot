@@ -1,5 +1,6 @@
+import aiohttp
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import VOICEOVER_PRICE_COINS, VOICEOVER_PRICE_USD
@@ -38,6 +39,34 @@ def _default_language(voice_id: int, model_id: int) -> str:
     langs = vc.list_languages(voice_id, model_id)
     default = next((l for l in langs if l["is_default"]), None)
     return default["name"] if default else (langs[0]["name"] if langs else "English")
+
+async def _fetch_preview_bytes(url: str) -> bytes | None:
+    """Artlist's CDN serves preview files with a wrong Content-Type
+    (application/x-www-form-urlencoded instead of audio/*), which makes
+    Telegram's own URL-fetch hang forever. Download the bytes ourselves
+    and upload them with an explicit .m4a filename instead."""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                if resp.status != 200:
+                    return None
+                return await resp.read()
+    except Exception:
+        return None
+
+async def _send_preview(message, voice_name: str, voice_id: int, model_id: int, model_name: str, language: str, lang: str) -> bool:
+    preview_url = vc.get_preview_url(voice_id, model_id, language)
+    if not preview_url:
+        return False
+    audio_bytes = await _fetch_preview_bytes(preview_url)
+    if not audio_bytes:
+        return False
+    await message.answer_audio(
+        audio=BufferedInputFile(audio_bytes, filename=f"{voice_name}.m4a"),
+        title=voice_name,
+        caption=t("vo_preview_caption", lang, voice=voice_name, language=language, model=model_name),
+    )
+    return True
 
 # ── Model menu (entry point) ────────────────────────────────────
 @router.callback_query(F.data == "cat_audio")
@@ -164,13 +193,7 @@ async def voiceover_voice_selected(cb: CallbackQuery, state: FSMContext):
         reply_markup=_voice_card_kb(voice_id, age, language, lang),
         parse_mode="HTML"
     )
-    preview_url = vc.get_preview_url(voice_id, model_id, language)
-    if preview_url:
-        await cb.message.answer_audio(
-            audio=preview_url,
-            title=voice["name"],
-            caption=t("vo_preview_caption", lang, voice=voice["name"], language=language, model=model_name),
-        )
+    await _send_preview(cb.message, voice["name"], voice_id, model_id, model_name, language, lang)
 
 # ── Listen again ─────────────────────────────────────────────────
 @router.callback_query(F.data == "vo_listen")
@@ -182,15 +205,10 @@ async def voiceover_listen(cb: CallbackQuery, state: FSMContext):
     model_name = data.get("vo_model_name", "—")
     voice_name = data.get("vo_voice_name", "—")
     language = data.get("vo_lang", "English")
-    preview_url = vc.get_preview_url(voice_id, model_id, language)
-    if not preview_url:
+    sent = await _send_preview(cb.message, voice_name, voice_id, model_id, model_name, language, lang)
+    if not sent:
         await cb.answer(t("vo_select_language", lang), show_alert=True)
         return
-    await cb.message.answer_audio(
-        audio=preview_url,
-        title=voice_name,
-        caption=t("vo_preview_caption", lang, voice=voice_name, language=language, model=model_name),
-    )
     await cb.answer()
 
 # ── Change language → language list ──────────────────────────────
@@ -235,14 +253,8 @@ async def voiceover_language_selected(cb: CallbackQuery, state: FSMContext):
         reply_markup=_voice_card_kb(voice_id, age, full_language, lang),
         parse_mode="HTML"
     )
-    preview_url = vc.get_preview_url(voice_id, model_id, full_language)
-    if preview_url:
-        await cb.message.answer_audio(
-            audio=preview_url,
-            title=voice["name"],
-            caption=t("vo_preview_caption", lang, voice=voice["name"], language=full_language, model=model_name),
-        )
-    else:
+    sent = await _send_preview(cb.message, voice["name"], voice_id, model_id, model_name, full_language, lang)
+    if not sent:
         await cb.answer()
 
 # ── Voice picked → ask for text ───────────────────────────────
