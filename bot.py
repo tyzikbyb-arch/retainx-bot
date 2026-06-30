@@ -214,11 +214,11 @@ async def panel_router(msg: Message, state: FSMContext):
     elif action == "audio":
         await state.clear()
         import voice_catalog as vc
-        buttons = [InlineKeyboardButton(text=cat, callback_data=f"vo_cat_{cat}") for cat in vc.CATEGORIES]
-        rows = list(chunked(buttons, 2))
+        buttons = [InlineKeyboardButton(text=m["name"], callback_data=f"vo_model_{m['id']}") for m in vc.list_models()]
+        rows = list(chunked(buttons, 1))
         rows.append([menu_btn(lang)])
         await msg.answer(
-            f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_category', lang)}",
+            f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_model', lang)}",
             reply_markup=kb(*rows), parse_mode="HTML"
         )
     elif action == "orders":
