@@ -1,6 +1,6 @@
 import aiohttp
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, BufferedInputFile
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, BufferedInputFile, InputMediaAudio
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import coins_to_usd
@@ -151,14 +151,49 @@ async def voiceover_age_selected(cb: CallbackQuery, state: FSMContext):
     category = data.get("vo_cat")
     gender = data.get("vo_gender")
     voices = vc.list_voices(model_id, category, gender, age)
+    await state.update_data(vo_voice_ids=[v["id"] for v in voices])
     buttons = [InlineKeyboardButton(text=v["name"], callback_data=f"vo_voice_{v['id']}") for v in voices]
     rows = list(chunked(buttons, 3))
+    if voices:
+        rows.insert(0, [InlineKeyboardButton(text=t("vo_btn_listen_all", lang, count=len(voices)), callback_data="vo_listen_all")])
     rows.append([back_btn(f"vo_gender_{gender}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{category}</b>  —  {_gender_label(gender, lang)}  —  {_age_label(age, lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_voice', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
+
+# ── Listen to all voices in the current filter ──────────────────
+@router.callback_query(F.data == "vo_listen_all")
+async def voiceover_listen_all(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    model_id = data.get("vo_model")
+    voice_ids = data.get("vo_voice_ids", [])
+    if not voice_ids:
+        await cb.answer()
+        return
+    await cb.answer(t("vo_listen_all_sending", lang))
+    for batch in chunked(voice_ids, 10):
+        media = []
+        for vid in batch:
+            voice = vc.get_voice(vid)
+            if not voice:
+                continue
+            language = _default_language(vid, model_id)
+            preview_url = vc.get_preview_url(vid, model_id, language)
+            if not preview_url:
+                continue
+            audio_bytes = await _fetch_preview_bytes(preview_url)
+            if not audio_bytes:
+                continue
+            media.append(InputMediaAudio(
+                media=BufferedInputFile(audio_bytes, filename=f"{voice['name']}.m4a"),
+                title=voice["name"],
+                caption=voice["name"],
+            ))
+        if media:
+            await cb.message.answer_media_group(media=media)
 
 def _voice_card_text(voice: dict, model_name: str, language: str, lang: str, stability: int | None = None, effect: str | None = None, emotion: str | None = None, speed: float | None = None) -> str:
     text = (
@@ -179,9 +214,17 @@ def _voice_card_text(voice: dict, model_name: str, language: str, lang: str, sta
         text += f"\n{t('vo_voice_speed_label', lang, speed=speed)}"
     return text
 
-def _voice_card_kb(voice_id: int, model_id: int, age: str, language: str, stability: int | None, effect: str | None, lang: str, emotion: str | None = None, speed: float | None = None):
+def _voice_card_kb(voice_id: int, model_id: int, age: str, language: str, stability: int | None, effect: str | None, lang: str, emotion: str | None = None, speed: float | None = None, voice_ids: list[int] | None = None):
+    voice_ids = voice_ids or []
+    idx = voice_ids.index(voice_id) if voice_id in voice_ids else -1
+    nav_row = []
+    if idx > 0:
+        nav_row.append(InlineKeyboardButton(text="◀", callback_data="vo_navprev"))
+    nav_row.append(InlineKeyboardButton(text=t("vo_btn_listen", lang), callback_data="vo_listen"))
+    if 0 <= idx < len(voice_ids) - 1:
+        nav_row.append(InlineKeyboardButton(text="▶", callback_data="vo_navnext"))
     rows = [
-        [InlineKeyboardButton(text=t("vo_btn_listen", lang), callback_data="vo_listen")],
+        nav_row,
         [InlineKeyboardButton(text=t("vo_btn_change_language", lang, language=language), callback_data="vo_lang_menu")],
     ]
     if model_id in vc.STABILITY_MODELS:
@@ -204,10 +247,7 @@ def _speed_bar(speed: float) -> str:
     filled = round((speed - 0.5) / 0.1)
     return "🟦" * filled + "⬜" * (10 - filled) + f"   {speed}x"
 
-# ── Voice selected → voice card + preview sample ────────────────
-@router.callback_query(F.data.startswith("vo_voice_"))
-async def voiceover_voice_selected(cb: CallbackQuery, state: FSMContext):
-    voice_id = int(cb.data.replace("vo_voice_", "", 1))
+async def _select_voice(cb: CallbackQuery, state: FSMContext, voice_id: int):
     lang = get_lang(cb.from_user.id)
     voice = vc.get_voice(voice_id)
     if not voice:
@@ -217,6 +257,7 @@ async def voiceover_voice_selected(cb: CallbackQuery, state: FSMContext):
     model_id = data.get("vo_model")
     model_name = data.get("vo_model_name", "—")
     age = data.get("vo_age")
+    voice_ids = data.get("vo_voice_ids", [])
     language = _default_language(voice_id, model_id)
     stability = vc.STABILITY_DEFAULT if model_id in vc.STABILITY_MODELS else None
     effect = "No Effect" if vc.list_effects(model_id) else None
@@ -230,10 +271,33 @@ async def voiceover_voice_selected(cb: CallbackQuery, state: FSMContext):
 
     await cb.message.edit_text(
         _voice_card_text(voice, model_name, language, lang, stability, effect, emotion, speed),
-        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang, emotion, speed),
+        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang, emotion, speed, voice_ids),
         parse_mode="HTML"
     )
     await _send_preview(cb.message, voice["name"], voice_id, model_id, model_name, language, lang)
+
+# ── Voice selected → voice card + preview sample ────────────────
+@router.callback_query(F.data.startswith("vo_voice_"))
+async def voiceover_voice_selected(cb: CallbackQuery, state: FSMContext):
+    voice_id = int(cb.data.replace("vo_voice_", "", 1))
+    await _select_voice(cb, state, voice_id)
+
+# ── Prev / Next voice in the current filtered list ────────────────
+@router.callback_query(F.data.in_(["vo_navprev", "vo_navnext"]))
+async def voiceover_voice_nav(cb: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    voice_ids = data.get("vo_voice_ids", [])
+    current_id = data.get("vo_voice_id")
+    if not voice_ids or current_id not in voice_ids:
+        await cb.answer()
+        return
+    idx = voice_ids.index(current_id)
+    new_idx = idx - 1 if cb.data == "vo_navprev" else idx + 1
+    if new_idx < 0 or new_idx >= len(voice_ids):
+        await cb.answer()
+        return
+    await _select_voice(cb, state, voice_ids[new_idx])
+    await cb.answer()
 
 # ── Listen again ─────────────────────────────────────────────────
 @router.callback_query(F.data == "vo_listen")
@@ -278,6 +342,7 @@ async def voiceover_language_selected(cb: CallbackQuery, state: FSMContext):
     model_id = data.get("vo_model")
     model_name = data.get("vo_model_name", "—")
     age = data.get("vo_age")
+    voice_ids = data.get("vo_voice_ids", [])
     voice = vc.get_voice(voice_id)
     if not voice:
         await cb.answer("Voice not found")
@@ -294,7 +359,7 @@ async def voiceover_language_selected(cb: CallbackQuery, state: FSMContext):
 
     await cb.message.edit_text(
         _voice_card_text(voice, model_name, full_language, lang, stability, effect, emotion, speed),
-        reply_markup=_voice_card_kb(voice_id, model_id, age, full_language, stability, effect, lang, emotion, speed),
+        reply_markup=_voice_card_kb(voice_id, model_id, age, full_language, stability, effect, lang, emotion, speed, voice_ids),
         parse_mode="HTML"
     )
     sent = await _send_preview(cb.message, voice["name"], voice_id, model_id, model_name, full_language, lang)
@@ -490,13 +555,14 @@ async def _render_voice_card(cb: CallbackQuery, state: FSMContext):
     effect = data.get("vo_effect")
     emotion = data.get("vo_emotion")
     speed = data.get("vo_speed")
+    voice_ids = data.get("vo_voice_ids", [])
     voice = vc.get_voice(voice_id)
     if not voice:
         await cb.answer("Voice not found")
         return
     await cb.message.edit_text(
         _voice_card_text(voice, model_name, language, lang, stability, effect, emotion, speed),
-        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang, emotion, speed),
+        reply_markup=_voice_card_kb(voice_id, model_id, age, language, stability, effect, lang, emotion, speed, voice_ids),
         parse_mode="HTML"
     )
 
