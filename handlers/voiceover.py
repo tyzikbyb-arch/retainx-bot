@@ -358,11 +358,13 @@ async def voiceover_effect_selected(cb: CallbackQuery, state: FSMContext):
     await state.update_data(vo_effect=effect["name"])
 
     if effect["preview_url"]:
-        await cb.message.answer_audio(
-            audio=effect["preview_url"],
-            title=effect["name"],
-            caption=t("vo_effect_preview_caption", lang, effect=effect["name"]),
-        )
+        audio_bytes = await _fetch_preview_bytes(effect["preview_url"])
+        if audio_bytes:
+            await cb.message.answer_audio(
+                audio=BufferedInputFile(audio_bytes, filename=f"{effect['name']}.m4a"),
+                title=effect["name"],
+                caption=t("vo_effect_preview_caption", lang, effect=effect["name"]),
+            )
     await voiceover_effect_menu(cb, state)
     await cb.answer()
 
