@@ -35,6 +35,213 @@ def _gender_label(gender: str, lang: str) -> str:
 def _age_label(age: str, lang: str) -> str:
     return AGE_LABELS.get(lang, AGE_LABELS["en"]).get(age, age)
 
+# Model names are intentionally NOT translated — they're product/brand names.
+CATEGORY_LABELS_RU = {
+    "Social": "Социальные сети",
+    "Tutorials": "Обучение",
+    "Documentaries": "Документалистика",
+    "Trailers": "Трейлеры",
+    "Explainers": "Объяснительные ролики",
+    "Characters": "Персонажи",
+    "Commercials": "Реклама",
+    "Health & Wellness": "Здоровье и благополучие",
+}
+
+LANGUAGE_LABELS_RU = {
+    "Afrikaans": "Африкаанс",
+    "Arabic": "Арабский",
+    "Armenian": "Армянский",
+    "Assamese": "Ассамский",
+    "Azerbaijani": "Азербайджанский",
+    "Belarusian": "Белорусский",
+    "Bengali": "Бенгальский",
+    "Bosnian": "Боснийский",
+    "Bulgarian": "Болгарский",
+    "Cantonese": "Кантонский",
+    "Catalan": "Каталанский",
+    "Cebuano": "Себуанский",
+    "Chichewa": "Чичева",
+    "Croatian": "Хорватский",
+    "Czech": "Чешский",
+    "Danish": "Датский",
+    "Dutch": "Голландский",
+    "English": "Английский",
+    "Estonian": "Эстонский",
+    "Filipino": "Филиппинский",
+    "Finnish": "Финский",
+    "French": "Французский",
+    "Galician": "Галисийский",
+    "Georgian": "Грузинский",
+    "German": "Немецкий",
+    "Greek": "Греческий",
+    "Gujarati": "Гуджарати",
+    "Hausa": "Хауса",
+    "Hebrew": "Иврит",
+    "Hindi": "Хинди",
+    "Hungarian": "Венгерский",
+    "Icelandic": "Исландский",
+    "Indonesian": "Индонезийский",
+    "Irish": "Ирландский",
+    "Italian": "Итальянский",
+    "Japanese": "Японский",
+    "Javanese": "Яванский",
+    "Kannada": "Каннада",
+    "Kazakh": "Казахский",
+    "Kirghiz": "Киргизский",
+    "Korean": "Корейский",
+    "Latvian": "Латышский",
+    "Lingala": "Лингала",
+    "Lithuanian": "Литовский",
+    "Luxembourgish": "Люксембургский",
+    "Macedonian": "Македонский",
+    "Malay": "Малайский",
+    "Mandarin Chinese": "Китайский (мандарин)",
+    "Marathi": "Маратхи",
+    "Nepali": "Непальский",
+    "Norwegian": "Норвежский",
+    "Pashto": "Пушту",
+    "Persian": "Персидский",
+    "Polish": "Польский",
+    "Portuguese": "Португальский",
+    "Punjabi": "Панджаби",
+    "Romanian": "Румынский",
+    "Russian": "Русский",
+    "Serbian": "Сербский",
+    "Sindhi": "Синдхи",
+    "Slovak": "Словацкий",
+    "Slovenian": "Словенский",
+    "Somali": "Сомалийский",
+    "Spanish": "Испанский",
+    "Swahili": "Суахили",
+    "Swedish": "Шведский",
+    "Tamil": "Тамильский",
+    "Telugu": "Телугу",
+    "Thai": "Тайский",
+    "Turkish": "Турецкий",
+    "Ukrainian": "Украинский",
+    "Urdu": "Урду",
+    "Vietnamese": "Вьетнамский",
+    "Welsh": "Валлийский",
+}
+
+EFFECT_LABELS_RU = {
+    "Announcer": "Диктор",
+    "Cave": "Пещера",
+    "Monster": "Монстр",
+    "No Effect": "Без эффекта",
+    "Phone Call": "Телефонный звонок",
+    "Pro Studio": "Профессиональная студия",
+    "Robotic Assistant": "Робот-ассистент",
+    "Upstairs Neighbor": "Сосед сверху",
+    "Vintage Radio": "Старое радио",
+    "Walkie-Talkie": "Рация",
+}
+
+EMOTION_LABELS_RU = {
+    "Angry": "Злость",
+    "Best Fit": "Оптимально",
+    "Disgusted": "Отвращение",
+    "Monotone": "Монотонно",
+    "Optimistic": "Оптимистично",
+    "Sad": "Грусть",
+    "Scared": "Испуг",
+    "Surprised": "Удивление",
+}
+
+VOICE_NAME_LABELS_RU = {
+    "All-Rounder": "Универсал",
+    "Alpha": "Альфа",
+    "Anchor": "Якорь",
+    "Aspire": "Стремление",
+    "Assistance": "Помощник",
+    "Balance": "Баланс",
+    "Boss": "Босс",
+    "Bright": "Светлый",
+    "Bulletin": "Бюллетень",
+    "Candid": "Искренний",
+    "Charmed": "Очарование",
+    "Chipper": "Бодрячок",
+    "Cupcake": "Кексик",
+    "Curiosity": "Любопытство",
+    "Deadpan": "Невозмутимый",
+    "Edge": "Грань",
+    "Essence": "Суть",
+    "Esteem": "Уважение",
+    "Everyday": "Обыденный",
+    "Explore": "Исследователь",
+    "Flair": "Изюминка",
+    "Focus": "Фокус",
+    "Gloom": "Мрак",
+    "Gloss": "Глянец",
+    "Grace": "Грация",
+    "Gravity": "Серьёзность",
+    "Grounded": "Приземлённый",
+    "Guidance": "Наставник",
+    "Horizon": "Горизонт",
+    "Hushed": "Приглушённый",
+    "Hype": "Хайп",
+    "Initiative": "Инициатива",
+    "Insight": "Проницательность",
+    "Jackpot": "Джекпот",
+    "Keen": "Увлечённый",
+    "League": "Лига",
+    "Mentor": "Наставник",
+    "Mild": "Мягкий",
+    "Mono": "Моно",
+    "Neutral": "Нейтральный",
+    "Nourish": "Забота",
+    "Obsession": "Одержимость",
+    "Paradigm": "Парадигма",
+    "Path": "Путь",
+    "Pep": "Энергия",
+    "Persuasion": "Убеждение",
+    "Pixel": "Пиксель",
+    "Polished": "Отточенный",
+    "Posh": "Шик",
+    "Precision": "Точность",
+    "Primetime": "Прайм-тайм",
+    "Professor": "Профессор",
+    "Quest": "Квест",
+    "Resonance": "Резонанс",
+    "Revelation": "Откровение",
+    "Rural": "Деревенский",
+    "Santa": "Санта",
+    "Secrets": "Секреты",
+    "Serenity": "Безмятежность",
+    "Shadow": "Тень",
+    "Showtime": "Время шоу",
+    "Sleek": "Изящный",
+    "Stride": "Уверенный шаг",
+    "Suburb": "Пригород",
+    "Sunny": "Солнечный",
+    "Tattle": "Сплетник",
+    "Trail": "Тропа",
+    "Twinkle": "Искорка",
+    "Unfiltered": "Без прикрас",
+    "Vibes": "Вайб",
+    "Views": "Взгляды",
+    "Vision": "Видение",
+    "Wit": "Остроумие",
+}
+
+def _ru(value: str, table: dict, lang: str) -> str:
+    return table.get(value, value) if lang == "ru" else value
+
+def _category_label(category: str, lang: str) -> str:
+    return _ru(category, CATEGORY_LABELS_RU, lang)
+
+def _language_label(language: str, lang: str) -> str:
+    return _ru(language, LANGUAGE_LABELS_RU, lang)
+
+def _effect_label(effect: str, lang: str) -> str:
+    return _ru(effect, EFFECT_LABELS_RU, lang)
+
+def _emotion_label(emotion: str, lang: str) -> str:
+    return _ru(emotion, EMOTION_LABELS_RU, lang)
+
+def _voice_name_label(name: str, lang: str) -> str:
+    return _ru(name, VOICE_NAME_LABELS_RU, lang)
+
 def _default_language(voice_id: int, model_id: int) -> str:
     langs = vc.list_languages(voice_id, model_id)
     default = next((l for l in langs if l["is_default"]), None)
@@ -55,16 +262,20 @@ async def _fetch_preview_bytes(url: str) -> bytes | None:
         return None
 
 async def _send_preview(message, voice_name: str, voice_id: int, model_id: int, model_name: str, language: str, lang: str) -> bool:
+    # `language` here must stay canonical English for the catalog lookup below;
+    # translation is applied only to the display strings further down.
     preview_url = vc.get_preview_url(voice_id, model_id, language)
     if not preview_url:
         return False
     audio_bytes = await _fetch_preview_bytes(preview_url)
     if not audio_bytes:
         return False
+    display_name = _voice_name_label(voice_name, lang)
+    display_language = _language_label(language, lang)
     await message.answer_audio(
         audio=BufferedInputFile(audio_bytes, filename=f"{voice_name}.m4a"),
-        title=voice_name,
-        caption=t("vo_preview_caption", lang, voice=voice_name, language=language, model=model_name),
+        title=display_name,
+        caption=t("vo_preview_caption", lang, voice=display_name, language=display_language, model=model_name),
     )
     return True
 
@@ -97,7 +308,7 @@ async def voiceover_model_selected(cb: CallbackQuery, state: FSMContext):
         await cb.answer("Model not found")
         return
     await state.update_data(vo_model=model_id, vo_model_name=model["name"], vo_price_coins=model["coins"])
-    buttons = [InlineKeyboardButton(text=cat, callback_data=f"vo_cat_{cat}") for cat in vc.list_categories(model_id)]
+    buttons = [InlineKeyboardButton(text=_category_label(cat, lang), callback_data=f"vo_cat_{cat}") for cat in vc.list_categories(model_id)]
     rows = list(chunked(buttons, 2))
     rows.append([back_btn("cat_audio", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
@@ -118,7 +329,7 @@ async def voiceover_category_selected(cb: CallbackQuery, state: FSMContext):
     rows = list(chunked(buttons, 3))
     rows.append([back_btn(f"vo_model_{model_id}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        f"◈  <b>{category}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_gender', lang)}",
+        f"◈  <b>{_category_label(category, lang)}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_gender', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
@@ -136,7 +347,7 @@ async def voiceover_gender_selected(cb: CallbackQuery, state: FSMContext):
     rows = list(chunked(buttons, 3))
     rows.append([back_btn(f"vo_cat_{category}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        f"◈  <b>{category}</b>  —  {_gender_label(gender, lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_age', lang)}",
+        f"◈  <b>{_category_label(category, lang)}</b>  —  {_gender_label(gender, lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_age', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
@@ -152,13 +363,13 @@ async def voiceover_age_selected(cb: CallbackQuery, state: FSMContext):
     gender = data.get("vo_gender")
     voices = vc.list_voices(model_id, category, gender, age)
     await state.update_data(vo_voice_ids=[v["id"] for v in voices])
-    buttons = [InlineKeyboardButton(text=v["name"], callback_data=f"vo_voice_{v['id']}") for v in voices]
+    buttons = [InlineKeyboardButton(text=_voice_name_label(v["name"], lang), callback_data=f"vo_voice_{v['id']}") for v in voices]
     rows = list(chunked(buttons, 3))
     if voices:
         rows.insert(0, [InlineKeyboardButton(text=t("vo_btn_listen_all", lang, count=len(voices)), callback_data="vo_listen_all")])
     rows.append([back_btn(f"vo_gender_{gender}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        f"◈  <b>{category}</b>  —  {_gender_label(gender, lang)}  —  {_age_label(age, lang)}\n"
+        f"◈  <b>{_category_label(category, lang)}</b>  —  {_gender_label(gender, lang)}  —  {_age_label(age, lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_voice', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
@@ -187,29 +398,30 @@ async def voiceover_listen_all(cb: CallbackQuery, state: FSMContext):
             audio_bytes = await _fetch_preview_bytes(preview_url)
             if not audio_bytes:
                 continue
+            display_name = _voice_name_label(voice["name"], lang)
             media.append(InputMediaAudio(
                 media=BufferedInputFile(audio_bytes, filename=f"{voice['name']}.m4a"),
-                title=voice["name"],
-                caption=voice["name"],
+                title=display_name,
+                caption=display_name,
             ))
         if media:
             await cb.message.answer_media_group(media=media)
 
 def _voice_card_text(voice: dict, model_name: str, language: str, lang: str, stability: int | None = None, effect: str | None = None, emotion: str | None = None, speed: float | None = None) -> str:
     text = (
-        f"◈  <b>{voice['name']}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"◈  <b>{_voice_name_label(voice['name'], lang)}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {voice['description']}\n\n"
         f"{t('vo_voice_model_label', lang, model=model_name)}\n"
         f"{t('vo_voice_gender_label', lang, gender=_gender_label(voice['gender'], lang))}\n"
         f"{t('vo_voice_age_label', lang, age=_age_label(voice['age'], lang))}\n"
-        f"{t('vo_voice_language_label', lang, language=language)}"
+        f"{t('vo_voice_language_label', lang, language=_language_label(language, lang))}"
     )
     if stability is not None:
         text += f"\n{t('vo_voice_stability_label', lang, pct=stability)}"
     if effect:
-        text += f"\n{t('vo_voice_effect_label', lang, effect=effect)}"
+        text += f"\n{t('vo_voice_effect_label', lang, effect=_effect_label(effect, lang))}"
     if emotion:
-        text += f"\n{t('vo_voice_emotion_label', lang, emotion=emotion)}"
+        text += f"\n{t('vo_voice_emotion_label', lang, emotion=_emotion_label(emotion, lang))}"
     if speed is not None:
         text += f"\n{t('vo_voice_speed_label', lang, speed=speed)}"
     return text
@@ -225,14 +437,14 @@ def _voice_card_kb(voice_id: int, model_id: int, age: str, language: str, stabil
         nav_row.append(InlineKeyboardButton(text="▶", callback_data="vo_navnext"))
     rows = [
         nav_row,
-        [InlineKeyboardButton(text=t("vo_btn_change_language", lang, language=language), callback_data="vo_lang_menu")],
+        [InlineKeyboardButton(text=t("vo_btn_change_language", lang, language=_language_label(language, lang)), callback_data="vo_lang_menu")],
     ]
     if model_id in vc.STABILITY_MODELS:
         rows.append([InlineKeyboardButton(text=t("vo_btn_stability", lang, pct=stability), callback_data="vo_stabmenu")])
     if vc.list_effects(model_id):
-        rows.append([InlineKeyboardButton(text=t("vo_btn_effect", lang, effect=effect), callback_data="vo_fxmenu")])
+        rows.append([InlineKeyboardButton(text=t("vo_btn_effect", lang, effect=_effect_label(effect, lang)), callback_data="vo_fxmenu")])
     if vc.list_emotions(model_id):
-        rows.append([InlineKeyboardButton(text=t("vo_btn_emotion", lang, emotion=emotion), callback_data="vo_emomenu")])
+        rows.append([InlineKeyboardButton(text=t("vo_btn_emotion", lang, emotion=_emotion_label(emotion, lang)), callback_data="vo_emomenu")])
     if model_id in vc.SPEED_MODELS:
         rows.append([InlineKeyboardButton(text=t("vo_btn_speed", lang, speed=speed), callback_data="vo_spdmenu")])
     rows.append([InlineKeyboardButton(text=t("vo_btn_choose_voice", lang), callback_data="vo_pick")])
@@ -324,11 +536,11 @@ async def voiceover_language_menu(cb: CallbackQuery, state: FSMContext):
     model_id = data.get("vo_model")
     voice_name = data.get("vo_voice_name", "—")
     languages = vc.list_languages(voice_id, model_id)
-    buttons = [InlineKeyboardButton(text=l["name"], callback_data=f"vo_lang_{l['name'][:24]}") for l in languages]
+    buttons = [InlineKeyboardButton(text=_language_label(l["name"], lang), callback_data=f"vo_lang_{l['name'][:24]}") for l in languages]
     rows = list(chunked(buttons, 3))
     rows.append([back_btn(f"vo_voice_{voice_id}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_language', lang)}",
+        f"◈  <b>{_voice_name_label(voice_name, lang)}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_language', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
@@ -371,7 +583,7 @@ async def voiceover_language_selected(cb: CallbackQuery, state: FSMContext):
 async def voiceover_stability_menu(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
-    voice_name = data.get("vo_voice_name", "—")
+    voice_name = _voice_name_label(data.get("vo_voice_name", "—"), lang)
     stability = data.get("vo_stability", vc.STABILITY_DEFAULT)
     await cb.message.edit_text(
         f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -388,7 +600,7 @@ async def voiceover_stability_menu(cb: CallbackQuery, state: FSMContext):
 async def voiceover_stability_adjust(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
-    voice_name = data.get("vo_voice_name", "—")
+    voice_name = _voice_name_label(data.get("vo_voice_name", "—"), lang)
     stability = data.get("vo_stability", vc.STABILITY_DEFAULT)
     step = 10 if cb.data == "vo_stabup" else -10
     stability = max(min(stability + step, 100), 10)
@@ -415,12 +627,12 @@ async def voiceover_effect_menu(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     model_id = data.get("vo_model")
-    voice_name = data.get("vo_voice_name", "—")
+    voice_name = _voice_name_label(data.get("vo_voice_name", "—"), lang)
     current_effect = data.get("vo_effect", "No Effect")
     effects = vc.list_effects(model_id)
     buttons = [
         InlineKeyboardButton(
-            text=("✓ " if e["name"] == current_effect else "") + e["name"],
+            text=("✓ " if e["name"] == current_effect else "") + _effect_label(e["name"], lang),
             callback_data=f"vo_fx_{i}",
         )
         for i, e in enumerate(effects)
@@ -448,10 +660,11 @@ async def voiceover_effect_selected(cb: CallbackQuery, state: FSMContext):
     if effect["preview_url"]:
         audio_bytes = await _fetch_preview_bytes(effect["preview_url"])
         if audio_bytes:
+            display_effect = _effect_label(effect["name"], lang)
             await cb.message.answer_audio(
                 audio=BufferedInputFile(audio_bytes, filename=f"{effect['name']}.m4a"),
-                title=effect["name"],
-                caption=t("vo_effect_preview_caption", lang, effect=effect["name"]),
+                title=display_effect,
+                caption=t("vo_effect_preview_caption", lang, effect=display_effect),
             )
     await voiceover_effect_menu(cb, state)
     await cb.answer()
@@ -466,12 +679,12 @@ async def voiceover_emotion_menu(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     model_id = data.get("vo_model")
-    voice_name = data.get("vo_voice_name", "—")
+    voice_name = _voice_name_label(data.get("vo_voice_name", "—"), lang)
     current_emotion = data.get("vo_emotion")
     emotions = vc.list_emotions(model_id)
     buttons = [
         InlineKeyboardButton(
-            text=("✓ " if e["name"] == current_emotion else "") + e["name"],
+            text=("✓ " if e["name"] == current_emotion else "") + _emotion_label(e["name"], lang),
             callback_data=f"vo_emo_{i}",
         )
         for i, e in enumerate(emotions)
@@ -505,7 +718,7 @@ async def voiceover_emotion_done(cb: CallbackQuery, state: FSMContext):
 async def voiceover_speed_menu(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
-    voice_name = data.get("vo_voice_name", "—")
+    voice_name = _voice_name_label(data.get("vo_voice_name", "—"), lang)
     speed = data.get("vo_speed", vc.SPEED_DEFAULT)
     await cb.message.edit_text(
         f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -522,7 +735,7 @@ async def voiceover_speed_menu(cb: CallbackQuery, state: FSMContext):
 async def voiceover_speed_adjust(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
-    voice_name = data.get("vo_voice_name", "—")
+    voice_name = _voice_name_label(data.get("vo_voice_name", "—"), lang)
     speed = data.get("vo_speed", vc.SPEED_DEFAULT)
     step = 0.1 if cb.data == "vo_spdup" else -0.1
     speed = round(max(min(speed + step, 1.5), 0.5), 1)
@@ -571,7 +784,7 @@ async def _render_voice_card(cb: CallbackQuery, state: FSMContext):
 async def voiceover_pick(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
-    voice_name = data.get("vo_voice_name", "—")
+    voice_name = _voice_name_label(data.get("vo_voice_name", "—"), lang)
     voice_id = data.get("vo_voice_id")
     await cb.message.edit_text(
         f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_enter_text', lang)}",
@@ -586,9 +799,9 @@ async def voiceover_text_received(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
     await state.update_data(vo_text=msg.text)
     data = await state.get_data()
-    voice_name = data.get("vo_voice_name", "—")
+    voice_name = _voice_name_label(data.get("vo_voice_name", "—"), lang)
     model_name = data.get("vo_model_name", "—")
-    language = data.get("vo_lang", "—")
+    language = _language_label(data.get("vo_lang", "—"), lang)
     stability = data.get("vo_stability")
     effect = data.get("vo_effect")
     emotion = data.get("vo_emotion")
@@ -601,9 +814,9 @@ async def voiceover_text_received(msg: Message, state: FSMContext):
     if stability is not None:
         extra_lines += f"{t('vo_stability_label', lang, pct=stability)}\n"
     if effect:
-        extra_lines += f"{t('vo_effect_label', lang, effect=effect)}\n"
+        extra_lines += f"{t('vo_effect_label', lang, effect=_effect_label(effect, lang))}\n"
     if emotion:
-        extra_lines += f"{t('vo_emotion_label', lang, emotion=emotion)}\n"
+        extra_lines += f"{t('vo_emotion_label', lang, emotion=_emotion_label(emotion, lang))}\n"
     if speed is not None:
         extra_lines += f"{t('vo_speed_label', lang, speed=speed)}\n"
 
@@ -680,9 +893,10 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
     await _push_to_queue(oid, uid, voice_id, tool_name, params, price_coins, price_usd, username=cb.from_user.username or cb.from_user.first_name or "")
     await _notify_admin(cb, oid, tool_name, params, price_coins, price_usd)
 
+    display_voice_name = _voice_name_label(voice_name, lang)
     await cb.message.edit_text(
         f"{t('vo_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('vo_voice_row', lang, name=voice_name)}\n"
+        f"{t('vo_voice_row', lang, name=display_voice_name)}\n"
         f"{t('vo_coins_deducted', lang, coins=price_coins)}\n\n"
         f"{t('vo_estimated_delivery', lang)}\n\n"
         f"{t('vo_will_deliver', lang)}",
