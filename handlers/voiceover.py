@@ -69,10 +69,7 @@ async def _send_preview(message, voice_name: str, voice_id: int, model_id: int, 
     return True
 
 def _model_price_badge(model: dict) -> str:
-    badge = f"🪙{model['coins']}"
-    if model.get("unlimited"):
-        badge += "/∞"
-    return badge
+    return f"◈ {model['coins']}"
 
 # ── Model menu (entry point) ────────────────────────────────────
 @router.callback_query(F.data == "cat_audio")
