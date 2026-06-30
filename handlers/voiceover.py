@@ -69,9 +69,9 @@ async def _send_preview(message, voice_name: str, voice_id: int, model_id: int, 
     return True
 
 def _model_price_badge(model: dict) -> str:
-    badge = f"{model['coins']}◈"
+    badge = f"🪙{model['coins']}"
     if model.get("unlimited"):
-        badge += " ♾️"
+        badge += "/∞"
     return badge
 
 # ── Model menu (entry point) ────────────────────────────────────
