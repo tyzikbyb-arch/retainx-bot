@@ -9,6 +9,7 @@ from database import get_coins, spend_coins, create_order, get_lang
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
 import voice_catalog as vc
+from handlers import spinner as sp
 
 router = Router()
 
@@ -990,14 +991,16 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
     await _notify_admin(cb, oid, tool_name, params, price_coins, price_usd)
 
     display_voice_name = _voice_name_label(voice_name, lang)
-    await cb.message.edit_text(
+    wait_min = sp.wait_minutes(tool_name, "voiceover")
+    base_text = (
         f"{t('vo_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vo_voice_row', lang, name=display_voice_name)}\n"
         f"{t('vo_coins_deducted', lang, coins=price_coins)}\n\n"
-        f"{t('vo_estimated_delivery', lang)}\n\n"
-        f"{t('vo_will_deliver', lang)}",
-        reply_markup=kb([menu_btn(lang)]), parse_mode="HTML"
+        f"{t('vo_estimated_delivery', lang, minutes=wait_min)}\n\n"
+        f"{t('vo_will_deliver', lang)}"
     )
+    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
     await state.clear()
 
 async def _push_to_queue(oid: int, uid: int, voice_id: int, tool: str, params: dict, coins: int, usd: float, username: str = ""):

@@ -7,6 +7,7 @@ from database import get_coins, spend_coins, create_order, get_lang
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
 from handlers.attachments import file_too_large
+from handlers import spinner as sp
 import math
 
 router = Router()
@@ -236,16 +237,17 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
 
     await _notify_admin(cb, oid, name, params, coins, price_usd)
 
-    await cb.message.edit_text(
+    wait_min = sp.wait_minutes(name, "image")
+    base_text = (
         f"{t('img_order_placed_title', lang, oid=oid)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('img_model_row', lang, name=name)}\n"
         f"{t('img_coins_deducted', lang, coins=coins)}\n\n"
-        f"{t('img_estimated_time', lang)}\n\n"
-        f"{t('img_will_deliver', lang)}",
-        reply_markup=kb([menu_btn(lang)]),
-        parse_mode="HTML"
+        f"{t('img_estimated_time', lang, minutes=wait_min)}\n\n"
+        f"{t('img_will_deliver', lang)}"
     )
+    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
     await state.clear()
 
 async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float, username: str = ""):

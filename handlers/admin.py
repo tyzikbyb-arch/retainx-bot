@@ -4,9 +4,10 @@ from aiogram.types import CallbackQuery, Message, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import ADMIN_ID, BOT_TOKEN
-from database import get_order, update_order_status, add_coins, save_delivery
+from database import get_order, update_order_status, add_coins, save_delivery, get_lang
 from keyboards import kb, menu_btn
 from aiogram.types import InlineKeyboardButton
+from i18n import t
 
 router = Router()
 
@@ -125,16 +126,13 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
 
     uid = target_uid if target_uid else order["user_id"]
     tool = order["tool"] if order else "—"
-    prompt = order["params"].get("prompt", "—") if order else "—"
 
-    caption = (
-        f"◈  <b>Your Order is Ready</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Order     #{oid}\n"
-        f"  Model     {tool}\n\n"
-        f"  Thank you for choosing RetainX Studio."
-    )
+    lang = get_lang(uid)
+    caption = t("order_ready_caption", lang, oid=oid, tool=tool)
+
     from aiogram import Bot
+    from handlers import spinner as sp
+    await sp.stop(oid)
     bot = Bot(token=BOT_TOKEN)
 
     try:

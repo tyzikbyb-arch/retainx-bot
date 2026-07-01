@@ -85,7 +85,7 @@ STR = {
         "vo_order_placed_title": "✓  <b>Voiceover order #{oid} placed!</b>",
         "vo_voice_row": "  Voice          <b>{name}</b>",
         "vo_coins_deducted": "  Coins deducted   <b>{coins} coins</b>",
-        "vo_estimated_delivery": "  Estimated delivery: ~2 minutes",
+        "vo_estimated_delivery": "  Estimated delivery: ~{minutes} min",
         "vo_will_deliver": "  We will deliver your audio file right here in this chat.",
 
         "support_title": "◌  <b>Support</b>",
@@ -154,7 +154,7 @@ STR = {
         "img_order_placed_title": "◌  <b>Order #{oid} Placed</b>",
         "img_model_row": "  Model     <b>{name}</b>",
         "img_coins_deducted": "  Coins      <b>{coins} deducted</b>",
-        "img_estimated_time": "  Estimated time  ~2 minutes",
+        "img_estimated_time": "  Estimated time  ~{minutes} min",
         "img_will_deliver": "  We will deliver your image here shortly.",
         "img_ref_title": "◈  <b>Image Reference</b>  ({count}/{max})",
         "img_ref_instructions": (
@@ -213,8 +213,15 @@ STR = {
         "vid_order_placed_title": "◌  <b>Order #{oid} Placed</b>",
         "vid_model_row": "  Model     <b>{name}</b>",
         "vid_coins_deducted": "  Coins      <b>{coins} deducted</b>",
-        "vid_estimated_delivery": "  Estimated delivery  ~2 minutes",
+        "vid_estimated_delivery": "  Estimated delivery  ~{minutes} min",
         "vid_will_deliver": "  Your result will be sent here.",
+        "order_ready_caption": (
+            "◈  <b>Your Order is Ready</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Order     #{oid}\n"
+            "  Model     {tool}\n\n"
+            "  Thank you for choosing RetainX Studio."
+        ),
 
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  Resolution: 720p\n\n  Select duration:",
@@ -600,7 +607,7 @@ STR = {
         "vo_order_placed_title": "✓  <b>Заказ озвучки #{oid} оформлен!</b>",
         "vo_voice_row": "  Голос          <b>{name}</b>",
         "vo_coins_deducted": "  Списано монет   <b>{coins} монет</b>",
-        "vo_estimated_delivery": "  Ожидаемое время доставки: ~2 минуты",
+        "vo_estimated_delivery": "  Ожидаемое время доставки: ~{minutes} мин",
         "vo_will_deliver": "  Мы доставим аудиофайл прямо в этот чат.",
 
         "support_title": "◌  <b>Поддержка</b>",
@@ -669,7 +676,7 @@ STR = {
         "img_order_placed_title": "◌  <b>Заказ #{oid} оформлен</b>",
         "img_model_row": "  Модель     <b>{name}</b>",
         "img_coins_deducted": "  Монеты      <b>{coins} списано</b>",
-        "img_estimated_time": "  Ожидаемое время  ~2 минуты",
+        "img_estimated_time": "  Ожидаемое время  ~{minutes} мин",
         "img_will_deliver": "  Мы пришлём изображение сюда в ближайшее время.",
         "img_ref_title": "◈  <b>Референс-изображение</b>  ({count}/{max})",
         "img_ref_instructions": (
@@ -728,8 +735,15 @@ STR = {
         "vid_order_placed_title": "◌  <b>Заказ #{oid} оформлен</b>",
         "vid_model_row": "  Модель     <b>{name}</b>",
         "vid_coins_deducted": "  Монеты      <b>{coins} списано</b>",
-        "vid_estimated_delivery": "  Ожидаемое время  ~2 минуты",
+        "vid_estimated_delivery": "  Ожидаемое время  ~{minutes} мин",
         "vid_will_deliver": "  Результат будет отправлен сюда.",
+        "order_ready_caption": (
+            "◈  <b>Ваш заказ готов</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Заказ     #{oid}\n"
+            "  Модель    {tool}\n\n"
+            "  Спасибо, что выбрали RetainX Studio."
+        ),
 
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  Разрешение: 720p\n\n  Выберите длительность:",

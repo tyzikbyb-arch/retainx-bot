@@ -1784,14 +1784,17 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
 
     await notify_admin(cb, oid, tool, params, coins, usd)
 
-    await cb.message.edit_text(
+    from handlers import spinner as sp
+    wait_min = sp.wait_minutes(tool, "video")
+    base_text = (
         f"{t('vid_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_model_row', lang, name=tool)}\n"
         f"{t('vid_coins_deducted', lang, coins=coins)}\n\n"
-        f"{t('vid_estimated_delivery', lang)}\n\n"
-        f"{t('vid_will_deliver', lang)}",
-        reply_markup=kb([menu_btn(lang)]), parse_mode="HTML"
+        f"{t('vid_estimated_delivery', lang, minutes=wait_min)}\n\n"
+        f"{t('vid_will_deliver', lang)}"
     )
+    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
     await state.clear()
 
 # ═══════════════════════════════════════════════════════════
