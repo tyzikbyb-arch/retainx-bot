@@ -124,13 +124,15 @@ async def start(msg: Message, state: FSMContext):
         await state.set_state(OnboardStates.selecting_lang)
         await state.update_data(onboard_bonus=total_bonus)
         await msg.answer(
-            "◐  Choose your language  ·  Выберите язык\n"
+            "◐  Choose your language  ·  Выберите язык  ·  اختر لغتك\n"
             "━━━━━━━━━━━━━━━━━━━━\n\n"
             "  Select your preferred language to continue.\n"
-            "  Выберите язык, чтобы продолжить.",
+            "  Выберите язык, чтобы продолжить.\n"
+            "  اختر لغتك للمتابعة.",
             reply_markup=kb(
                 [InlineKeyboardButton(text="🇬🇧  English", callback_data="onboard_lang_en")],
                 [InlineKeyboardButton(text="🇷🇺  Русский", callback_data="onboard_lang_ru")],
+                [InlineKeyboardButton(text="🇸🇦  العربية", callback_data="onboard_lang_ar")],
             ),
             parse_mode="HTML"
         )
@@ -144,10 +146,10 @@ async def start(msg: Message, state: FSMContext):
         await msg.answer(t("choose_option", lang), reply_markup=keyboard, parse_mode="HTML")
 
 # ── Onboarding language selection ────────────────────────────
-@dp.callback_query(F.data.in_({"onboard_lang_en", "onboard_lang_ru"}), OnboardStates.selecting_lang)
+@dp.callback_query(F.data.in_({"onboard_lang_en", "onboard_lang_ru", "onboard_lang_ar"}), OnboardStates.selecting_lang)
 async def onboard_lang_cb(cb: CallbackQuery, state: FSMContext):
     uid = cb.from_user.id
-    lang = "en" if cb.data == "onboard_lang_en" else "ru"
+    lang = {"onboard_lang_en": "en", "onboard_lang_ru": "ru", "onboard_lang_ar": "ar"}.get(cb.data, "en")
     set_lang(uid, lang)
     data = await state.get_data()
     total_bonus = data.get("onboard_bonus", WELCOME_BONUS)
@@ -356,15 +358,16 @@ async def lang_menu_cb(cb: CallbackQuery):
         reply_markup=kb(
             [InlineKeyboardButton(text=("✓  " if lang == "en" else "○  ") + "English",  callback_data="lang_set_en")],
             [InlineKeyboardButton(text=("✓  " if lang == "ru" else "○  ") + "Русский",  callback_data="lang_set_ru")],
+            [InlineKeyboardButton(text=("✓  " if lang == "ar" else "○  ") + "العربية",  callback_data="lang_set_ar")],
             [InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")],
         ),
         parse_mode="HTML"
     )
 
-@dp.callback_query(F.data.in_({"lang_set_en", "lang_set_ru"}))
+@dp.callback_query(F.data.in_({"lang_set_en", "lang_set_ru", "lang_set_ar"}))
 async def lang_set_cb(cb: CallbackQuery):
     uid = cb.from_user.id
-    new_lang = "en" if cb.data == "lang_set_en" else "ru"
+    new_lang = {"lang_set_en": "en", "lang_set_ru": "ru", "lang_set_ar": "ar"}.get(cb.data, "en")
     set_lang(uid, new_lang)
     coins = get_coins(uid)
     await cb.message.edit_text(

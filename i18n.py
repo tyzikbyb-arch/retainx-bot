@@ -1,4 +1,4 @@
-LANGS = ("en", "ru")
+LANGS = ("en", "ru", "ar")
 
 STR = {
     "en": {
@@ -1045,6 +1045,528 @@ STR = {
         "order_status_cancelled": "Отменён",
         "order_your_result": "◈  Ваш результат",
     },
+    "ar": {
+        "welcome_title": "◈  <b>مرحباً بك في RetainX Studio</b>",
+        "welcome_body": (
+            "  أسرع وأوفر طريقة\n"
+            "  لإنشاء فيديو وصور وصوت بالذكاء الاصطناعي.\n\n"
+            "  ◉  Kling 3.0  ·  Veo 3.1  ·  Sora 2\n"
+            "  ◉  Midjourney  ·  Flux  ·  Seedance\n"
+            "  ◉  HeyGen  ·  ElevenLabs  ·  LTX\n\n"
+            "  أرخص بـ <b>3 أضعاف</b> من أي منافس.\n"
+            "  النتائج خلال <b>~دقيقتين.</b>"
+        ),
+        "welcome_bonus": "  🎁  أُضيف <b>{bonus} عملة</b> إلى حسابك.\n  الرصيد   <b>{coins} عملة</b>",
+        "what_create": "ماذا تريد أن تنشئ؟",
+        "choose_option": "اختر خياراً:",
+
+        "main_menu_title": "◈  <b>RetainX Studio</b>",
+        "main_menu_balance": "  الرصيد   <b>{coins} عملة</b>",
+        "main_menu_desc": "  إنشاء فيديو وصور وصوت بالذكاء الاصطناعي\n  بأنسب الأسعار.",
+
+        "btn_video_generation": "▸  إنشاء الفيديو",
+        "btn_image_generation": "▸  إنشاء الصور",
+        "btn_audio_voice": "▸  الصوت",
+        "btn_wallet_coins": "◈  المحفظة  ·  {coins} عملة",
+        "btn_pricing": "◎  الأسعار",
+        "btn_support": "◌  الدعم",
+        "btn_language": "◐  اللغة",
+        "btn_start_generating": "▸  ابدأ الإنشاء",
+        "btn_view_pricing": "◎  عرض الأسعار",
+        "btn_back": "←  رجوع",
+
+        "audio_title": "◌  <b>الصوت</b>",
+        "audio_body": "  قريباً.\n\n  نحن نعمل على دمج أدوات\n  تركيب الصوت وتوليد الموسيقى.\n\n  ترقّب التحديثات.",
+
+        "vo_select_model": "  اختر نموذج الذكاء الاصطناعي للصوت:",
+        "vo_select_category": "  اختر فئة الصوت:",
+        "vo_select_gender": "  اختر جنس الصوت:",
+        "vo_select_age": "  اختر عمر الصوت:",
+        "vo_select_voice": "  اختر صوتاً:",
+        "vo_btn_listen_all": "🔊  استمع للجميع ({count})",
+        "vo_listen_all_sending": "🔊 جارٍ الإرسال…",
+        "vo_select_language": "  اختر اللغة:",
+        "vo_voice_gender_label": "  الجنس      {gender}",
+        "vo_voice_age_label": "  العمر       {age}",
+        "vo_voice_category_label": "  الفئة        {category}",
+        "vo_voice_model_label": "  النموذج     {model}",
+        "vo_voice_language_label": "  اللغة         {language}",
+        "vo_btn_choose_voice": "✓  استخدم هذا الصوت",
+        "vo_btn_listen": "🎧  استمع للعينة",
+        "vo_btn_change_language": "🌐  تغيير اللغة  ·  {language}",
+        "vo_preview_caption": "🎧  {voice}  —  {language}  ({model})",
+        "vo_voice_stability_label": "  الثبات   {pct}%",
+        "vo_voice_effect_label": "  التأثير    {effect}",
+        "vo_btn_stability": "🎚  الثبات  ·  {pct}%",
+        "vo_select_stability": "  اضبط ثبات الصوت.\n  الأقل يعني أكثر تعبيراً، والأكثر يعني أكثر ثباتاً.",
+        "vo_btn_effect": "🎭  التأثير  ·  {effect}",
+        "vo_select_effect": "  اختر تأثير الصوت:",
+        "vo_effect_preview_caption": "🎭  {effect}  —  عينة التأثير",
+        "vo_btn_done": "✓  تم",
+        "vo_stability_label": "  الثبات   <b>{pct}%</b>",
+        "vo_effect_label": "  التأثير    <b>{effect}</b>",
+        "vo_voice_emotion_label": "  المشاعر   {emotion}",
+        "vo_btn_emotion": "🙂  المشاعر  ·  {emotion}",
+        "vo_select_emotion": "  اختر المشاعر:",
+        "vo_emotion_label": "  المشاعر     <b>{emotion}</b>",
+        "vo_voice_speed_label": "  السرعة   {speed}x",
+        "vo_btn_speed": "⏱  السرعة  ·  {speed}x",
+        "vo_select_speed": "  اضبط سرعة الكلام.",
+        "vo_speed_label": "  السرعة     <b>{speed}x</b>",
+        "vo_enter_text": "  أدخل النص الذي تريد من هذا الصوت قراءته:",
+        "vo_edit_text_prompt": "  أدخل النص الجديد لهذا الصوت:",
+        "vo_order_summary_title": "◈  <b>ملخص طلب التعليق الصوتي</b>",
+        "vo_voice_label": "  الصوت       <b>{name}</b>",
+        "vo_model_label": "  النموذج      <b>{model}</b>",
+        "vo_language_label": "  اللغة          <b>{language}</b>",
+        "vo_text_label": "  النص",
+        "vo_cost_label": "  التكلفة   ",
+        "vo_balance_label": "  الرصيد    ",
+        "vo_btn_confirm": "✓  تأكيد  ·  {coins} عملة",
+        "vo_btn_edit_text": "✎  تعديل النص",
+        "vo_session_expired": "انتهت الجلسة، يرجى البدء من جديد.",
+        "vo_insufficient_coins": "رصيد غير كافٍ. يرجى شحن المحفظة.",
+        "vo_order_placed_title": "✓  <b>تم تقديم طلب التعليق الصوتي #{oid}!</b>",
+        "vo_voice_row": "  الصوت       <b>{name}</b>",
+        "vo_coins_deducted": "  العملات المخصومة   <b>{coins} عملة</b>",
+        "vo_estimated_delivery": "  وقت التسليم المتوقع: ~{minutes} دقيقة",
+        "vo_will_deliver": "  سنرسل ملف الصوت مباشرةً في هذه المحادثة.",
+
+        "support_title": "◌  <b>الدعم</b>",
+        "support_body": "  تواصل معنا: @RetainXStudio",
+
+        "video_title": "◈  <b>إنشاء الفيديو</b>",
+        "select_category": "اختر فئة:",
+
+        "images_title": "◈  <b>إنشاء الصور</b>",
+        "select_model": "اختر نموذجاً:",
+
+        "pricing_title": "◎  <b>الأسعار</b>",
+        "pricing_body": "  1 عملة  =  <b>$0.05</b>\n\n  اختر فئة لعرض الأسعار:",
+        "btn_image_pricing": "▸  أسعار الصور",
+        "btn_video_pricing": "▸  أسعار الفيديو",
+
+        "price_images_title": "◎  <b>أسعار الصور</b>",
+        "price_video_title": "◎  <b>أسعار الفيديو</b>",
+        "price_video_body": (
+            "  تتفاوت الأسعار حسب النموذج والدقة والمدة.\n"
+            "  اختر نموذجاً في قسم إنشاء الفيديو\n"
+            "  لرؤية التكلفة الدقيقة بالعملات.\n\n"
+            "  <b>أسعار نموذجية:</b>\n"
+            "  Kling 3.0   720p  5s  —  6◈\n"
+            "  Veo 3.1     4K    8s  —  58◈\n"
+            "  Seedance   1080p 10s  —  60◈\n"
+        ),
+
+        "menu_main_menu": "⌂  القائمة الرئيسية",
+        "menu_wallet": "◈  المحفظة",
+        "menu_video": "▸  فيديو",
+        "menu_images": "▸  صور",
+        "menu_audio": "▸  صوت",
+        "menu_orders": "≡  الطلبات",
+        "menu_support": "◌  الدعم",
+
+        "lang_title": "◐  <b>اللغة</b>",
+        "lang_desc": "  اختر لغتك المفضلة:",
+        "lang_changed": "✓  تم تحديث اللغة.",
+
+        "coins_word": "عملة",
+
+        # ── Image generation flow ──────────────────────────────
+        "img_menu_title": "◈  <b>إنشاء الصور</b>",
+        "img_menu_select": "اختر نموذجاً للمتابعة:",
+        "img_price_label": "السعر",
+        "img_per_gen": "لكل توليد",
+        "img_select_ar": "اختر نسبة الأبعاد:",
+        "img_select_quality": "اختر الجودة:",
+        "img_aspect_ratio_label": "نسبة الأبعاد",
+        "img_quality_label": "الجودة",
+        "img_cost_label": "التكلفة",
+        "img_balance_label": "رصيدك",
+        "img_attach_optional": "  أرفق صور مرجعية (اختياري)\n  أو تخطَّ لكتابة البروم بت.",
+        "img_btn_add_ref": "◈  إضافة صورة مرجعية  (حتى {max})",
+        "img_btn_skip_prompt": "▸  تخطّ — اكتب البروم بت",
+        "img_enter_prompt": "أدخل البروم بت:",
+        "img_order_summary_title": "◈  <b>ملخص الطلب</b>",
+        "img_model_label": "النموذج",
+        "img_prompt_label": "البروم بت:",
+        "img_btn_confirm": "◈  تأكيد  ({coins} عملة)",
+        "img_btn_edit_prompt": "✎  تعديل البروم بت",
+        "img_edit_prompt_prompt": "✎  أدخل البروم بت الجديد:",
+        "img_session_expired": "انتهت الجلسة. يرجى بدء طلبك من جديد.",
+        "img_insufficient_coins": "رصيد غير كافٍ. يرجى شحن المحفظة.",
+        "img_order_placed_title": "◌  <b>تم تقديم الطلب #{oid}</b>",
+        "img_model_row": "  النموذج     <b>{name}</b>",
+        "img_coins_deducted": "  العملات      <b>{coins} مخصومة</b>",
+        "img_estimated_time": "  الوقت المتوقع  ~{minutes} دقيقة",
+        "img_will_deliver": "  سنرسل صورتك هنا قريباً.",
+        "img_ref_title": "◈  <b>صورة مرجعية</b>  ({count}/{max})",
+        "img_ref_instructions": (
+            "  أرسل حتى <b>{max} صور</b> كمرجع.\n\n"
+            "  <code>@img1</code>، <code>@img2</code> إلخ مجرد تسميات\n"
+            "  لك — الذكاء الاصطناعي لا يقرأها. صف كل صورة\n"
+            "  بالكلمات في البروم بت.\n\n"
+            "  اضغط <b>تم</b> عند الانتهاء."
+        ),
+        "btn_done": "✓  تم",
+        "img_ref_saved": "✓  تم حفظ الصورة @img{n}.  ({count}/{max})",
+        "img_ref_send_more": "أرسل المزيد أو اضغط تم.",
+        "img_ref_max_reached": "تم الوصول للحد الأقصى. اضغط تم.",
+        "img_ref_max_alert": "تم الوصول للحد الأقصى {max} صورة. اضغط تم للمتابعة.",
+        "img_refs_attached": "  ◈  {count} صورة مرجعية مرفقة\n",
+
+        # ── Video generation flow ──────────────────────────────
+        "vid_menu_title": "◈  <b>إنشاء الفيديو</b>",
+        "vid_select_category": "اختر فئة:",
+        "vid_sub_standard": "▸  فيديو قياسي",
+        "vid_sub_premium": "▸  فيديو مميز",
+        "vid_sub_kling": "▸  Kling فيديو",
+        "vid_sub_avatar": "▸  الأفاتار والدبلجة",
+        "vid_select_model": "اختر نموذجاً:",
+        "vid_unknown_tool": "الأداة غير موجودة",
+        "vid_resolution_word": "الدقة",
+        "vid_duration_word": "المدة",
+        "vid_sec_word": "ثانية",
+        "vid_type_word": "النوع",
+        "vid_avatar_video_word": "فيديو الأفاتار",
+        "vid_select_resolution": "  اختر الدقة:",
+        "vid_select_aspect_ratio": "  اختر نسبة الأبعاد:",
+        "vid_select_duration": "  اختر المدة:",
+        "vid_resolution_label": "  الدقة    {res}",
+        "vid_aspect_ratio_label": "  نسبة الأبعاد  {ar}",
+        "vid_duration_label": "  المدة       {dur} ثانية",
+        "vid_cost_label": "  التكلفة       <b>{coins} عملة</b>",
+        "vid_cost_label_short": "  التكلفة   <b>{coins} عملة</b>",
+        "vid_audio_label": "  الصوت      {audio}",
+        "vid_audio_yes": "نعم",
+        "vid_audio_no": "لا",
+        "vid_include_audio": "  هل تريد تضمين الصوت في الفيديو؟",
+        "vid_btn_with_audio": "🔊  مع الصوت",
+        "vid_btn_no_audio": "🔇  بدون صوت",
+        "vid_enter_prompt": "أدخل البروم بت:",
+        "vid_btn_confirm": "◈  تأكيد  ({coins} عملة)",
+        "vid_btn_edit_prompt": "✎  تعديل البروم بت",
+        "vid_edit_prompt_prompt": "✎  أدخل البروم بت الجديد:",
+        "vid_order_summary_title": "◈  <b>ملخص الطلب</b>",
+        "vid_model_label": "  النموذج       <b>{name}</b>",
+        "vid_language_label": "  اللغة           {lang}",
+        "vid_attachments_label": "\n  المرفقات:\n",
+        "vid_prompt_label": "  البروم بت:",
+        "vid_session_expired": "انتهت الجلسة. يرجى بدء طلبك من جديد.",
+        "vid_insufficient_coins": "رصيد غير كافٍ. يرجى شحن المحفظة.",
+        "vid_order_placed_title": "◌  <b>تم تقديم الطلب #{oid}</b>",
+        "vid_model_row": "  النموذج     <b>{name}</b>",
+        "vid_coins_deducted": "  العملات      <b>{coins} مخصومة</b>",
+        "vid_estimated_delivery": "  وقت التسليم المتوقع  ~{minutes} دقيقة",
+        "vid_will_deliver": "  سيتم إرسال نتيجتك هنا.",
+        "order_ready_caption": (
+            "◈  <b>طلبك جاهز</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  الطلب     #{oid}\n"
+            "  النموذج   {tool}\n\n"
+            "  شكراً لاختيارك RetainX Studio."
+        ),
+
+        "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
+        "vid_grok_resolution_line": "  الدقة: 720p\n\n  اختر المدة:",
+
+        "vid_unknown_tool_alert": "أداة غير معروفة",
+        "vid_select_lang_label": "◈  اختر اللغة المستهدفة:",
+        "vid_translate_cost": "  التكلفة   <b>{coins} عملة</b>",
+        "vid_send_video_any_format": "  أرسل ملف الفيديو بأي صيغة\n  (MP4, MOV, AVI, MKV إلخ)",
+        "vid_please_send_video": "يرجى إرسال ملف فيديو (MP4, MOV, AVI, MKV إلخ)\n\nاكتب /cancel للإلغاء.",
+        "vid_video_received": "✓  تم استقبال الفيديو",
+        "vid_add_notes_prompt": "  أضف ملاحظات إضافية (اختياري)\n  أو تخطَّ لتأكيد الطلب:",
+        "vid_btn_add_notes": "✎  إضافة ملاحظة",
+        "vid_add_notes_only": "✎  أضف ملاحظات أو تعليمات (اختياري):",
+
+        "vid_attach_start_frame": "  ◈  الإطار الأول\n",
+        "vid_attach_end_frame": "  ◈  الإطار الأخير\n",
+        "vid_attach_imgs": "  ◈  {count} صورة مرجعية\n",
+        "vid_attach_vids": "  ◈  {count} فيديو مرجعي\n",
+        "vid_attach_auds": "  ◈  {count} ملف صوتي\n",
+
+        "vid_attach_optional_inline": "أرفق ملفات مرجعية (اختياري)\n  أو انتقل مباشرةً إلى البروم بت.",
+        "vid_sd_attach_warning": (
+            "  ⚠️  لا يمكن الجمع بين الإطار الأول/الأخير\n"
+            "  وأنواع المرفقات الأخرى."
+        ),
+        "vid_btn_start_frame": "الإطار الأول",
+        "vid_btn_end_frame": "الإطار الأخير",
+        "vid_btn_clear_startend": "✕  مسح الأول/الأخير",
+        "vid_btn_clear": "✕  مسح",
+        "vid_btn_image_ref": "◈  صورة مرجعية  ({count}/{max})",
+        "vid_btn_image_reference": "◈  صورة مرجعية",
+        "vid_btn_image_reference_max": "◈  صورة مرجعية  (حتى {max})",
+        "vid_btn_video_ref": "◈  فيديو مرجعي  ({count}/{max})",
+        "vid_btn_video_reference": "◈  فيديو مرجعي",
+        "vid_btn_video_reference_max": "◈  فيديو مرجعي  (حتى {max}){req}",
+        "vid_btn_audio_file": "◈  ملف صوتي  ({count}/{max})",
+        "vid_btn_audio_file_plain": "◈  ملف صوتي",
+        "vid_btn_audio_file_max": "◈  ملف صوتي  (حتى {max})",
+        "vid_btn_start_end_frame": "◈  الإطار الأول والأخير",
+        "vid_btn_start_frame_only": "◈  الإطار الأول",
+        "vid_required_label": " *مطلوب",
+        "vid_btn_write_prompt": "✓  اكتب البروم بت →",
+        "vid_btn_skip_write_prompt": "▸  تخطّ — اكتب البروم بت",
+        "vid_btn_confirm_order": "◈  تأكيد الطلب",
+        "vid_btn_upload_required": "⚠️  ارفع {items} للمتابعة",
+        "vid_required_and": " و ",
+        "vid_required_video": "فيديو",
+        "vid_required_image": "صورة",
+        "vid_required_audio": "صوت",
+        "vid_required_start_frame": "الإطار الأول",
+        "vid_required_files_alert": "يرجى رفع الملفات المطلوبة: {items}",
+        "vid_required_files_alert_simple": "يرجى رفع الملفات المطلوبة أولاً.",
+
+        "vid_start_frame_title": "◈  <b>الإطار الأول</b>",
+        "vid_start_frame_desc": "  أرسل الصورة للإطار الأول <b>لفيديوك</b>.\n\n  أشر إليه في البروم بت بـ <code>@start</code>",
+        "vid_start_frame_desc_short": "  أرسل الصورة للإطار الأول.\n\n  أشر إليه في البروم بت بـ <code>@start</code>",
+        "vid_end_frame_title": "◈  <b>الإطار الأخير</b>",
+        "vid_end_frame_desc": "  أرسل الصورة للإطار الأخير <b>لفيديوك</b>.\n\n  أشر إليه في البروم بت بـ <code>@end</code>",
+        "vid_end_frame_desc_short": "  أرسل الصورة للإطار الأخير.\n\n  أشر إليه في البروم بت بـ <code>@end</code>",
+        "vid_please_send_image": "◈  يرجى إرسال ملف صورة (JPG, PNG, WEBP إلخ)",
+        "vid_please_send_video_short": "◈  يرجى إرسال ملف فيديو (MP4, MOV, AVI إلخ)",
+        "vid_please_send_audio": "◈  يرجى إرسال ملف صوتي (MP3, OGG, WAV, M4A إلخ)",
+        "err_file_too_large": "⚠️  الملف كبير جداً — لا تستطيع بوتات Telegram تنزيل ملفات أكبر من 20 ميجابايت. يرجى ضغط الملف أو إرسال ملف أصغر.",
+        "vid_start_frame_saved": "✓  تم حفظ الإطار الأول.\n\nاختر الإطار الأخير أو اكتب البروم بت.",
+        "vid_end_frame_saved": "✓  تم حفظ الإطار الأخير.\n\nاكتب البروم بت عندما تكون جاهزاً.",
+
+        "vid_img_ref_title": "◈  <b>صورة مرجعية</b>  ({count}/{max})",
+        "vid_img_ref_instructions": (
+            "  أرسل حتى <b>{max} صور</b> كمرجع.\n\n"
+            "  <code>@img1</code>، <code>@img2</code> إلخ مجرد تسميات\n"
+            "  لك — الذكاء الاصطناعي لا يقرأها. صف كل صورة\n"
+            "  بالكلمات في البروم بت (مثلاً \"المرأة في الصورة 1\").\n\n"
+            "  أرسل الصور واحدة تلو الأخرى أو كألبوم.\n"
+            "  اضغط <b>تم</b> عند الانتهاء."
+        ),
+        "vid_img_ref_instructions_short": (
+            "  أرسل حتى <b>{max} صورة</b>.\n"
+            "  <code>@img1</code> إلخ مجرد تسميات لك — الذكاء الاصطناعي\n"
+            "  لا يقرأها. صف كل صورة بالكلمات.\n\n"
+            "  اضغط تم عند الانتهاء."
+        ),
+        "vid_img_max_reached": "تم الوصول للحد الأقصى {max} صورة. اضغط تم للمتابعة.",
+        "vid_img_max_reached_short": "تم الوصول للحد الأقصى {max} صورة. اضغط تم.",
+        "vid_img_saved": "✓  تم حفظ الصورة @img{n}.  ({count}/{max})",
+        "vid_img_saved_short": "✓  @img{n} محفوظة  ({count}/{max})",
+        "vid_send_more_or_done": "أرسل المزيد أو اضغط تم.",
+        "vid_max_reached_tap_done": "تم الوصول للحد الأقصى. اضغط تم.",
+
+        "vid_vid_ref_title": "◈  <b>فيديو مرجعي</b>  ({count}/{max})",
+        "vid_vid_ref_instructions": (
+            "  أرسل حتى <b>{max} فيديوهات</b> كمرجع.\n\n"
+            "  <code>@vid1</code>، <code>@vid2</code> إلخ مجرد تسميات\n"
+            "  لك — الذكاء الاصطناعي لا يقرأها. صف كل فيديو\n"
+            "  بالكلمات في البروم بت.\n\n"
+            "  اضغط <b>تم</b> عند الانتهاء."
+        ),
+        "vid_vid_ref_instructions_short": (
+            "  أرسل حتى <b>{max} فيديو</b> بأي صيغة.\n"
+            "  <code>@vid1</code> إلخ مجرد تسميات لك — الذكاء الاصطناعي\n"
+            "  لا يقرأها. صف كل فيديو بالكلمات.\n\n"
+            "  اضغط تم عند الانتهاء."
+        ),
+        "vid_vid_max_reached": "تم الوصول للحد الأقصى {max} فيديو. اضغط تم للمتابعة.",
+        "vid_vid_max_reached_short": "تم الوصول للحد الأقصى {max} فيديو. اضغط تم.",
+        "vid_vid_saved": "✓  تم حفظ الفيديو @vid{n}.  ({count}/{max})",
+        "vid_vid_saved_short": "✓  @vid{n} محفوظ  ({count}/{max})",
+
+        "vid_aud_ref_title": "◈  <b>ملف صوتي</b>  ({count}/{max})",
+        "vid_aud_ref_instructions": (
+            "  أرسل حتى <b>{max} ملفات صوتية</b>.\n\n"
+            "  <code>@aud1</code>، <code>@aud2</code> إلخ مجرد تسميات\n"
+            "  لك — الذكاء الاصطناعي لا يقرأها. صف كل ملف صوتي\n"
+            "  بالكلمات في البروم بت.\n\n"
+            "  اضغط <b>تم</b> عند الانتهاء."
+        ),
+        "vid_aud_ref_instructions_short": (
+            "  أرسل حتى <b>{max} ملف صوتي</b>.\n"
+            "  <code>@aud1</code> إلخ مجرد تسميات لك — الذكاء الاصطناعي\n"
+            "  لا يقرأها. صف كل ملف صوتي بالكلمات.\n\n"
+            "  اضغط تم عند الانتهاء."
+        ),
+        "vid_aud_max_reached": "تم الوصول للحد الأقصى {max} ملف صوتي. اضغط تم للمتابعة.",
+        "vid_aud_max_reached_short": "تم الوصول للحد الأقصى {max} ملف صوتي. اضغط تم.",
+        "vid_aud_saved": "✓  تم حفظ الصوت @aud{n}.  ({count}/{max})",
+        "vid_aud_saved_short": "✓  @aud{n} محفوظ  ({count}/{max})",
+
+        "vid_attached_files_label": "\n  <b>الملفات المرفقة:</b>\n{lines}\n  ملاحظة: هذه التسميات لأغراضك الشخصية فقط —\n  الذكاء الاصطناعي لا يقرأها. صف كل ملف بالكلمات\n  في البروم بت.\n",
+        "vid_attach_n_imgs": "  ◈  {count} صورة → @img1",
+        "vid_attach_n_vids": "  ◈  {count} فيديو → @vid1",
+        "vid_attach_n_auds": "  ◈  {count} صوت → @aud1",
+        "vid_attach_start_attached": "  ◈  الإطار الأول مرفق\n",
+        "vid_attach_end_attached": "  ◈  الإطار الأخير مرفق\n",
+        "vid_now_select_resolution": "  اختر الدقة الآن:",
+
+        "vid_hgtr_quality_desc": (
+            "  اختر وضع الجودة:\n\n"
+            "  <b>Precision</b>  —  أعلى دقة، أبطأ\n"
+            "  <b>Speed</b>  —  أسرع معالجة، تكلفة أقل"
+        ),
+        "vid_btn_precision": "◈  Precision",
+        "vid_btn_speed": "◈  Speed",
+
+        "vid_hga4_select_ar": "  اختر نسبة الأبعاد:",
+        "vid_hga4_select_res": "  اختر الدقة:",
+        "vid_hga4_select_style": "  اختر أسلوب الكلام:",
+        "vid_omni_desc": "  حرّك أي صورة شخصية مع صوت.\n\n  اختر المدة:",
+
+        # ── Wallet / top-up flow ────────────────────────────────
+        "wallet_title": "◈  <b>محفظتك</b>",
+        "wallet_balance": "  الرصيد     <b>{coins} عملة</b>  (≈ ${usd})",
+        "wallet_rate": "  السعر        1 عملة  =  $0.05",
+        "wallet_min_topup": "  الحد الأدنى للشحن   $2.00  =  40 عملة",
+        "wallet_btn_add_coins": "＋  إضافة عملات",
+        "wallet_btn_referral": "◈  برنامج الإحالة",
+
+        "wallet_topup_title": "＋  <b>إضافة عملات</b>",
+        "wallet_topup_rate_line": "  1 عملة  =  <b>$0.05</b>",
+        "wallet_topup_min_line": "  $2.00   =  <b>40 عملة</b>  ← الحد الأدنى",
+        "wallet_topup_5_line": "  $5.00   =  <b>100 عملة</b>",
+        "wallet_topup_10_line": "  $10.00  =  <b>200 عملة</b>",
+        "wallet_topup_select_or_custom": "اختر مبلغاً أو أدخل مبلغاً مخصصاً:",
+        "wallet_btn_2": "$2  →  40 عملة",
+        "wallet_btn_5": "$5  →  100 عملة",
+        "wallet_btn_10": "$10  →  200 عملة",
+        "wallet_btn_20": "$20  →  400 عملة",
+        "wallet_btn_custom": "✎  مبلغ مخصص",
+
+        "wallet_custom_title": "✎  <b>مبلغ مخصص</b>",
+        "wallet_custom_desc": "اكتب المبلغ بالدولار (الحد الأدنى $2.00):\n\n<i>مثال: 7.5</i>",
+        "wallet_min_deposit_error": "الحد الأدنى للإيداع هو ${min}. يرجى إدخال مبلغ صحيح (مثلاً 2، 5، 10).",
+        "wallet_enter_number_error": "يرجى إدخال رقم (مثلاً 5 أو 7.50).\n\nاكتب /cancel للإلغاء.",
+
+        "wallet_confirm_title": "◈  <b>تأكيد الشحن</b>",
+        "wallet_confirm_amount": "  المبلغ      <b>${amount}</b>",
+        "wallet_confirm_receive": "  ستحصل على   <b>{coins} عملة</b>",
+        "wallet_choose_payment": "اختر طريقة الدفع:",
+        "wallet_btn_pay_stars": "⭐  الدفع بـ Stars ({stars} XTR)",
+        "wallet_btn_pay_usdt": "₮  الدفع بـ USDT (TRC20)",
+
+        "wallet_usdt_title": "₮  <b>الدفع بـ USDT</b>",
+        "wallet_usdt_send_exactly": "  أرسل بالضبط  <b>${amount} USDT</b>",
+        "wallet_usdt_network": "  الشبكة          <b>TRC20 (Tron)</b>",
+        "wallet_usdt_address_label": "  عنوان المحفظة:",
+        "wallet_usdt_after_sending": "بعد الإرسال، الصق <b>رقم المعاملة</b> أدناه.\n<i>سيتم التحقق منه تلقائياً.</i>",
+
+        "wallet_verifying": "⏳  جارٍ التحقق من المعاملة...",
+        "wallet_verified_title": "✓  <b>تم تأكيد الدفع</b>",
+        "wallet_verified_confirmed": "  تم تأكيد المعاملة",
+        "wallet_verified_amount": "  المبلغ المستلم   <b>${amount} USDT</b>",
+        "wallet_verified_coins": "  العملات المُضافة     <b>{coins} عملة</b>",
+        "wallet_verified_balance": "  الرصيد الجديد        <b>{coins} عملة</b>",
+
+        "wallet_review_title": "◌  <b>قيد المراجعة</b>",
+        "wallet_review_body": (
+            "  لم نتمكن من التحقق من معاملتك تلقائياً.\n"
+            "  سيراجعها فريقنا يدوياً خلال 15 دقيقة.\n\n"
+            "  ستُضاف العملات بعد التأكيد."
+        ),
+
+        "wallet_stars_invoice_title": "RetainX Studio — عملات",
+        "wallet_stars_invoice_desc": "شحن {coins} عملة إلى حسابك في RetainX",
+        "wallet_stars_label": "{coins} عملة",
+        "wallet_stars_success_title": "⭐  <b>تم الدفع بنجاح</b>",
+        "wallet_stars_success_body": "  أُضيف {coins} عملة إلى محفظتك.\n  الرصيد الجديد: <b>{coins2} عملة</b>",
+
+        "wallet_topup_confirmed_title": "✓  <b>تم تأكيد الشحن</b>",
+        "wallet_topup_confirmed_body": "  أُضيف <b>{coins} عملة</b> إلى حسابك.\n  الرصيد: <b>{balance} عملة</b>",
+        "wallet_topup_rejected": "✕  لم يتم تأكيد شحنك. يرجى التواصل مع الدعم.",
+
+        "wallet_btn_yoomoney": "₽  الدفع بالبطاقة الروسية",
+        "wallet_yoomoney_title": "₽  <b>شحن عبر YooMoney</b>",
+        "wallet_yoomoney_rate_line": "  1 عملة  =  <b>3.70 ₽</b>",
+        "wallet_yoomoney_min_line": "  185 ₽   =  <b>50 عملة</b>  ← الحد الأدنى",
+        "wallet_yoomoney_prompt": "أدخل المبلغ بالروبل الذي تريد دفعه:\n\n<i>مثال: 500</i>",
+        "wallet_yoomoney_min_error": "الحد الأدنى للإيداع {min} ₽ (50 عملة). يرجى إدخال مبلغ أكبر.",
+        "wallet_yoomoney_confirm_title": "₽  <b>الدفع عبر YooMoney</b>",
+        "wallet_yoomoney_confirm_amount": "  المبلغ      <b>{amount} ₽</b>",
+        "wallet_yoomoney_confirm_coins": "  ستحصل على  <b>{coins} عملة</b>",
+        "wallet_yoomoney_confirm_note": "اضغط الزر أدناه للدفع. تُضاف العملات تلقائياً بعد الدفع.",
+        "wallet_btn_pay_yoomoney": "₽  ادفع {amount} ₽ بالبطاقة الروسية",
+        "wallet_yoomoney_success_title": "✓  <b>تم استلام الدفع</b>",
+        "wallet_yoomoney_success_body": "  أُضيف <b>{coins} عملة</b> إلى حسابك.\n  الدفع: <b>{amount} ₽</b>",
+
+        "wallet_referral_bonus_title": "◈  <b>مكافأة الإحالة</b>",
+        "wallet_referral_bonus_body": "  قام المُحال منك بدفعة.\n  حصلت على <b>{bonus} ₽</b> ({percentage}%) في رصيد إحالتك.",
+
+        "referral_friend_joined": "👤  <b>إحالة جديدة!</b>\n\n  {username} انضم عبر رابطك.\n  ستحصل على مكافأة عند أول عملية شراء له.",
+
+        "wallet_referral_title": "◈  <b>برنامج الإحالة</b>",
+        "wallet_referral_tier_line": "  ◉  <b>{name}</b>  →  {next}",
+        "wallet_referral_tier_max": "  ★  <b>{name}</b>  ·  المستوى الأقصى",
+        "wallet_referral_rate": "  تكسب  <b>{first}%</b> أول دفعة  ·  <b>{repeat}%</b> للدفعات التالية",
+        "wallet_referral_stat_invited": "أصدقاء مدعوون",
+        "wallet_referral_stat_buyers": "أجروا عملية شراء",
+        "wallet_referral_stat_balance": "رصيد الإحالة",
+        "wallet_referral_stat_total": "إجمالي الأرباح",
+        "wallet_referral_join_bonus_note": "🎁  كل صديق يحصل على +{bonus} عملة عند الانضمام!",
+        "wallet_referral_share_btn": "📤  شارك رابطي",
+        "wallet_referral_share_text": "أستخدم @RetainXStudioBot لتوليد الفيديو والصور بالذكاء الاصطناعي — Sora 2، Grok، Seedance، HeyGen والمزيد. انضم عبر رابطي واحصل على +10 عملات بونص! 🎁\n",
+
+        "wallet_referral_desc": "  اكسب <b>20%</b> من أول دفعة لمُحالك\n  و<b>10%</b> من كل دفعة لاحقة.\n  الأرباح تُضاف إلى رصيد الإحالة بالروبل.",
+        "wallet_referral_balance_line": "  رصيد الإحالة   <b>{balance} ₽</b>",
+        "wallet_referral_total_line": "  إجمالي الأرباح     <b>{total} ₽</b>",
+        "wallet_referral_stats_line": "  الإحالات:  <b>{count}</b>  ·  الدافعون:  <b>{buyers}</b>",
+        "wallet_referral_my_list_btn": "👥  إحالاتي ({count})",
+        "wallet_referral_list_title": "👥  <b>إحالاتي</b>",
+        "wallet_referral_list_empty": "  لا توجد إحالات بعد.\n  شارك رابطك للبدء في الكسب!",
+        "wallet_referral_list_header": "  <b>{count} إجمالاً</b>  ·  {buyers} أجروا شراءً",
+
+        "wallet_referral_link_label": "رابطك:",
+        "wallet_referral_share": "  شاركه واكسب بشكل سلبي.",
+        "wallet_referral_withdraw_btn": "₽  سحب {amount} ₽",
+        "wallet_referral_withdraw_unavailable": "◌  الحد الأدنى للسحب: {min} ₽",
+        "wallet_referral_withdraw_pending": "◌  جارٍ معالجة طلب السحب...",
+        "wallet_referral_withdraw_low_alert": "الحد الأدنى للسحب هو {min} ₽. استمر في الكسب!",
+        "wallet_referral_withdraw_title": "₽  <b>سحب رصيد الإحالة</b>",
+        "wallet_referral_withdraw_amount": "  المبلغ المراد سحبه   <b>{amount} ₽</b>",
+        "wallet_referral_enter_requisites": "أدخل رقم بطاقتك البنكية أو بيانات الدفع\n(رقم البطاقة، هاتف SBP، إلخ):",
+        "wallet_referral_requisites_invalid": "يرجى إدخال بيانات دفع صحيحة (رقم بطاقة، هاتف، إلخ).",
+        "wallet_referral_withdraw_submitted_title": "✓  <b>تم تقديم طلب السحب</b>",
+        "wallet_referral_withdraw_submitted_body": "  المبلغ: <b>{amount} ₽</b>\n\n  سيعالج فريقنا الطلب يدوياً خلال 24 ساعة.",
+        "wallet_referral_withdraw_paid_title": "✓  <b>تمت معالجة السحب</b>",
+        "wallet_referral_withdraw_paid_body": "  تم إرسال <b>{amount} ₽</b> إلى بيانات الدفع الخاصة بك.",
+        "wallet_referral_withdraw_rejected_title": "◌  <b>تم رفض السحب</b>",
+        "wallet_referral_withdraw_rejected_body": "  تم رفض سحبك بمبلغ <b>{amount} ₽</b>.\n  تم إعادة المبلغ إلى رصيد إحالتك.\n  تواصل مع @RetainXStudio للتفاصيل.",
+
+        # ── Order history flow ──────────────────────────────────
+        "order_history_title": "◈  <b>سجل الطلبات</b>",
+        "order_history_empty": "  لا توجد طلبات بعد.\n\n  ابدأ بالإنشاء لترى سجلك هنا.",
+        "order_history_total": "  إجمالي الطلبات   <b>{total}</b>",
+        "order_history_completed": "  المكتملة          <b>{delivered}</b>",
+        "order_history_spent": "  العملات المُنفقة  <b>{spent}◈</b>",
+        "order_history_tap_to_view": "  اضغط على أي طلب لعرض تفاصيله:",
+        "order_not_found": "الطلب غير موجود",
+        "order_detail_title": "◈  <b>الطلب #{oid}</b>",
+        "order_detail_status": "  الحالة    {emoji}  <b>{status}</b>",
+        "order_detail_model": "  النموذج     <b>{tool}</b>",
+        "order_detail_coins": "  العملات     {coins}◈",
+        "order_detail_date": "  التاريخ      {date}",
+        "order_detail_resolution": "  الدقة          {res}",
+        "order_detail_aspect_ratio": "  نسبة الأبعاد  {ar}",
+        "order_detail_duration": "  المدة          {dur} ثانية",
+        "order_detail_quality": "  الجودة         {quality}",
+        "order_detail_audio": "  الصوت           نعم",
+        "order_detail_language": "  اللغة           {lang}",
+        "order_detail_prompt_label": "  البروم بت:",
+        "order_btn_repeat": "↺  تكرار الطلب",
+        "order_btn_back": "← رجوع",
+        "order_repeat_title": "◈  <b>تكرار الطلب</b>",
+        "order_repeat_model": "  النموذج     <b>{tool}</b>",
+        "order_repeat_resolution": "  الدقة         {res}",
+        "order_repeat_aspect": "  نسبة الأبعاد  {ar}",
+        "order_repeat_duration": "  المدة         {dur} ثانية",
+        "order_repeat_cost": "  التكلفة        <b>{coins} عملة</b>",
+        "order_repeat_prev_prompt": "  البروم بت السابق:",
+        "order_repeat_enter_prompt": "  أدخل البروم بت (أو أرسل نفس البروم بت أعلاه):",
+        "order_status_processing": "قيد المعالجة",
+        "order_status_delivered": "مُسلَّم",
+        "order_status_cancelled": "ملغى",
+        "order_your_result": "◈  نتيجتك",
+    },
 }
 
 
@@ -1055,13 +1577,13 @@ def t(key: str, lang: str = "en", **kwargs) -> str:
 
 # ── Client reply-keyboard button labels (per language, with reverse lookup) ──
 CLIENT_BUTTONS = {
-    "main_menu": {"en": STR["en"]["menu_main_menu"], "ru": STR["ru"]["menu_main_menu"]},
-    "wallet":    {"en": STR["en"]["menu_wallet"],     "ru": STR["ru"]["menu_wallet"]},
-    "video":     {"en": STR["en"]["menu_video"],      "ru": STR["ru"]["menu_video"]},
-    "images":    {"en": STR["en"]["menu_images"],     "ru": STR["ru"]["menu_images"]},
-    "audio":     {"en": STR["en"]["menu_audio"],      "ru": STR["ru"]["menu_audio"]},
-    "orders":    {"en": STR["en"]["menu_orders"],     "ru": STR["ru"]["menu_orders"]},
-    "support":   {"en": STR["en"]["menu_support"],    "ru": STR["ru"]["menu_support"]},
+    "main_menu": {"en": STR["en"]["menu_main_menu"], "ru": STR["ru"]["menu_main_menu"], "ar": STR["ar"]["menu_main_menu"]},
+    "wallet":    {"en": STR["en"]["menu_wallet"],     "ru": STR["ru"]["menu_wallet"],     "ar": STR["ar"]["menu_wallet"]},
+    "video":     {"en": STR["en"]["menu_video"],      "ru": STR["ru"]["menu_video"],      "ar": STR["ar"]["menu_video"]},
+    "images":    {"en": STR["en"]["menu_images"],     "ru": STR["ru"]["menu_images"],     "ar": STR["ar"]["menu_images"]},
+    "audio":     {"en": STR["en"]["menu_audio"],      "ru": STR["ru"]["menu_audio"],      "ar": STR["ar"]["menu_audio"]},
+    "orders":    {"en": STR["en"]["menu_orders"],     "ru": STR["ru"]["menu_orders"],     "ar": STR["ar"]["menu_orders"]},
+    "support":   {"en": STR["en"]["menu_support"],    "ru": STR["ru"]["menu_support"],    "ar": STR["ar"]["menu_support"]},
 }
 
 CLIENT_ACTION_BY_TEXT = {

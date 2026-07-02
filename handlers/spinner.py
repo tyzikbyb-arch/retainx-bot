@@ -26,7 +26,7 @@ _active: dict[int, tuple] = {}
 
 # ---------- wait-time estimates per tool name (keyword, minutes) ----------
 _WAIT_RULES: list[tuple[str, int]] = [
-    ("sora",              15),
+    ("sora",              10),
     ("heygen avatar",     10),
     ("aurora avatar",      8),
     ("heygen translate",   6),
