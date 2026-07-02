@@ -43,11 +43,13 @@ _WAIT_RULES: list[tuple[str, int]] = [
 ]
 
 def wait_minutes(tool: str, order_type: str = "video") -> int:
+    if order_type == "video":
+        return 10
     tl = tool.lower()
     for kw, mins in _WAIT_RULES:
         if kw in tl:
             return mins
-    return 2 if order_type in ("voiceover", "image") else 5
+    return 2 if order_type == "image" else 5
 
 
 # ---------- internal runner ----------
