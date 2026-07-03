@@ -1,4 +1,5 @@
 import os
+import random
 import time
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -42,6 +43,13 @@ def init_db():
             try:
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS file_id TEXT DEFAULT NULL")
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS file_type TEXT DEFAULT NULL")
+            except Exception:
+                pass
+            # Migrate orders.id from SERIAL (auto-increment) to BIGINT (random IDs)
+            try:
+                cur.execute("ALTER TABLE orders ALTER COLUMN id DROP DEFAULT")
+                cur.execute("ALTER TABLE orders ALTER COLUMN id TYPE BIGINT USING id::BIGINT")
+                cur.execute("DROP SEQUENCE IF EXISTS orders_id_seq")
             except Exception:
                 pass
             try:
@@ -200,16 +208,23 @@ def set_lang(uid: int, lang: str):
         conn.commit()
 
 # ── Order functions ───────────────────────────────────────────
+def _gen_order_id(cur) -> int:
+    for _ in range(20):
+        oid = random.randint(1000, 9_999_999)
+        cur.execute("SELECT 1 FROM orders WHERE id = %s", (oid,))
+        if not cur.fetchone():
+            return oid
+    raise RuntimeError("Failed to generate unique order ID after 20 attempts")
+
 def create_order(user_id, username, tool, params, coins, price_usd) -> int:
     import json
     with get_conn() as conn:
         with conn.cursor() as cur:
+            oid = _gen_order_id(cur)
             cur.execute("""
-                INSERT INTO orders (user_id, username, tool, params, coins, price_usd, status, created)
-                VALUES (%s, %s, %s, %s, %s, %s, 'processing', %s)
-                RETURNING id
-            """, (user_id, username, tool, json.dumps(params), coins, price_usd, int(time.time())))
-            oid = cur.fetchone()[0]
+                INSERT INTO orders (id, user_id, username, tool, params, coins, price_usd, status, created)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'processing', %s)
+            """, (oid, user_id, username, tool, json.dumps(params), coins, price_usd, int(time.time())))
         conn.commit()
         return oid
 
