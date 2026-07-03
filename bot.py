@@ -540,6 +540,12 @@ async def cancelorder_cmd(msg: Message):
         if not order:
             await msg.answer("Order not found.")
             return
+        if order["status"] != "processing":
+            await msg.answer(
+                f"⚠️  Order #{oid} is already <b>{order['status']}</b> — refund skipped.",
+                parse_mode="HTML"
+            )
+            return
         add_coins(order["user_id"], order["coins"])
         update_order_status(oid, "cancelled")
         await bot.send_message(order["user_id"], f"◌  <b>Order #{oid} Cancelled</b>\n\n  <b>{order['coins']} coins</b> refunded.", parse_mode="HTML")

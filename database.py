@@ -444,6 +444,9 @@ def process_withdrawal(req_id: int, status: str):
             req = cur.fetchone()
             if not req:
                 return None
+            if req["status"] != "pending":
+                # Already processed — do nothing to prevent double-refunds.
+                return dict(req)
             cur.execute(
                 "UPDATE withdrawal_requests SET status = %s, processed = %s WHERE id = %s",
                 (status, int(time.time()), req_id)

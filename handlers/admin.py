@@ -68,6 +68,12 @@ async def admin_cancel_with_reason(msg: Message, state: FSMContext):
     if not order:
         await msg.answer(f"⚠️ Order #{oid} not found.")
         return
+    if order["status"] != "processing":
+        await msg.answer(
+            f"⚠️ Order #{oid} is already <b>{order['status']}</b> — refund skipped.",
+            parse_mode="HTML"
+        )
+        return
     reason = msg.text.strip() if msg.text else ""
     if reason == "-":
         reason = ""
@@ -92,16 +98,6 @@ async def admin_cancel_with_reason(msg: Message, state: FSMContext):
     if reason:
         admin_note += f"\n  Reason sent: {reason}"
     await msg.answer(admin_note)
-
-@router.callback_query(F.data.startswith("delivered_"))
-async def mark_delivered_quick(cb: CallbackQuery, state: FSMContext):
-    if cb.from_user.id != ADMIN_ID:
-        return
-    oid = int(cb.data.replace("delivered_", ""))
-    await state.update_data(admin_oid=oid)
-    await state.set_state(AdminStates.sending_result)
-    await cb.message.answer(f"▸  Attach file for Order #{oid}")
-    await cb.answer()
 
 @router.message(AdminStates.sending_result, F.from_user.id == ADMIN_ID)
 async def admin_deliver_file(msg: Message, state: FSMContext):
