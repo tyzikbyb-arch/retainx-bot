@@ -136,6 +136,10 @@ def init_db():
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blogger BOOLEAN DEFAULT FALSE")
             except Exception:
                 pass
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT DEFAULT NULL")
+            except Exception:
+                pass
         conn.commit()
 
 # ── User functions ────────────────────────────────────────────
@@ -152,6 +156,12 @@ def get_user(uid: int) -> dict:
             )
             conn.commit()
             return dict(cur.fetchone())
+
+def update_username(uid: int, username: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET username = %s WHERE uid = %s", (username, uid))
+        conn.commit()
 
 def is_new_user(uid: int) -> bool:
     with get_conn() as conn:
@@ -280,11 +290,11 @@ def get_all_users() -> list:
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT u.uid, u.coins, u.joined,
+                SELECT u.uid, u.coins, u.joined, u.username,
                        COUNT(o.id) as order_count
                 FROM users u
                 LEFT JOIN orders o ON o.user_id = u.uid
-                GROUP BY u.uid, u.coins, u.joined
+                GROUP BY u.uid, u.coins, u.joined, u.username
                 ORDER BY u.joined DESC
             """)
             return [dict(r) for r in cur.fetchall()]

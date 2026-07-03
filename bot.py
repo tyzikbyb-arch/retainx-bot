@@ -31,7 +31,7 @@ class OnboardStates(StatesGroup):
     selecting_lang = State()
 
 from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
-from database import is_new_user, add_coins, get_coins, remove_coins, set_referred_by, get_lang, set_lang
+from database import is_new_user, add_coins, get_coins, remove_coins, set_referred_by, get_lang, set_lang, update_username
 from keyboards import kb, menu_btn, client_kb, chunked
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
 from handlers import credits, images, video, voiceover, admin as admin_handler, orders as orders_handler
@@ -90,6 +90,10 @@ async def start(msg: Message, state: FSMContext):
     args = msg.text.split()
 
     new = is_new_user(uid)
+
+    # Keep username fresh on every /start so the admin Users list stays accurate.
+    if msg.from_user.username:
+        update_username(uid, msg.from_user.username)
 
     # Only register a referral for brand-new users.
     # Existing users clicking a ref link must NOT get retroactively assigned
@@ -296,7 +300,8 @@ async def panel_router(msg: Message, state: FSMContext):
             orders = u["order_count"] or 0
             coins = u["coins"] or 0
             uid_str = u["uid"]
-            text_out += f"  <code>{uid_str}</code>  ·  {coins}◈  ·  {orders} orders  ·  {date}\n"
+            uname = f"  @{u['username']}" if u.get("username") else ""
+            text_out += f"  <code>{uid_str}</code>{uname}  ·  {coins}◈  ·  {orders} orders  ·  {date}\n"
         text_out += "\n  <i>Use /msg USER_ID to contact any user</i>"
         await msg.answer(text_out, parse_mode="HTML")
 
