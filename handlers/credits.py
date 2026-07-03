@@ -533,18 +533,33 @@ async def referral_list_handler(cb: CallbackQuery):
         )
     else:
         buyers = sum(1 for r in referrals if (r.get("topup_count") or 0) > 0)
+        total_sub = sum(r.get("sub_count") or 0 for r in referrals)
+        total_sub_buyers = sum(r.get("sub_buyers") or 0 for r in referrals)
         lines = []
         for r in referrals[:30]:
             username = f"@{r['username']}" if r.get("username") else f"ID {r['uid']}"
-            joined_ts = r.get("joined") or 0
-            joined_date = time.strftime("%d.%m.%Y", time.localtime(joined_ts)) if joined_ts else "—"
             icon = "✅" if (r.get("topup_count") or 0) > 0 else "◌"
-            lines.append(f"  {icon}  {username}  ·  {joined_date}")
+            sub_count = r.get("sub_count") or 0
+            sub_buyers = r.get("sub_buyers") or 0
+            if sub_count > 0:
+                lines.append(
+                    f"  {icon}  {username}  ·  "
+                    f"{t('wallet_referral_sub_followers', lang, n=sub_count)}  ·  "
+                    f"{t('wallet_referral_sub_buyers', lang, n=sub_buyers)}"
+                )
+            else:
+                joined_ts = r.get("joined") or 0
+                joined_date = time.strftime("%d.%m.%Y", time.localtime(joined_ts)) if joined_ts else "—"
+                lines.append(f"  {icon}  {username}  ·  {joined_date}")
         header = t("wallet_referral_list_header", lang, count=len(referrals), buyers=buyers)
+        blogger_line = (
+            f"\n{t('wallet_referral_blogger_totals', lang, sub=total_sub, sub_buyers=total_sub_buyers)}"
+            if total_sub > 0 else ""
+        )
         text = (
             f"{t('wallet_referral_list_title', lang)}\n"
             "━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"{header}\n\n"
+            f"{header}{blogger_line}\n\n"
             + "\n".join(lines)
         )
 

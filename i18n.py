@@ -470,6 +470,9 @@ STR = {
         "wallet_referral_list_title": "👥  <b>My Referrals</b>",
         "wallet_referral_list_empty": "  No referrals yet.\n  Share your link to start earning!",
         "wallet_referral_list_header": "  <b>{count} total</b>  ·  {buyers} made a purchase",
+        "wallet_referral_sub_followers": "👥 {n} followers",
+        "wallet_referral_sub_buyers": "🛒 {n} purchases",
+        "wallet_referral_blogger_totals": "  Bloggers total: {sub} followers  ·  {sub_buyers} purchases",
 
         "wallet_referral_link_label": "Your link:",
         "wallet_referral_share": "  Share it and earn passively.",
@@ -992,6 +995,9 @@ STR = {
         "wallet_referral_list_title": "👥  <b>Мои рефералы</b>",
         "wallet_referral_list_empty": "  Рефералов пока нет.\n  Поделитесь ссылкой, чтобы начать зарабатывать!",
         "wallet_referral_list_header": "  <b>Всего {count}</b>  ·  {buyers} совершили покупку",
+        "wallet_referral_sub_followers": "👥 {n} подписчиков",
+        "wallet_referral_sub_buyers": "🛒 {n} покупок",
+        "wallet_referral_blogger_totals": "  Итого через блогеров: {sub} подписчиков  ·  {sub_buyers} покупок",
 
         "wallet_referral_link_label": "Ваша ссылка:",
         "wallet_referral_share": "  Поделитесь ей и зарабатывайте пассивно.",
@@ -1514,6 +1520,9 @@ STR = {
         "wallet_referral_list_title": "👥  <b>إحالاتي</b>",
         "wallet_referral_list_empty": "  لا توجد إحالات بعد.\n  شارك رابطك للبدء في الكسب!",
         "wallet_referral_list_header": "  <b>{count} إجمالاً</b>  ·  {buyers} أجروا شراءً",
+        "wallet_referral_sub_followers": "👥 {n} متابع",
+        "wallet_referral_sub_buyers": "🛒 {n} عملية شراء",
+        "wallet_referral_blogger_totals": "  إجمالي عبر البلوغرز: {sub} متابع  ·  {sub_buyers} عملية شراء",
 
         "wallet_referral_link_label": "رابطك:",
         "wallet_referral_share": "  شاركه واكسب بشكل سلبي.",

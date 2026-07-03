@@ -491,17 +491,24 @@ def get_referral_stats(uid: int) -> dict:
         }
 
 def get_referral_list(uid: int) -> list:
-    """Returns list of users referred by uid: uid, joined, topup_count, username."""
+    """Returns referrals with their own sub-referral counts for blogger tracking."""
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT u.uid, u.joined, u.topup_count,
-                       (SELECT o.username FROM orders o
-                        WHERE o.user_id = u.uid AND o.username IS NOT NULL AND o.username != ''
-                        LIMIT 1) as username
+                SELECT
+                    u.uid,
+                    u.joined,
+                    u.topup_count,
+                    (SELECT o.username FROM orders o
+                     WHERE o.user_id = u.uid AND o.username IS NOT NULL AND o.username != ''
+                     LIMIT 1) as username,
+                    (SELECT COUNT(*) FROM users sub
+                     WHERE sub.referred_by = u.uid) as sub_count,
+                    (SELECT COUNT(*) FROM users sub
+                     WHERE sub.referred_by = u.uid AND sub.topup_count > 0) as sub_buyers
                 FROM users u
                 WHERE u.referred_by = %s
-                ORDER BY u.joined DESC
+                ORDER BY sub_count DESC, u.joined DESC
             """, (uid,))
             return [dict(r) for r in cur.fetchall()]
 
