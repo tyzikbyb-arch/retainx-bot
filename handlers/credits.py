@@ -296,10 +296,15 @@ async def receive_tx_hash(msg: Message, state: FSMContext):
 
         if verified:
             add_coins(uid, coins)
-            await _handle_referral_bonus(uid, coins, payment_type="usdt")
             promo_code = data.get("promo_code")
             if promo_code:
                 use_promo_code(promo_code, uid)
+            # Referral notification isolated — a Telegram error here must NOT
+            # send the TX to manual review (coins are already credited above).
+            try:
+                await _handle_referral_bonus(uid, coins, payment_type="usdt")
+            except Exception:
+                pass
             await msg.answer(
                 f"{t('wallet_verified_title', lang)}\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -318,7 +323,7 @@ async def receive_tx_hash(msg: Message, state: FSMContext):
             await state.clear()
 
     except Exception as e:
-        # Network error — send for manual review
+        # Network/API error during verification — send for manual review
         promo_code = data.get("promo_code")
         await _send_for_manual_review(msg, tx_hash, amount, coins, uid, promo_code)
         await state.clear()
@@ -411,9 +416,17 @@ async def successful_stars_payment(msg: Message, state: FSMContext):
     uid = msg.from_user.id
     promo_code = parts[3] if len(parts) > 3 and parts[3] else None
     add_coins(uid, coins)
-    await _handle_referral_bonus(uid, coins, payment_type="stars")
+    # Referral bonus isolated — a Telegram error must not propagate past this point.
+    try:
+        await _handle_referral_bonus(uid, coins, payment_type="stars")
+    except Exception:
+        pass
     if promo_code:
-        use_promo_code(promo_code, uid)
+        # Guard against race: two concurrent invoices sent before the first
+        # payment consumed the promo. use_promo_code is idempotent (ON CONFLICT
+        # DO NOTHING) but we only clear state if the promo was actually new.
+        if not has_used_promo(uid):
+            use_promo_code(promo_code, uid)
         await state.update_data(promo_code=None, promo_discount=0)
     await msg.answer(
         f"{t('wallet_stars_success_title', lang)}\n\n"
@@ -567,7 +580,13 @@ async def receive_card_proof(msg: Message, state: FSMContext):
     coins = int(data.get("card_coins", 0))
     pay_rub = float(data.get("card_pay_rub", 0))
     promo_code = data.get("card_promo") or ""
-    await state.clear()
+
+    # Guard: FSM state data expired — card_coins would be 0 and we have no
+    # amount to credit. Reject here so admin never sees a "0 coins" proof.
+    if coins == 0:
+        await state.clear()
+        await msg.answer("⚠️  Session expired. Please start a new payment from the menu.")
+        return
 
     from config import ADMIN_ID
     from aiogram import Bot
@@ -585,17 +604,23 @@ async def receive_card_proof(msg: Message, state: FSMContext):
         InlineKeyboardButton(text="✕  Reject",  callback_data=f"reject_card_{uid}"),
     ]])
 
-    if msg.photo:
-        await bot.send_photo(ADMIN_ID, msg.photo[-1].file_id, caption=caption, reply_markup=keyboard, parse_mode="HTML")
-    elif msg.document:
-        await bot.send_document(ADMIN_ID, msg.document.file_id, caption=caption, reply_markup=keyboard, parse_mode="HTML")
-    else:
-        await bot.send_message(
-            ADMIN_ID,
-            caption + f"\n\n  Proof text:\n<code>{msg.text}</code>",
-            reply_markup=keyboard, parse_mode="HTML"
-        )
+    # Send to admin BEFORE clearing state — if this fails the user can retry.
+    try:
+        if msg.photo:
+            await bot.send_photo(ADMIN_ID, msg.photo[-1].file_id, caption=caption, reply_markup=keyboard, parse_mode="HTML")
+        elif msg.document:
+            await bot.send_document(ADMIN_ID, msg.document.file_id, caption=caption, reply_markup=keyboard, parse_mode="HTML")
+        else:
+            await bot.send_message(
+                ADMIN_ID,
+                caption + f"\n\n  Proof text:\n<code>{msg.text}</code>",
+                reply_markup=keyboard, parse_mode="HTML"
+            )
+    except Exception:
+        await msg.answer("⚠️  Could not forward your proof. Please try again.")
+        return
 
+    await state.clear()
     await msg.answer(
         f"{t('wallet_card_submitted_title', lang)}\n\n"
         f"{t('wallet_card_submitted_body', lang)}",
@@ -614,8 +639,14 @@ async def admin_confirm_card(cb: CallbackQuery):
     coins = int(parts[3])
     promo_code = parts[4] if len(parts) > 4 and parts[4] != "none" else None
 
+    # Disable the button immediately — prevents double-tap if send_message below fails.
+    await cb.message.edit_reply_markup(reply_markup=None)
     add_coins(uid, coins)
-    await _handle_referral_bonus(uid, coins, payment_type="card")
+    # Referral bonus isolated — a Telegram error must not skip promo consumption.
+    try:
+        await _handle_referral_bonus(uid, coins, payment_type="card")
+    except Exception:
+        pass
     if promo_code:
         use_promo_code(promo_code, uid)
 
@@ -623,12 +654,15 @@ async def admin_confirm_card(cb: CallbackQuery):
     bot = Bot(token=BOT_TOKEN)
     user_lang = get_lang(uid)
     balance = get_coins(uid)
-    await bot.send_message(
-        uid,
-        f"{t('wallet_card_success_title', user_lang)}\n\n"
-        f"{t('wallet_card_success_body', user_lang, coins=coins, balance=balance)}",
-        parse_mode="HTML"
-    )
+    try:
+        await bot.send_message(
+            uid,
+            f"{t('wallet_card_success_title', user_lang)}\n\n"
+            f"{t('wallet_card_success_body', user_lang, coins=coins, balance=balance)}",
+            parse_mode="HTML"
+        )
+    except Exception:
+        pass
     await cb.message.edit_text(f"✓  Card confirmed — {coins} coins → user {uid}", parse_mode="HTML")
 
 @router.callback_query(F.data.startswith("reject_card_"))
@@ -659,19 +693,28 @@ async def admin_confirm_topup(cb: CallbackQuery):
     uid = int(parts[2])
     coins = int(parts[3])
     promo_code = parts[4] if len(parts) > 4 and parts[4] != "none" else None
+    # Disable the button immediately — prevents double-tap if send_message below fails.
+    await cb.message.edit_reply_markup(reply_markup=None)
     add_coins(uid, coins)
-    await _handle_referral_bonus(uid, coins, payment_type="usdt")
+    # Referral bonus isolated — a Telegram error must not skip promo consumption.
+    try:
+        await _handle_referral_bonus(uid, coins, payment_type="usdt")
+    except Exception:
+        pass
     if promo_code:
         use_promo_code(promo_code, uid)
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
     user_lang = get_lang(uid)
-    await bot.send_message(
-        uid,
-        f"{t('wallet_topup_confirmed_title', user_lang)}\n\n"
-        f"{t('wallet_topup_confirmed_body', user_lang, coins=coins, balance=get_coins(uid))}",
-        parse_mode="HTML"
-    )
+    try:
+        await bot.send_message(
+            uid,
+            f"{t('wallet_topup_confirmed_title', user_lang)}\n\n"
+            f"{t('wallet_topup_confirmed_body', user_lang, coins=coins, balance=get_coins(uid))}",
+            parse_mode="HTML"
+        )
+    except Exception:
+        pass
     await cb.message.edit_text(f"✓  Confirmed — {coins} coins → user {uid}", parse_mode="HTML")
 
 @router.callback_query(F.data.startswith("reject_topup_"))

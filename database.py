@@ -701,10 +701,16 @@ def pop_pending_yoomoney_promo(user_id: int):
             row = cur.fetchone()
             if not row:
                 return None
+            # Check expiry BEFORE deleting — if expired we still delete the
+            # stale row but return None so the webhook falls back to raw amount.
+            # Deleting after the check (pre-existing order) would lose the row
+            # before we know whether to use it, giving the user fewer coins.
+            if int(time.time()) - row["created"] > 86400:
+                cur.execute("DELETE FROM pending_yoomoney_promos WHERE user_id = %s", (user_id,))
+                conn.commit()
+                return None
             cur.execute("DELETE FROM pending_yoomoney_promos WHERE user_id = %s", (user_id,))
         conn.commit()
-    if int(time.time()) - row["created"] > 86400:
-        return None
     return dict(row)
 
 def clear_pending_yoomoney_promo(user_id: int):
