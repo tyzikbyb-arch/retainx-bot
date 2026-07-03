@@ -91,9 +91,12 @@ async def start(msg: Message, state: FSMContext):
 
     new = is_new_user(uid)
 
-    # Process referral link BEFORE add_coins so we know the total bonus upfront
+    # Only register a referral for brand-new users.
+    # Existing users clicking a ref link must NOT get retroactively assigned
+    # to a referrer (they would silently generate commissions without the
+    # referrer actually having brought them in).
     ref_id_val = None
-    if len(args) > 1 and args[1].startswith("ref_"):
+    if new and len(args) > 1 and args[1].startswith("ref_"):
         try:
             rid = int(args[1].replace("ref_", ""))
             if rid != uid:

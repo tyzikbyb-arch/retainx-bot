@@ -401,18 +401,18 @@ def deduct_referral_balance(uid: int, amount_rub: float):
         conn.commit()
 
 def increment_topup_count(uid: int) -> int:
-    """Increment topup_count and return the value BEFORE incrementing (0 = first topup)."""
+    """Increment topup_count atomically and return the value BEFORE incrementing (0 = first topup)."""
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT topup_count FROM users WHERE uid = %s", (uid,))
-            row = cur.fetchone()
-            count = row[0] if row and row[0] else 0
+            # Single atomic statement: increment and return old value in one round-trip.
+            # RETURNING evaluates after the SET, so `topup_count - 1` is the pre-update value.
             cur.execute(
-                "UPDATE users SET topup_count = topup_count + 1 WHERE uid = %s",
+                "UPDATE users SET topup_count = topup_count + 1 WHERE uid = %s RETURNING topup_count - 1",
                 (uid,)
             )
+            row = cur.fetchone()
         conn.commit()
-        return count
+        return row[0] if row else 0
 
 def add_referral_earning(referrer_id: int, from_user_id: int, amount_rub: float, percentage: int, payment_type: str):
     with get_conn() as conn:

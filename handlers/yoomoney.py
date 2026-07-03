@@ -81,11 +81,13 @@ async def yoomoney_webhook(request: web.Request) -> web.Response:
 
         add_coins(user_id, coins)
 
+        # Await directly — create_task() would swallow exceptions silently,
+        # leaving topup_count incremented but the referrer never credited.
         try:
             from handlers.credits import _handle_referral_bonus
-            asyncio.create_task(_handle_referral_bonus(user_id, coins, payment_type="yoomoney"))
+            await _handle_referral_bonus(user_id, coins, payment_type="yoomoney")
         except Exception as e:
-            log.warning(f"Referral bonus failed: {e}")
+            log.error(f"YooMoney: referral bonus failed for user {user_id}: {e}")
 
         import aiohttp as _http
         user_lang = get_lang(user_id)
