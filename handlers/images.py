@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import IMAGE_TOOLS, usd_to_coins
-from database import get_coins, spend_coins, create_order, get_lang
+from database import get_coins, spend_coins, create_order, get_lang, add_coins
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
 from handlers.attachments import file_too_large
@@ -230,7 +230,13 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
     price_usd = round(coins * 0.05, 2)
 
     params = {"aspect_ratio": ar, "quality": quality, "prompt": prompt, "refs": refs if refs else None}
-    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, name, params, coins, price_usd)
+    try:
+        oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, name, params, coins, price_usd)
+    except Exception:
+        add_coins(uid, coins)
+        await state.clear()
+        await cb.message.edit_text(t("img_order_error", lang), reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+        return
 
     # Push to Redis queue for auto-generation
     await _push_to_queue(oid, uid, tid, name, params, coins, price_usd, username=cb.from_user.username or cb.from_user.first_name or "")

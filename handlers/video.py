@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from keyboards import kb, back_btn, menu_btn, chunked
 from handlers.attachments import get_attach_config, has_attachments, get_hint, get_prompt_label, file_too_large
-from database import get_coins, spend_coins, create_order, get_lang
+from database import get_coins, spend_coins, create_order, get_lang, add_coins
 from i18n import t
 from config import (
     usd_to_coins,
@@ -446,7 +446,7 @@ async def show_grok(cb, state):
         for s, usd in GROK_IMAGINE_15_PRICES.items()
     ]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
+    rows.append([back_btn("vsub_Standard", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"{t('vid_grok_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -459,9 +459,12 @@ async def grok_dur(cb: CallbackQuery, state: FSMContext):
     sec = int(cb.data[6:])
     usd = GROK_IMAGINE_15_PRICES[sec]
     coins = usd_to_coins(usd)
-    await state.update_data(v_tool="Grok Imagine 1.5", v_tid="grok", v_dur=sec, v_coins=coins, v_usd=usd,
-                            att_mode="free", att_start=None, att_end=None,
-                            att_imgs=[], att_vids=[], att_auds=[])
+    await state.update_data(
+        v_tool="Grok Imagine 1.5", v_tid="grok", v_dur=sec, v_coins=coins, v_usd=usd,
+        v_res=None, v_ar=None,
+        att_mode="free", att_start=None, att_end=None, att_imgs=[], att_vids=[], att_auds=[],
+        sd_start=None, sd_end=None, sd_imgs=[], sd_vids=[], sd_auds=[],
+    )
     await _show_attach_menu(cb, state)
     await state.set_state(VideoStates.attach_mode)
 
@@ -1749,20 +1752,19 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         await cb.answer(t("vid_insufficient_coins", lang), show_alert=True)
         return
 
-    # Build unified attachments
+    # Build unified attachments: sd_* first (legacy Seedance), att_* take precedence
     attachments = {}
-    # Generic att_ fields
-    if data.get("att_start"):  attachments["start"] = data["att_start"]
-    if data.get("att_end"):    attachments["end"]   = data["att_end"]
-    if data.get("att_imgs"):   attachments["imgs"]  = data["att_imgs"]
-    if data.get("att_vids"):   attachments["vids"]  = data["att_vids"]
-    if data.get("att_auds"):   attachments["auds"]  = data["att_auds"]
-    # Legacy sd_ fields (Seedance)
     if data.get("sd_start"):   attachments["start"] = data["sd_start"]
     if data.get("sd_end"):     attachments["end"]   = data["sd_end"]
     if data.get("sd_imgs"):    attachments["imgs"]  = data["sd_imgs"]
     if data.get("sd_vids"):    attachments["vids"]  = data["sd_vids"]
     if data.get("sd_auds"):    attachments["auds"]  = data["sd_auds"]
+    # att_* fields overwrite sd_* so current-tool uploads always win
+    if data.get("att_start"):  attachments["start"] = data["att_start"]
+    if data.get("att_end"):    attachments["end"]   = data["att_end"]
+    if data.get("att_imgs"):   attachments["imgs"]  = data["att_imgs"]
+    if data.get("att_vids"):   attachments["vids"]  = data["att_vids"]
+    if data.get("att_auds"):   attachments["auds"]  = data["att_auds"]
 
     params = {
         "resolution":    data.get("v_res"),
@@ -1777,7 +1779,13 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         "upload_file_type": data.get("v_upload_file_type"),
     }
     usd = data.get("v_usd", 0)
-    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
+    try:
+        oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
+    except Exception:
+        add_coins(uid, coins)
+        await state.clear()
+        await cb.message.edit_text(t("vid_order_error", lang), reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+        return
 
     # Push to Redis queue for auto-generation
     await _push_to_queue(oid, uid, tid, tool, params, coins, usd, username=cb.from_user.username or cb.from_user.first_name or "")

@@ -29,7 +29,8 @@ async def mark_delivered(cb: CallbackQuery, state: FSMContext):
     if cb.from_user.id != ADMIN_ID:
         return
     oid = int(cb.data.replace("delivered_", ""))
-    await state.update_data(admin_oid=oid)
+    # Clear admin_target_uid so a stale /deliver uid doesn't route this file to the wrong user
+    await state.update_data(admin_oid=oid, admin_target_uid=None)
     await state.set_state(AdminStates.sending_result)
     await cb.message.answer(
         f"▸  Attach the file for Order #{oid}\n"
@@ -56,7 +57,7 @@ async def cancel_order_admin(cb: CallbackQuery, state: FSMContext):
     )
     await cb.answer()
 
-@router.message(AdminStates.cancelling_order, F.from_user.id == ADMIN_ID)
+@router.message(AdminStates.cancelling_order, F.from_user.id == ADMIN_ID, F.text)
 async def admin_cancel_with_reason(msg: Message, state: FSMContext):
     data = await state.get_data()
     oid = data.get("admin_cancel_oid")
@@ -93,7 +94,11 @@ async def admin_cancel_with_reason(msg: Message, state: FSMContext):
             f"  <b>{order['coins']} coins</b> have been refunded to your wallet.\n"
             f"  We apologise for the inconvenience."
         )
-    await bot.send_message(order["user_id"], user_text, parse_mode="HTML")
+    try:
+        await bot.send_message(order["user_id"], user_text, parse_mode="HTML")
+    except Exception:
+        pass
+    await bot.session.close()
     admin_note = f"✕  Order #{oid} cancelled — {order['coins']} coins refunded."
     if reason:
         admin_note += f"\n  Reason sent: {reason}"
@@ -184,6 +189,8 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
         await msg.answer(f"✓  Delivered to user {uid}.")
     except Exception as e:
         await msg.answer(f"❌ Failed to deliver: {e}")
+    finally:
+        await bot.session.close()
     await state.clear()
 
 @router.message(F.text.startswith("/setblogger"))

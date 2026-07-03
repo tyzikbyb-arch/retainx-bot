@@ -168,15 +168,12 @@ def init_db():
 def get_user(uid: int) -> dict:
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM users WHERE uid = %s", (uid,))
-            row = cur.fetchone()
-            if row:
-                return dict(row)
             cur.execute(
-                "INSERT INTO users (uid, coins, joined) VALUES (%s, 0, %s) RETURNING *",
+                "INSERT INTO users (uid, coins, joined) VALUES (%s, 0, %s) ON CONFLICT (uid) DO NOTHING",
                 (uid, int(time.time()))
             )
             conn.commit()
+            cur.execute("SELECT * FROM users WHERE uid = %s", (uid,))
             return dict(cur.fetchone())
 
 def update_username(uid: int, username: str):
@@ -223,7 +220,8 @@ def remove_coins(uid: int, amount: int) -> int:
     """Deduct up to `amount` coins from user, clamped at 0. Returns actual amount deducted."""
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT coins FROM users WHERE uid = %s", (uid,))
+            # FOR UPDATE locks the row so concurrent calls can't both pass the guard
+            cur.execute("SELECT coins FROM users WHERE uid = %s FOR UPDATE", (uid,))
             row = cur.fetchone()
             if not row:
                 return 0
@@ -485,11 +483,17 @@ def add_referral_earning(referrer_id: int, from_user_id: int, amount_rub: float,
         conn.commit()
 
 def create_withdrawal_request(uid: int, amount_rub: float, requisites: str) -> int:
-    """Creates request and deducts balance atomically, returns request id."""
+    """Deducts balance and creates withdrawal request atomically. Returns request id.
+    Raises ValueError if balance is insufficient."""
     with get_conn() as conn:
         with conn.cursor() as cur:
+            cur.execute("SELECT referral_balance FROM users WHERE uid = %s FOR UPDATE", (uid,))
+            row = cur.fetchone()
+            balance = float(row[0]) if row and row[0] else 0.0
+            if balance < amount_rub:
+                raise ValueError("Insufficient referral balance")
             cur.execute(
-                "UPDATE users SET referral_balance = GREATEST(0, referral_balance - %s) WHERE uid = %s",
+                "UPDATE users SET referral_balance = referral_balance - %s WHERE uid = %s",
                 (amount_rub, uid)
             )
             cur.execute("""
@@ -581,26 +585,16 @@ def get_referral_list(uid: int) -> list:
 
 def record_yoomoney_payment(operation_id: str, user_id: int, amount_rub: float, coins: int) -> bool:
     """Insert payment record. Returns True if new, False if duplicate operation_id."""
-    import logging as _logging
-    _log = _logging.getLogger(__name__)
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # Check for duplicate first so we can distinguish it from a real DB error
-            cur.execute("SELECT 1 FROM yoomoney_payments WHERE operation_id = %s", (operation_id,))
-            if cur.fetchone():
-                return False
-            try:
-                cur.execute(
-                    "INSERT INTO yoomoney_payments (operation_id, user_id, amount_rub, coins, created) "
-                    "VALUES (%s, %s, %s, %s, %s)",
-                    (operation_id, user_id, amount_rub, coins, int(time.time()))
-                )
-                conn.commit()
-                return True
-            except Exception as e:
-                conn.rollback()
-                _log.error(f"record_yoomoney_payment DB error (op={operation_id} user={user_id}): {e}")
-                raise
+            cur.execute(
+                "INSERT INTO yoomoney_payments (operation_id, user_id, amount_rub, coins, created) "
+                "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (operation_id) DO NOTHING",
+                (operation_id, user_id, amount_rub, coins, int(time.time()))
+            )
+            is_new = cur.rowcount == 1
+        conn.commit()
+        return is_new
 
 
 def get_stale_orders(min_age_seconds: int = 900) -> list:

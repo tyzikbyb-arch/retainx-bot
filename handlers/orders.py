@@ -26,6 +26,7 @@ async def orders_from_reply(msg: Message, state: FSMContext):
 
 @router.callback_query(F.data == "my_orders")
 async def orders_cb(cb: CallbackQuery):
+    await cb.answer()
     await show_orders(cb, cb.from_user.id, edit=True)
 
 async def show_orders(target, uid: int, edit: bool = False):
@@ -154,6 +155,7 @@ async def order_detail(cb: CallbackQuery):
         except Exception:
             pass
 
+    await cb.answer()
     await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 @router.callback_query(F.data.startswith("repeat_"))
@@ -210,9 +212,12 @@ async def repeat_order(cb: CallbackQuery, state: FSMContext):
     # Set appropriate state
     from handlers.video import VideoStates
     from handlers.images import ImageStates
-    # Determine if video or image
+    from handlers.voiceover import VoiceoverStates
     from config import IMAGE_TOOLS
     if tool in IMAGE_TOOLS:
         await state.set_state(ImageStates.entering_prompt)
+    elif tool.startswith("Voiceover"):
+        await state.set_state(VoiceoverStates.entering_text)
     else:
         await state.set_state(VideoStates.entering_prompt)
+    await cb.answer()

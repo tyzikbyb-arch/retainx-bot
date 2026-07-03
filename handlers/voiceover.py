@@ -903,7 +903,7 @@ async def voiceover_text_received(msg: Message, state: FSMContext):
     effect = data.get("vo_effect")
     emotion = data.get("vo_emotion")
     speed = data.get("vo_speed")
-    price_coins = data.get("vo_price_coins", 5)
+    price_coins = data.get("vo_price_coins", 0)
     coins_word = t("coins_word", lang)
     user_coins = get_coins(msg.from_user.id)
 
@@ -957,10 +957,10 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
     model_name = data.get("vo_model_name")
     language = data.get("vo_lang")
     text = data.get("vo_text")
-    price_coins = data.get("vo_price_coins", 5)
+    price_coins = data.get("vo_price_coins", 0)
     price_usd = coins_to_usd(price_coins)
 
-    if not voice_id or not text:
+    if not voice_id or not text or not price_coins:
         await cb.answer(t("vo_session_expired", lang), show_alert=True)
         await state.clear()
         return
@@ -985,10 +985,19 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
         "text": text,
     }
     tool_name = f"Voiceover — {voice_name} ({model_name})"
-    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool_name, params, price_coins, price_usd)
+    try:
+        oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool_name, params, price_coins, price_usd)
+    except Exception:
+        add_coins(uid, price_coins)
+        await state.clear()
+        await cb.message.edit_text(t("vid_order_error", lang), reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+        return
 
-    await _push_to_queue(oid, uid, voice_id, tool_name, params, price_coins, price_usd, username=cb.from_user.username or cb.from_user.first_name or "")
-    await _notify_admin(cb, oid, tool_name, params, price_coins, price_usd)
+    if not oid:
+        add_coins(uid, price_coins)
+        await state.clear()
+        await cb.message.edit_text(t("vid_order_error", lang), reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+        return
 
     display_voice_name = _voice_name_label(voice_name, lang)
     wait_min = sp.wait_minutes(tool_name, "voiceover")
@@ -1001,7 +1010,13 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
     )
     await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
     sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
+    # Clear state before background calls so a failure cannot leave FSM active
     await state.clear()
+    await _push_to_queue(oid, uid, voice_id, tool_name, params, price_coins, price_usd, username=cb.from_user.username or cb.from_user.first_name or "")
+    try:
+        await _notify_admin(cb, oid, tool_name, params, price_coins, price_usd)
+    except Exception:
+        pass
 
 async def _push_to_queue(oid: int, uid: int, voice_id: int, tool: str, params: dict, coins: int, usd: float, username: str = ""):
     import logging, os, json
