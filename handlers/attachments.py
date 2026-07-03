@@ -89,7 +89,6 @@ TOOL_ATTACHMENTS = {
 
     "kl30": {   # Kling 3.0
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
         "exclusive_startend": True,
     },
     "kl03": {   # Kling 0.3 — Artlist's UI shows Image Reference as disabled
