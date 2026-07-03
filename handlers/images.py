@@ -235,8 +235,6 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
     # Push to Redis queue for auto-generation
     await _push_to_queue(oid, uid, tid, name, params, coins, price_usd, username=cb.from_user.username or cb.from_user.first_name or "")
 
-    await _notify_admin(cb, oid, name, params, coins, price_usd)
-
     wait_min = sp.wait_minutes(name, "image")
     base_text = (
         f"{t('img_order_placed_title', lang, oid=oid)}\n"
@@ -248,7 +246,13 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
     )
     await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
     sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
+    # Clear state before notifying admin so a Telegram error can't leave FSM
+    # active and allow a second Confirm tap to double-charge.
     await state.clear()
+    try:
+        await _notify_admin(cb, oid, name, params, coins, price_usd)
+    except Exception:
+        pass
 
 async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float, username: str = ""):
     import logging, os, json

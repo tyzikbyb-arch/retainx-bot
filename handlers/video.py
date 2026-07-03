@@ -1782,8 +1782,6 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     # Push to Redis queue for auto-generation
     await _push_to_queue(oid, uid, tid, tool, params, coins, usd, username=cb.from_user.username or cb.from_user.first_name or "")
 
-    await notify_admin(cb, oid, tool, params, coins, usd)
-
     from handlers import spinner as sp
     wait_min = sp.wait_minutes(tool, "video")
     base_text = (
@@ -1795,7 +1793,13 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     )
     await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
     sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
+    # Clear state before notifying admin — a Telegram API error in notify_admin
+    # must not leave FSM active so a second Confirm tap can't double-charge.
     await state.clear()
+    try:
+        await notify_admin(cb, oid, tool, params, coins, usd)
+    except Exception:
+        pass
 
 # ═══════════════════════════════════════════════════════════
 # HEYGEN AVATAR 4 — Full flow

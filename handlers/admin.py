@@ -120,6 +120,12 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
         await state.clear()
         return
 
+    # Guard against double-delivery (admin re-clicks Deliver on an already-delivered order)
+    if order and order.get("status") == "delivered":
+        await msg.answer(f"⚠️ Order #{oid} is already delivered. Aborting to prevent duplicate.")
+        await state.clear()
+        return
+
     uid = target_uid if target_uid else order["user_id"]
     tool = order["tool"] if order else "—"
 

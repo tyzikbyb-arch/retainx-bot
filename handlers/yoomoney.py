@@ -64,12 +64,23 @@ async def yoomoney_webhook(request: web.Request) -> web.Response:
 
         # Check if user had a pending promo — if so, use the pre-agreed coin amount
         # instead of calculating from the (discounted) payment received.
+        # Also verify the payment amount matches what was expected (1% tolerance)
+        # so a user cannot pay 1 RUB and receive full promo coins.
         pending_promo = pop_pending_yoomoney_promo(user_id)
         if pending_promo:
-            coins = pending_promo["expected_coins"]
-            promo_code_used = pending_promo["promo_code"]
-            log.info(f"YooMoney: promo {promo_code_used} — crediting {coins} coins "
-                     f"(payment {amount_rub} RUB, discount applied)")
+            expected_rub = pending_promo.get("expected_payment_rub", 0)
+            if expected_rub > 0 and amount_rub < expected_rub * 0.99:
+                log.warning(
+                    f"YooMoney: promo amount too low — expected {expected_rub} RUB, "
+                    f"received {amount_rub} RUB for user {user_id}. Crediting by raw amount."
+                )
+                coins = math.floor(amount_rub / COIN_TO_RUB)
+                promo_code_used = None
+            else:
+                coins = pending_promo["expected_coins"]
+                promo_code_used = pending_promo["promo_code"]
+                log.info(f"YooMoney: promo {promo_code_used} — crediting {coins} coins "
+                         f"(payment {amount_rub} RUB, discount applied)")
         else:
             coins = math.floor(amount_rub / COIN_TO_RUB)
             promo_code_used = None

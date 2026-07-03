@@ -463,6 +463,9 @@ STR = {
         "wallet_card_rejected_title": "✕  <b>Payment Not Confirmed</b>",
         "wallet_card_rejected_body": "  Your card payment could not be confirmed.\n  Please contact @RetainXStudio.",
 
+        "wallet_session_expired": "⚠️  Session expired. Please start a new top-up from the wallet menu.",
+        "wallet_tx_already_used": "⚠️  This transaction has already been used. Please use a different transaction.",
+
         "wallet_referral_bonus_title": "◈  <b>Referral Bonus</b>",
         "wallet_referral_bonus_body": "  Your referral made a payment.\n  You received <b>{bonus} ₽</b> ({percentage}%) to your referral balance.",
 
@@ -1028,6 +1031,9 @@ STR = {
         "wallet_card_rejected_title": "✕  <b>Платёж не подтверждён</b>",
         "wallet_card_rejected_body": "  Ваш платёж картой не удалось подтвердить.\n  Обратитесь к @RetainXStudio.",
 
+        "wallet_session_expired": "⚠️  Сессия истекла. Начните новое пополнение из меню кошелька.",
+        "wallet_tx_already_used": "⚠️  Эта транзакция уже была использована. Используйте другую транзакцию.",
+
         "wallet_referral_bonus_title": "◈  <b>Реферальный бонус</b>",
         "wallet_referral_bonus_body": "  Ваш реферал совершил платёж.\n  Вам начислено <b>{bonus} ₽</b> ({percentage}%) на реферальный баланс.",
 
@@ -1592,6 +1598,9 @@ STR = {
         "wallet_card_success_body": "  أُضيف <b>{coins} عملة</b> إلى حسابك.\n  الرصيد الجديد: <b>{balance} عملة</b>",
         "wallet_card_rejected_title": "✕  <b>لم يتم تأكيد الدفع</b>",
         "wallet_card_rejected_body": "  تعذّر تأكيد دفعتك بالبطاقة.\n  يرجى التواصل مع @RetainXStudio.",
+
+        "wallet_session_expired": "⚠️  انتهت الجلسة. يرجى بدء عملية شحن جديدة من قائمة المحفظة.",
+        "wallet_tx_already_used": "⚠️  تم استخدام هذه المعاملة من قبل. يرجى استخدام معاملة مختلفة.",
 
         "wallet_referral_bonus_title": "◈  <b>مكافأة الإحالة</b>",
         "wallet_referral_bonus_body": "  قام المُحال منك بدفعة.\n  حصلت على <b>{bonus} ₽</b> ({percentage}%) في رصيد إحالتك.",

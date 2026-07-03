@@ -12,7 +12,7 @@ from database import (get_coins, add_coins, get_referred_by, get_lang,
                        get_promo_code, get_my_promo_code, create_promo_code,
                        has_used_promo, has_topped_up, use_promo_code,
                        set_pending_yoomoney_promo, clear_pending_yoomoney_promo,
-                       get_is_blogger)
+                       get_is_blogger, record_usdt_payment, record_stars_payment)
 from keyboards import kb, back_btn, menu_btn
 from i18n import t
 
@@ -151,9 +151,18 @@ async def promo_cancel_cb(cb: CallbackQuery, state: FSMContext):
     await cb.answer(t("promo_cancelled", lang))
     await _show_topup_start(cb, state, lang)
 
+_PRESET_AMOUNTS = {2.0, 5.0, 10.0, 20.0}
+
 @router.callback_query(F.data.startswith("topup_amount_"))
 async def topup_preset(cb: CallbackQuery, state: FSMContext):
-    amount = float(cb.data.replace("topup_amount_", ""))
+    try:
+        amount = float(cb.data.replace("topup_amount_", ""))
+    except ValueError:
+        await cb.answer()
+        return
+    if amount not in _PRESET_AMOUNTS:
+        await cb.answer()
+        return
     await show_payment_options(cb, state, amount)
 
 @router.callback_query(F.data == "topup_custom")
@@ -256,12 +265,14 @@ async def show_payment_options_msg(msg: Message, state: FSMContext, amount: floa
 @router.callback_query(F.data.startswith("pay_usdt_"))
 async def pay_usdt(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
-    amount = float(cb.data.replace("pay_usdt_", ""))
     data = await state.get_data()
-    # coins come from state (set before discount applied) — do NOT recalculate
-    # from pay_amount or the promo discount would shrink the coin credit too
-    coins = data.get("topup_coins") or math.floor(amount / COIN_TO_USD)
-    await state.update_data(topup_amount=amount, topup_coins=coins)
+    # Read amount and coins from FSM only — never from callback data which
+    # is user-controlled and could be forged to credit coins at a discount.
+    amount = data.get("topup_amount")
+    coins = data.get("topup_coins")
+    if not amount or not coins:
+        await cb.answer(t("wallet_session_expired", lang), show_alert=True)
+        return
     text = (
         f"{t('wallet_usdt_title', lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -283,11 +294,17 @@ async def pay_usdt(cb: CallbackQuery, state: FSMContext):
 @router.message(TopupStates.entering_tx)
 async def receive_tx_hash(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
-    tx_hash = msg.text.strip()
+    tx_hash = msg.text.strip() if msg.text else ""
     data = await state.get_data()
     amount = float(data.get("topup_amount", 0))
-    coins = int(data.get("topup_coins", math.floor(amount / COIN_TO_USD)))
+    coins = int(data.get("topup_coins", 0))
     uid = msg.from_user.id
+
+    # Guard: session expired (bot restarted with MemoryStorage) or tampered state
+    if coins == 0 or amount == 0:
+        await state.clear()
+        await msg.answer(t("wallet_session_expired", lang))
+        return
 
     await msg.answer(t("wallet_verifying", lang))
 
@@ -295,6 +312,12 @@ async def receive_tx_hash(msg: Message, state: FSMContext):
         verified, actual_amount = await verify_tron_tx(tx_hash, amount)
 
         if verified:
+            # Dedup: reject replay of the same TX hash
+            is_new = record_usdt_payment(tx_hash, uid, actual_amount, coins)
+            if not is_new:
+                await msg.answer(t("wallet_tx_already_used", lang), reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+                await state.clear()
+                return
             add_coins(uid, coins)
             promo_code = data.get("promo_code")
             if promo_code:
@@ -389,11 +412,15 @@ async def _send_for_manual_review(msg: Message, tx_hash: str, amount: float, coi
 async def pay_stars(cb: CallbackQuery, state: FSMContext):
     from aiogram import Bot
     lang = get_lang(cb.from_user.id)
-    pay_amount = float(cb.data.replace("pay_stars_", ""))
-    stars_amount = int(pay_amount * 100)
-    # Coins come from state (set in show_payment_options to the original pre-discount amount)
     data = await state.get_data()
-    coins = data.get("topup_coins") or math.floor(pay_amount / COIN_TO_USD)
+    # Read amount and coins from FSM only — never from callback data which
+    # is user-controlled and could be forged to charge 1 star for 2000 coins.
+    pay_amount = data.get("topup_amount")
+    coins = data.get("topup_coins")
+    if not pay_amount or not coins:
+        await cb.answer(t("wallet_session_expired", lang), show_alert=True)
+        return
+    stars_amount = int(pay_amount * 100)
     promo_code = data.get("promo_code")
     bot = Bot(token=BOT_TOKEN)
     await bot.send_invoice(
@@ -415,6 +442,11 @@ async def successful_stars_payment(msg: Message, state: FSMContext):
     coins = int(parts[1])
     uid = msg.from_user.id
     promo_code = parts[3] if len(parts) > 3 and parts[3] else None
+    charge_id = msg.successful_payment.telegram_payment_charge_id
+    # Dedup: Telegram guarantees at-least-once delivery; reject replays
+    is_new = record_stars_payment(charge_id, uid, coins)
+    if not is_new:
+        return
     add_coins(uid, coins)
     # Referral bonus isolated — a Telegram error must not propagate past this point.
     try:
@@ -471,7 +503,7 @@ async def receive_rub_amount(msg: Message, state: FSMContext):
 
     if promo_code and promo_pct:
         pay_rub = round(amount_rub * (1 - promo_pct / 100), 2)
-        set_pending_yoomoney_promo(uid, coins, promo_code)
+        set_pending_yoomoney_promo(uid, coins, promo_code, expected_payment_rub=pay_rub)
         promo_lines = (
             f"\n{t('wallet_confirm_original', lang, amount=f'{amount_rub:.2f} ₽')}\n"
             f"{t('wallet_confirm_discounted', lang, discounted=f'{pay_rub:.2f} ₽', pct=promo_pct)}"

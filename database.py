@@ -129,11 +129,33 @@ def init_db():
                     user_id BIGINT PRIMARY KEY,
                     expected_coins INTEGER NOT NULL,
                     promo_code TEXT NOT NULL,
+                    created INTEGER NOT NULL,
+                    expected_payment_rub REAL NOT NULL DEFAULT 0
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS usdt_payments (
+                    tx_hash TEXT PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    amount_usd REAL NOT NULL,
+                    coins INTEGER NOT NULL,
+                    created INTEGER NOT NULL
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS stars_payments (
+                    charge_id TEXT PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    coins INTEGER NOT NULL,
                     created INTEGER NOT NULL
                 )
             """)
             try:
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blogger BOOLEAN DEFAULT FALSE")
+            except Exception:
+                pass
+            try:
+                cur.execute("ALTER TABLE pending_yoomoney_promos ADD COLUMN IF NOT EXISTS expected_payment_rub REAL NOT NULL DEFAULT 0")
             except Exception:
                 pass
             try:
@@ -189,13 +211,13 @@ def add_coins(uid: int, amount: int):
 def spend_coins(uid: int, amount: int) -> bool:
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT coins FROM users WHERE uid = %s", (uid,))
-            row = cur.fetchone()
-            if not row or row[0] < amount:
-                return False
-            cur.execute("UPDATE users SET coins = coins - %s WHERE uid = %s", (amount, uid))
+            cur.execute(
+                "UPDATE users SET coins = coins - %s WHERE uid = %s AND coins >= %s",
+                (amount, uid, amount)
+            )
+            success = cur.rowcount == 1
         conn.commit()
-        return True
+        return success
 
 def remove_coins(uid: int, amount: int) -> int:
     """Deduct up to `amount` coins from user, clamped at 0. Returns actual amount deducted."""
@@ -463,10 +485,13 @@ def add_referral_earning(referrer_id: int, from_user_id: int, amount_rub: float,
         conn.commit()
 
 def create_withdrawal_request(uid: int, amount_rub: float, requisites: str) -> int:
-    """Creates request, deducts balance, returns request id."""
-    deduct_referral_balance(uid, amount_rub)
+    """Creates request and deducts balance atomically, returns request id."""
     with get_conn() as conn:
         with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE users SET referral_balance = GREATEST(0, referral_balance - %s) WHERE uid = %s",
+                (amount_rub, uid)
+            )
             cur.execute("""
                 INSERT INTO withdrawal_requests (user_id, amount_rub, requisites, created)
                 VALUES (%s, %s, %s, %s) RETURNING id
@@ -679,18 +704,19 @@ def use_promo_code(code: str, user_uid: int):
                 )
         conn.commit()
 
-def set_pending_yoomoney_promo(user_id: int, expected_coins: int, promo_code: str):
-    """Store expected coins for a YooMoney promo payment so the webhook can credit the right amount."""
+def set_pending_yoomoney_promo(user_id: int, expected_coins: int, promo_code: str, expected_payment_rub: float = 0):
+    """Store expected coins and payment amount for a YooMoney promo so the webhook can verify both."""
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO pending_yoomoney_promos (user_id, expected_coins, promo_code, created)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO pending_yoomoney_promos (user_id, expected_coins, promo_code, created, expected_payment_rub)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (user_id) DO UPDATE
                     SET expected_coins = EXCLUDED.expected_coins,
                         promo_code = EXCLUDED.promo_code,
-                        created = EXCLUDED.created
-            """, (user_id, expected_coins, promo_code.upper().strip(), int(time.time())))
+                        created = EXCLUDED.created,
+                        expected_payment_rub = EXCLUDED.expected_payment_rub
+            """, (user_id, expected_coins, promo_code.upper().strip(), int(time.time()), expected_payment_rub))
         conn.commit()
 
 def pop_pending_yoomoney_promo(user_id: int):
@@ -718,6 +744,32 @@ def clear_pending_yoomoney_promo(user_id: int):
         with conn.cursor() as cur:
             cur.execute("DELETE FROM pending_yoomoney_promos WHERE user_id = %s", (user_id,))
         conn.commit()
+
+def record_usdt_payment(tx_hash: str, user_id: int, amount_usd: float, coins: int) -> bool:
+    """Persist a USDT TX hash. Returns True if new, False if already seen (replay)."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO usdt_payments (tx_hash, user_id, amount_usd, coins, created)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (tx_hash) DO NOTHING
+            """, (tx_hash, user_id, amount_usd, coins, int(time.time())))
+            is_new = cur.rowcount == 1
+        conn.commit()
+        return is_new
+
+def record_stars_payment(charge_id: str, user_id: int, coins: int) -> bool:
+    """Persist a Telegram Stars charge_id. Returns True if new, False if already seen (replay)."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO stars_payments (charge_id, user_id, coins, created)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (charge_id) DO NOTHING
+            """, (charge_id, user_id, coins, int(time.time())))
+            is_new = cur.rowcount == 1
+        conn.commit()
+        return is_new
 
 
 # Initialize on import
