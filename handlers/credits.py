@@ -177,7 +177,9 @@ async def receive_custom_amount(msg: Message, state: FSMContext):
         if amount < MIN_TOPUP_USD:
             await msg.answer(t("wallet_min_deposit_error", lang, min=MIN_TOPUP_USD))
             return
-        await state.clear()
+        # Only clear the FSM state (entering_amount), not state data —
+        # state.clear() would erase the promo code stored earlier
+        await state.set_state(None)
         await show_payment_options_msg(msg, state, amount)
     except ValueError:
         await msg.answer(t("wallet_enter_number_error", lang))
@@ -255,7 +257,10 @@ async def show_payment_options_msg(msg: Message, state: FSMContext, amount: floa
 async def pay_usdt(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     amount = float(cb.data.replace("pay_usdt_", ""))
-    coins = math.floor(amount / COIN_TO_USD)
+    data = await state.get_data()
+    # coins come from state (set before discount applied) — do NOT recalculate
+    # from pay_amount or the promo discount would shrink the coin credit too
+    coins = data.get("topup_coins") or math.floor(amount / COIN_TO_USD)
     await state.update_data(topup_amount=amount, topup_coins=coins)
     text = (
         f"{t('wallet_usdt_title', lang)}\n"
@@ -308,12 +313,14 @@ async def receive_tx_hash(msg: Message, state: FSMContext):
             await state.clear()
         else:
             # Manual review fallback
-            await _send_for_manual_review(msg, tx_hash, amount, coins, uid)
+            promo_code = data.get("promo_code")
+            await _send_for_manual_review(msg, tx_hash, amount, coins, uid, promo_code)
             await state.clear()
 
     except Exception as e:
         # Network error — send for manual review
-        await _send_for_manual_review(msg, tx_hash, amount, coins, uid)
+        promo_code = data.get("promo_code")
+        await _send_for_manual_review(msg, tx_hash, amount, coins, uid, promo_code)
         await state.clear()
 
 async def verify_tron_tx(tx_hash: str, expected_amount: float) -> tuple[bool, float]:
@@ -344,21 +351,23 @@ async def verify_tron_tx(tx_hash: str, expected_amount: float) -> tuple[bool, fl
 
     return False, 0
 
-async def _send_for_manual_review(msg: Message, tx_hash: str, amount: float, coins: int, uid: int):
+async def _send_for_manual_review(msg: Message, tx_hash: str, amount: float, coins: int, uid: int, promo_code: str = None):
     """Fallback to manual review if auto-verify fails."""
     from config import ADMIN_ID
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
+    promo_part = promo_code or "none"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="✓  Confirm", callback_data=f"confirm_topup_{uid}_{coins}"),
+        InlineKeyboardButton(text="✓  Confirm", callback_data=f"confirm_topup_{uid}_{coins}_{promo_part}"),
         InlineKeyboardButton(text="✕  Reject",  callback_data=f"reject_topup_{uid}"),
     ]])
     await bot.send_message(
         ADMIN_ID,
         f"◈  <b>Manual Review Required</b>\n\n"
         f"  User    @{msg.from_user.username or '—'} (<code>{uid}</code>)\n"
-        f"  Amount  <b>${amount:.2f}</b>  →  <b>{coins} coins</b>\n\n"
-        f"  TX Hash:\n<code>{tx_hash}</code>\n\n"
+        f"  Amount  <b>${amount:.2f}</b>  →  <b>{coins} coins</b>\n"
+        + (f"  Promo   <code>{promo_code}</code>\n" if promo_code else "")
+        + f"\n  TX Hash:\n<code>{tx_hash}</code>\n\n"
         f"  <i>Auto-verify could not confirm. Please check manually.</i>",
         reply_markup=keyboard, parse_mode="HTML"
     )
@@ -645,11 +654,15 @@ async def admin_confirm_topup(cb: CallbackQuery):
     from config import ADMIN_ID
     if cb.from_user.id != ADMIN_ID:
         return
-    _, _, uid_str, coins_str = cb.data.split("_", 3)
-    uid = int(uid_str)
-    coins = int(coins_str)
+    # format: confirm_topup_{uid}_{coins}_{promo_or_none}
+    parts = cb.data.split("_", 4)
+    uid = int(parts[2])
+    coins = int(parts[3])
+    promo_code = parts[4] if len(parts) > 4 and parts[4] != "none" else None
     add_coins(uid, coins)
     await _handle_referral_bonus(uid, coins, payment_type="usdt")
+    if promo_code:
+        use_promo_code(promo_code, uid)
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
     user_lang = get_lang(uid)
