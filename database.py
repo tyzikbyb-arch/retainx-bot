@@ -132,6 +132,10 @@ def init_db():
                     created INTEGER NOT NULL
                 )
             """)
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blogger BOOLEAN DEFAULT FALSE")
+            except Exception:
+                pass
         conn.commit()
 
 # ── User functions ────────────────────────────────────────────
@@ -585,6 +589,19 @@ def get_stale_orders(min_age_seconds: int = 900) -> list:
 
 
 # ── Promo code functions ──────────────────────────────────────
+
+def get_is_blogger(uid: int) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT is_blogger FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return bool(row and row[0])
+
+def set_blogger(uid: int, value: bool):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET is_blogger = %s WHERE uid = %s", (value, uid))
+        conn.commit()
 
 def create_promo_code(owner_uid: int, username: str) -> str:
     """Generate and store a unique promo code for a blogger. Returns the code."""

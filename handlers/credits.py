@@ -11,7 +11,8 @@ from database import (get_coins, add_coins, get_referred_by, get_lang,
                        get_referral_stats, get_referral_list, create_withdrawal_request, process_withdrawal,
                        get_promo_code, get_my_promo_code, create_promo_code,
                        has_used_promo, has_topped_up, use_promo_code,
-                       set_pending_yoomoney_promo, clear_pending_yoomoney_promo)
+                       set_pending_yoomoney_promo, clear_pending_yoomoney_promo,
+                       get_is_blogger)
 from keyboards import kb, back_btn, menu_btn
 from i18n import t
 
@@ -636,10 +637,11 @@ async def referral_info(cb: CallbackQuery):
             text=t("wallet_referral_withdraw_pending", lang),
             callback_data="referral_withdraw_low"
         )])
-    buttons.append([InlineKeyboardButton(
-        text=t("wallet_referral_promo_btn", lang),
-        callback_data="referral_my_promo"
-    )])
+    if get_is_blogger(uid):
+        buttons.append([InlineKeyboardButton(
+            text=t("wallet_referral_promo_btn", lang),
+            callback_data="referral_my_promo"
+        )])
     buttons.append([back_btn("wallet", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(text, reply_markup=kb(*buttons), parse_mode="HTML")
 

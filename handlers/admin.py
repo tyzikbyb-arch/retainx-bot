@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, Message, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import ADMIN_ID, BOT_TOKEN
-from database import get_order, update_order_status, add_coins, save_delivery, get_lang
+from database import get_order, update_order_status, add_coins, save_delivery, get_lang, set_blogger, get_is_blogger
 from keyboards import kb, menu_btn
 from aiogram.types import InlineKeyboardButton
 from i18n import t
@@ -179,3 +179,29 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
     except Exception as e:
         await msg.answer(f"❌ Failed to deliver: {e}")
     await state.clear()
+
+@router.message(F.text.startswith("/setblogger"))
+async def cmd_set_blogger(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        await msg.answer("Usage: /setblogger USER_ID")
+        return
+    uid = int(parts[1])
+    already = get_is_blogger(uid)
+    set_blogger(uid, True)
+    status = "already was" if already else "✓ set"
+    await msg.answer(f"Blogger {status}: user {uid}")
+
+@router.message(F.text.startswith("/removeblogger"))
+async def cmd_remove_blogger(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        await msg.answer("Usage: /removeblogger USER_ID")
+        return
+    uid = int(parts[1])
+    set_blogger(uid, False)
+    await msg.answer(f"✓ Blogger status removed: user {uid}")
