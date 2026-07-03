@@ -107,6 +107,31 @@ def init_db():
                     created INTEGER
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS promo_codes (
+                    code TEXT PRIMARY KEY,
+                    owner_uid BIGINT NOT NULL,
+                    discount_pct INTEGER NOT NULL DEFAULT 30,
+                    uses_count INTEGER NOT NULL DEFAULT 0,
+                    created INTEGER NOT NULL
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS promo_uses (
+                    id SERIAL PRIMARY KEY,
+                    code TEXT NOT NULL,
+                    user_uid BIGINT NOT NULL UNIQUE,
+                    created INTEGER NOT NULL
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS pending_yoomoney_promos (
+                    user_id BIGINT PRIMARY KEY,
+                    expected_coins INTEGER NOT NULL,
+                    promo_code TEXT NOT NULL,
+                    created INTEGER NOT NULL
+                )
+            """)
         conn.commit()
 
 # ── User functions ────────────────────────────────────────────
@@ -557,6 +582,109 @@ def get_stale_orders(min_age_seconds: int = 900) -> list:
                     d["params"] = json.loads(d["params"])
                 result.append(d)
             return result
+
+
+# ── Promo code functions ──────────────────────────────────────
+
+def create_promo_code(owner_uid: int, username: str) -> str:
+    """Generate and store a unique promo code for a blogger. Returns the code."""
+    import string
+    prefix = ''.join(c for c in (username or "").upper() if c.isalpha())[:6] or "USER"
+    for _ in range(20):
+        suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        code = f"{prefix}-{suffix}"
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM promo_codes WHERE code = %s", (code,))
+                if not cur.fetchone():
+                    cur.execute(
+                        "INSERT INTO promo_codes (code, owner_uid, discount_pct, uses_count, created) "
+                        "VALUES (%s, %s, 30, 0, %s)",
+                        (code, owner_uid, int(time.time()))
+                    )
+                    conn.commit()
+                    return code
+    raise RuntimeError("Failed to generate unique promo code after 20 attempts")
+
+def get_promo_code(code: str):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM promo_codes WHERE code = %s", (code.upper().strip(),))
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+def get_my_promo_code(owner_uid: int):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM promo_codes WHERE owner_uid = %s ORDER BY created DESC LIMIT 1",
+                (owner_uid,)
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+def has_used_promo(user_uid: int) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM promo_uses WHERE user_uid = %s", (user_uid,))
+            return cur.fetchone() is not None
+
+def has_topped_up(uid: int) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT topup_count FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return bool(row and row[0] and row[0] > 0)
+
+def use_promo_code(code: str, user_uid: int):
+    """Mark promo as used by this user and increment the code's uses_count."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO promo_uses (code, user_uid, created) VALUES (%s, %s, %s) "
+                "ON CONFLICT (user_uid) DO NOTHING",
+                (code.upper().strip(), user_uid, int(time.time()))
+            )
+            if cur.rowcount > 0:
+                cur.execute(
+                    "UPDATE promo_codes SET uses_count = uses_count + 1 WHERE code = %s",
+                    (code.upper().strip(),)
+                )
+        conn.commit()
+
+def set_pending_yoomoney_promo(user_id: int, expected_coins: int, promo_code: str):
+    """Store expected coins for a YooMoney promo payment so the webhook can credit the right amount."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO pending_yoomoney_promos (user_id, expected_coins, promo_code, created)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE
+                    SET expected_coins = EXCLUDED.expected_coins,
+                        promo_code = EXCLUDED.promo_code,
+                        created = EXCLUDED.created
+            """, (user_id, expected_coins, promo_code.upper().strip(), int(time.time())))
+        conn.commit()
+
+def pop_pending_yoomoney_promo(user_id: int):
+    """Read and delete the pending yoomoney promo for a user. Returns None if not found or expired (>24 h)."""
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM pending_yoomoney_promos WHERE user_id = %s", (user_id,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            cur.execute("DELETE FROM pending_yoomoney_promos WHERE user_id = %s", (user_id,))
+        conn.commit()
+    if int(time.time()) - row["created"] > 86400:
+        return None
+    return dict(row)
+
+def clear_pending_yoomoney_promo(user_id: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM pending_yoomoney_promos WHERE user_id = %s", (user_id,))
+        conn.commit()
 
 
 # Initialize on import

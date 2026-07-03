@@ -8,7 +8,10 @@ from aiogram.fsm.state import State, StatesGroup
 from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, YOOMONEY_WALLET, COIN_TO_RUB, MIN_TOPUP_RUB, REFERRAL_TIERS, REFERRAL_JOIN_BONUS
 from database import (get_coins, add_coins, get_referred_by, get_lang,
                        add_referral_balance, add_referral_earning, increment_topup_count,
-                       get_referral_stats, get_referral_list, create_withdrawal_request, process_withdrawal)
+                       get_referral_stats, get_referral_list, create_withdrawal_request, process_withdrawal,
+                       get_promo_code, get_my_promo_code, create_promo_code,
+                       has_used_promo, has_topped_up, use_promo_code,
+                       set_pending_yoomoney_promo, clear_pending_yoomoney_promo)
 from keyboards import kb, back_btn, menu_btn
 from i18n import t
 
@@ -20,6 +23,7 @@ class TopupStates(StatesGroup):
     entering_amount = State()
     entering_tx = State()
     entering_rub_amount = State()
+    entering_promo = State()
 
 class WithdrawalStates(StatesGroup):
     entering_requisites = State()
@@ -57,9 +61,11 @@ async def wallet_cb(cb: CallbackQuery, state: FSMContext):
     await show_wallet(cb, state)
 
 # ── Top-up start ──────────────────────────────────────────
-@router.callback_query(F.data == "topup_start")
-async def topup_start(cb: CallbackQuery, state: FSMContext):
-    lang = get_lang(cb.from_user.id)
+async def _show_topup_start(target, state: FSMContext, lang: str):
+    """Shared helper used by callback and after promo entry/cancellation."""
+    data = await state.get_data()
+    promo_code = data.get("promo_code")
+    promo_pct  = data.get("promo_discount", 0)
     text = (
         f"{t('wallet_topup_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -69,6 +75,14 @@ async def topup_start(cb: CallbackQuery, state: FSMContext):
         f"{t('wallet_topup_10_line', lang)}\n\n"
         f"{t('wallet_topup_select_or_custom', lang)}"
     )
+    promo_row = (
+        [InlineKeyboardButton(
+            text=t("promo_active_btn", lang, code=promo_code, pct=promo_pct),
+            callback_data="promo_cancel"
+        )]
+        if promo_code else
+        [InlineKeyboardButton(text=t("promo_btn", lang), callback_data="promo_enter")]
+    )
     keyboard = kb(
         [InlineKeyboardButton(text=t("wallet_btn_2", lang),  callback_data="topup_amount_2"),
          InlineKeyboardButton(text=t("wallet_btn_5", lang),  callback_data="topup_amount_5")],
@@ -76,9 +90,62 @@ async def topup_start(cb: CallbackQuery, state: FSMContext):
          InlineKeyboardButton(text=t("wallet_btn_20", lang), callback_data="topup_amount_20")],
         [InlineKeyboardButton(text=t("wallet_btn_custom", lang), callback_data="topup_custom")],
         [InlineKeyboardButton(text=t("wallet_btn_yoomoney", lang), callback_data="topup_yoomoney")],
+        promo_row,
         [back_btn("wallet", lang=lang), menu_btn(lang)],
     )
-    await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    if isinstance(target, CallbackQuery):
+        await target.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    else:
+        await target.answer(text, reply_markup=keyboard, parse_mode="HTML")
+
+@router.callback_query(F.data == "topup_start")
+async def topup_start(cb: CallbackQuery, state: FSMContext):
+    await state.set_state(None)
+    lang = get_lang(cb.from_user.id)
+    await _show_topup_start(cb, state, lang)
+
+# ── Promo code entry ──────────────────────────────────────
+@router.callback_query(F.data == "promo_enter")
+async def promo_enter_cb(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await cb.message.edit_text(
+        f"{t('promo_enter_title', lang)}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('promo_enter_desc', lang)}",
+        reply_markup=kb([back_btn("topup_start", lang=lang), menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+    await state.set_state(TopupStates.entering_promo)
+
+@router.message(TopupStates.entering_promo)
+async def receive_promo_code(msg: Message, state: FSMContext):
+    uid = msg.from_user.id
+    lang = get_lang(uid)
+    code = msg.text.strip().upper() if msg.text else ""
+    promo = get_promo_code(code)
+    if not promo:
+        await msg.answer(t("promo_invalid", lang))
+        return
+    if promo["owner_uid"] == uid:
+        await msg.answer(t("promo_own_code", lang))
+        return
+    if has_used_promo(uid):
+        await msg.answer(t("promo_already_used", lang))
+        return
+    if has_topped_up(uid):
+        await msg.answer(t("promo_not_first", lang))
+        return
+    pct = promo["discount_pct"]
+    await state.update_data(promo_code=code, promo_discount=pct)
+    await msg.answer(t("promo_applied", lang, code=code, pct=pct), parse_mode="HTML")
+    await _show_topup_start(msg, state, lang)
+
+@router.callback_query(F.data == "promo_cancel")
+async def promo_cancel_cb(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(promo_code=None, promo_discount=0)
+    await cb.answer(t("promo_cancelled", lang))
+    await _show_topup_start(cb, state, lang)
 
 @router.callback_query(F.data.startswith("topup_amount_"))
 async def topup_preset(cb: CallbackQuery, state: FSMContext):
@@ -113,43 +180,71 @@ async def receive_custom_amount(msg: Message, state: FSMContext):
 
 async def show_payment_options(cb: CallbackQuery, state: FSMContext, amount: float):
     lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    promo_code = data.get("promo_code")
+    promo_pct  = int(data.get("promo_discount") or 0)
     coins = math.floor(amount / COIN_TO_USD)
-    stars_amount = int(amount * 100)
+    if promo_code and promo_pct:
+        pay_amount = round(amount * (1 - promo_pct / 100), 2)
+        stars_amount = int(pay_amount * 100)
+        promo_lines = (
+            f"\n{t('wallet_confirm_original', lang, amount=f'${amount:.2f}')}\n"
+            f"{t('wallet_confirm_discounted', lang, discounted=f'${pay_amount:.2f}', pct=promo_pct)}"
+        )
+    else:
+        pay_amount = amount
+        stars_amount = int(amount * 100)
+        promo_lines = ""
     text = (
         f"{t('wallet_confirm_title', lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('wallet_confirm_amount', lang, amount=f'{amount:.2f}')}\n"
-        f"{t('wallet_confirm_receive', lang, coins=coins)}\n\n"
+        f"{t('wallet_confirm_receive', lang, coins=coins)}"
+        f"{promo_lines}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{t('wallet_choose_payment', lang)}"
     )
     keyboard = kb(
-        [InlineKeyboardButton(text=t("wallet_btn_pay_stars", lang, stars=stars_amount), callback_data=f"pay_stars_{amount}")],
-        [InlineKeyboardButton(text=t("wallet_btn_pay_usdt", lang), callback_data=f"pay_usdt_{amount}")],
+        [InlineKeyboardButton(text=t("wallet_btn_pay_stars", lang, stars=stars_amount), callback_data=f"pay_stars_{pay_amount}")],
+        [InlineKeyboardButton(text=t("wallet_btn_pay_usdt", lang), callback_data=f"pay_usdt_{pay_amount}")],
         [back_btn("topup_start", lang=lang), menu_btn(lang)],
     )
     await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
-    await state.update_data(topup_amount=amount)
+    await state.update_data(topup_amount=pay_amount, topup_coins=coins)
 
 async def show_payment_options_msg(msg: Message, state: FSMContext, amount: float):
     lang = get_lang(msg.from_user.id)
+    data = await state.get_data()
+    promo_code = data.get("promo_code")
+    promo_pct  = int(data.get("promo_discount") or 0)
     coins = math.floor(amount / COIN_TO_USD)
-    stars_amount = int(amount * 100)
+    if promo_code and promo_pct:
+        pay_amount = round(amount * (1 - promo_pct / 100), 2)
+        stars_amount = int(pay_amount * 100)
+        promo_lines = (
+            f"\n{t('wallet_confirm_original', lang, amount=f'${amount:.2f}')}\n"
+            f"{t('wallet_confirm_discounted', lang, discounted=f'${pay_amount:.2f}', pct=promo_pct)}"
+        )
+    else:
+        pay_amount = amount
+        stars_amount = int(amount * 100)
+        promo_lines = ""
     text = (
         f"{t('wallet_confirm_title', lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('wallet_confirm_amount', lang, amount=f'{amount:.2f}')}\n"
-        f"{t('wallet_confirm_receive', lang, coins=coins)}\n\n"
+        f"{t('wallet_confirm_receive', lang, coins=coins)}"
+        f"{promo_lines}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{t('wallet_choose_payment', lang)}"
     )
     keyboard = kb(
-        [InlineKeyboardButton(text=t("wallet_btn_pay_stars", lang, stars=stars_amount), callback_data=f"pay_stars_{amount}")],
-        [InlineKeyboardButton(text=t("wallet_btn_pay_usdt", lang), callback_data=f"pay_usdt_{amount}")],
+        [InlineKeyboardButton(text=t("wallet_btn_pay_stars", lang, stars=stars_amount), callback_data=f"pay_stars_{pay_amount}")],
+        [InlineKeyboardButton(text=t("wallet_btn_pay_usdt", lang), callback_data=f"pay_usdt_{pay_amount}")],
         [back_btn("topup_start", lang=lang), menu_btn(lang)],
     )
     await msg.answer(text, reply_markup=keyboard, parse_mode="HTML")
-    await state.update_data(topup_amount=amount)
+    await state.update_data(topup_amount=pay_amount, topup_coins=coins)
 
 # ── USDT payment ──────────────────────────────────────────
 @router.callback_query(F.data.startswith("pay_usdt_"))
@@ -191,9 +286,11 @@ async def receive_tx_hash(msg: Message, state: FSMContext):
         verified, actual_amount = await verify_tron_tx(tx_hash, amount)
 
         if verified:
-            # Auto-credit coins
             add_coins(uid, coins)
             await _handle_referral_bonus(uid, coins, payment_type="usdt")
+            promo_code = data.get("promo_code")
+            if promo_code:
+                use_promo_code(promo_code, uid)
             await msg.answer(
                 f"{t('wallet_verified_title', lang)}\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -274,15 +371,18 @@ async def _send_for_manual_review(msg: Message, tx_hash: str, amount: float, coi
 async def pay_stars(cb: CallbackQuery, state: FSMContext):
     from aiogram import Bot
     lang = get_lang(cb.from_user.id)
-    amount = float(cb.data.replace("pay_stars_", ""))
-    coins = math.floor(amount / COIN_TO_USD)
-    stars_amount = int(amount * 100)
+    pay_amount = float(cb.data.replace("pay_stars_", ""))
+    stars_amount = int(pay_amount * 100)
+    # Coins come from state (set in show_payment_options to the original pre-discount amount)
+    data = await state.get_data()
+    coins = data.get("topup_coins") or math.floor(pay_amount / COIN_TO_USD)
+    promo_code = data.get("promo_code")
     bot = Bot(token=BOT_TOKEN)
     await bot.send_invoice(
         chat_id=cb.from_user.id,
         title=t("wallet_stars_invoice_title", lang),
         description=t("wallet_stars_invoice_desc", lang, coins=coins),
-        payload=f"topup_{coins}_{cb.from_user.id}",
+        payload=f"topup_{coins}_{cb.from_user.id}_{promo_code or ''}",
         currency="XTR",
         prices=[LabeledPrice(label=t("wallet_stars_label", lang, coins=coins), amount=stars_amount)],
         provider_token="",
@@ -290,14 +390,18 @@ async def pay_stars(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 @router.message(F.successful_payment)
-async def successful_stars_payment(msg: Message):
+async def successful_stars_payment(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
     payload = msg.successful_payment.invoice_payload
     parts = payload.split("_")
     coins = int(parts[1])
     uid = msg.from_user.id
+    promo_code = parts[3] if len(parts) > 3 and parts[3] else None
     add_coins(uid, coins)
     await _handle_referral_bonus(uid, coins, payment_type="stars")
+    if promo_code:
+        use_promo_code(promo_code, uid)
+        await state.update_data(promo_code=None, promo_discount=0)
     await msg.answer(
         f"{t('wallet_stars_success_title', lang)}\n\n"
         f"{t('wallet_stars_success_body', lang, coins=coins, coins2=get_coins(uid))}",
@@ -333,13 +437,29 @@ async def receive_rub_amount(msg: Message, state: FSMContext):
         await msg.answer(t("wallet_yoomoney_min_error", lang, min=int(MIN_TOPUP_RUB)))
         return
 
-    coins = math.floor(amount_rub / COIN_TO_RUB)
     uid = msg.from_user.id
+    coins = math.floor(amount_rub / COIN_TO_RUB)
+    data = await state.get_data()
+    promo_code = data.get("promo_code")
+    promo_pct  = int(data.get("promo_discount") or 0)
+
+    if promo_code and promo_pct:
+        pay_rub = round(amount_rub * (1 - promo_pct / 100), 2)
+        set_pending_yoomoney_promo(uid, coins, promo_code)
+        promo_lines = (
+            f"\n{t('wallet_confirm_original', lang, amount=f'{amount_rub:.2f} ₽')}\n"
+            f"{t('wallet_confirm_discounted', lang, discounted=f'{pay_rub:.2f} ₽', pct=promo_pct)}"
+        )
+    else:
+        pay_rub = amount_rub
+        clear_pending_yoomoney_promo(uid)
+        promo_lines = ""
+
     pay_url = (
         f"https://yoomoney.ru/quickpay/confirm.xml"
         f"?receiver={YOOMONEY_WALLET}"
         f"&quickpay-form=shop"
-        f"&sum={amount_rub:.2f}"
+        f"&sum={pay_rub:.2f}"
         f"&label={uid}"
         f"&targets=RetainX+пополнение"
     )
@@ -348,11 +468,12 @@ async def receive_rub_amount(msg: Message, state: FSMContext):
         f"{t('wallet_yoomoney_confirm_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('wallet_yoomoney_confirm_amount', lang, amount=f'{amount_rub:.2f}')}\n"
-        f"{t('wallet_yoomoney_confirm_coins', lang, coins=coins)}\n\n"
+        f"{t('wallet_yoomoney_confirm_coins', lang, coins=coins)}"
+        f"{promo_lines}\n\n"
         f"{t('wallet_yoomoney_confirm_note', lang)}",
         reply_markup=kb(
             [InlineKeyboardButton(
-                text=t("wallet_btn_pay_yoomoney", lang, amount=f"{amount_rub:.0f}"),
+                text=t("wallet_btn_pay_yoomoney", lang, amount=f"{pay_rub:.0f}"),
                 url=pay_url,
             )],
             [menu_btn(lang)],
@@ -515,8 +636,69 @@ async def referral_info(cb: CallbackQuery):
             text=t("wallet_referral_withdraw_pending", lang),
             callback_data="referral_withdraw_low"
         )])
+    buttons.append([InlineKeyboardButton(
+        text=t("wallet_referral_promo_btn", lang),
+        callback_data="referral_my_promo"
+    )])
     buttons.append([back_btn("wallet", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(text, reply_markup=kb(*buttons), parse_mode="HTML")
+
+
+@router.callback_query(F.data == "referral_my_promo")
+async def referral_my_promo(cb: CallbackQuery):
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    promo = get_my_promo_code(uid)
+    if not promo:
+        text = (
+            f"{t('my_promo_title', lang)}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"{t('my_promo_none', lang)}"
+        )
+        keyboard = kb(
+            [InlineKeyboardButton(text=t("my_promo_create_btn", lang), callback_data="referral_create_promo")],
+            [back_btn("referral_info", lang=lang), menu_btn(lang)],
+        )
+    else:
+        text = (
+            f"{t('my_promo_title', lang)}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"{t('my_promo_code_label', lang, code=promo['code'])}\n"
+            f"{t('my_promo_discount_label', lang, pct=promo['discount_pct'])}\n"
+            f"{t('my_promo_uses_label', lang, uses=promo['uses_count'])}\n\n"
+            f"  {t('my_promo_share_hint', lang)}"
+        )
+        keyboard = kb(
+            [back_btn("referral_info", lang=lang), menu_btn(lang)],
+        )
+    await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+
+
+@router.callback_query(F.data == "referral_create_promo")
+async def referral_create_promo(cb: CallbackQuery):
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    if get_my_promo_code(uid):
+        await cb.answer()
+        return
+    username = cb.from_user.username or str(uid)
+    try:
+        code = create_promo_code(uid, username)
+    except RuntimeError:
+        await cb.answer("Could not generate code. Please try again.", show_alert=True)
+        return
+    text = (
+        f"{t('my_promo_title', lang)}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('my_promo_code_label', lang, code=code)}\n"
+        f"{t('my_promo_discount_label', lang, pct=30)}\n"
+        f"{t('my_promo_uses_label', lang, uses=0)}\n\n"
+        f"  {t('my_promo_share_hint', lang)}"
+    )
+    keyboard = kb(
+        [back_btn("referral_info", lang=lang), menu_btn(lang)],
+    )
+    await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(F.data == "referral_list")

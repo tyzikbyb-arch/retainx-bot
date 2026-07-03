@@ -6,7 +6,7 @@ import math
 from aiohttp import web
 
 from config import YOOMONEY_SECRET, COIN_TO_RUB, BOT_TOKEN, ADMIN_ID
-from database import add_coins, get_lang, record_yoomoney_payment
+from database import add_coins, get_lang, record_yoomoney_payment, pop_pending_yoomoney_promo, use_promo_code
 
 log = logging.getLogger(__name__)
 
@@ -61,9 +61,20 @@ async def yoomoney_webhook(request: web.Request) -> web.Response:
         withdraw_amount = data.get("withdraw_amount", "")
         amount_received = float(data.get("amount", "0"))
         amount_rub = float(withdraw_amount) if withdraw_amount else amount_received
-        coins = math.floor(amount_rub / COIN_TO_RUB)
-        log.info(f"YooMoney: withdraw_amount={withdraw_amount!r} amount={amount_received} "
-                 f"→ using {amount_rub} RUB → {coins} coins for user {user_id}")
+
+        # Check if user had a pending promo — if so, use the pre-agreed coin amount
+        # instead of calculating from the (discounted) payment received.
+        pending_promo = pop_pending_yoomoney_promo(user_id)
+        if pending_promo:
+            coins = pending_promo["expected_coins"]
+            promo_code_used = pending_promo["promo_code"]
+            log.info(f"YooMoney: promo {promo_code_used} — crediting {coins} coins "
+                     f"(payment {amount_rub} RUB, discount applied)")
+        else:
+            coins = math.floor(amount_rub / COIN_TO_RUB)
+            promo_code_used = None
+            log.info(f"YooMoney: withdraw_amount={withdraw_amount!r} amount={amount_received} "
+                     f"→ using {amount_rub} RUB → {coins} coins for user {user_id}")
 
         if coins <= 0:
             log.warning(f"YooMoney: zero coins for {amount_rub} RUB (COIN_TO_RUB={COIN_TO_RUB})")
@@ -80,6 +91,12 @@ async def yoomoney_webhook(request: web.Request) -> web.Response:
             return web.Response(text="ok")
 
         add_coins(user_id, coins)
+
+        if promo_code_used:
+            try:
+                use_promo_code(promo_code_used, user_id)
+            except Exception as e:
+                log.error(f"YooMoney: use_promo_code failed for user {user_id}: {e}")
 
         # Await directly — create_task() would swallow exceptions silently,
         # leaving topup_count incremented but the referrer never credited.
