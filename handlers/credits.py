@@ -5,7 +5,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, YOOMONEY_WALLET, COIN_TO_RUB, MIN_TOPUP_RUB, REFERRAL_TIERS, REFERRAL_JOIN_BONUS
+from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, YOOMONEY_WALLET, COIN_TO_RUB, MIN_TOPUP_RUB, REFERRAL_TIERS, REFERRAL_JOIN_BONUS, CARD_NUMBER
 from database import (get_coins, add_coins, get_referred_by, get_lang,
                        add_referral_balance, add_referral_earning, increment_topup_count,
                        get_referral_stats, get_referral_list, create_withdrawal_request, process_withdrawal,
@@ -25,6 +25,8 @@ class TopupStates(StatesGroup):
     entering_tx = State()
     entering_rub_amount = State()
     entering_promo = State()
+    entering_card_amount = State()
+    entering_card_proof = State()
 
 class WithdrawalStates(StatesGroup):
     entering_requisites = State()
@@ -91,6 +93,7 @@ async def _show_topup_start(target, state: FSMContext, lang: str):
          InlineKeyboardButton(text=t("wallet_btn_20", lang), callback_data="topup_amount_20")],
         [InlineKeyboardButton(text=t("wallet_btn_custom", lang), callback_data="topup_custom")],
         [InlineKeyboardButton(text=t("wallet_btn_yoomoney", lang), callback_data="topup_yoomoney")],
+        [InlineKeyboardButton(text=t("wallet_btn_card", lang), callback_data="topup_card")],
         promo_row,
         [back_btn("wallet", lang=lang), menu_btn(lang)],
     )
@@ -481,6 +484,160 @@ async def receive_rub_amount(msg: Message, state: FSMContext):
         ),
         parse_mode="HTML"
     )
+
+# ── Card payment (RF Mastercard) ──────────────────────────────
+@router.callback_query(F.data == "topup_card")
+async def topup_card_start(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await cb.message.edit_text(
+        f"{t('wallet_card_title', lang)}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('wallet_card_rate_line', lang)}\n"
+        f"{t('wallet_card_min_line', lang)}\n\n"
+        f"{t('wallet_card_prompt', lang)}",
+        reply_markup=kb([back_btn("topup_start", lang=lang), menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+    await state.set_state(TopupStates.entering_card_amount)
+
+@router.message(TopupStates.entering_card_amount)
+async def receive_card_amount(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
+    text = msg.text.strip().replace(",", ".").replace("₽", "").replace(" ", "") if msg.text else ""
+    try:
+        amount_rub = float(text)
+    except ValueError:
+        await msg.answer(t("wallet_enter_number_error", lang))
+        return
+
+    if amount_rub < MIN_TOPUP_RUB:
+        await msg.answer(t("wallet_card_min_error", lang, min=int(MIN_TOPUP_RUB)))
+        return
+
+    uid = msg.from_user.id
+    coins = math.floor(amount_rub / COIN_TO_RUB)
+    data = await state.get_data()
+    promo_code = data.get("promo_code")
+    promo_pct  = int(data.get("promo_discount") or 0)
+
+    if promo_code and promo_pct:
+        pay_rub = round(amount_rub * (1 - promo_pct / 100), 2)
+        promo_lines = (
+            f"\n{t('wallet_confirm_original', lang, amount=f'{amount_rub:.2f} ₽')}\n"
+            f"{t('wallet_confirm_discounted', lang, discounted=f'{pay_rub:.2f} ₽', pct=promo_pct)}"
+        )
+    else:
+        pay_rub = amount_rub
+        promo_lines = ""
+
+    await state.update_data(card_coins=coins, card_pay_rub=pay_rub, card_promo=promo_code)
+    await state.set_state(TopupStates.entering_card_proof)
+
+    await msg.answer(
+        f"{t('wallet_card_confirm_title', lang)}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('wallet_card_confirm_amount', lang, amount=f'{pay_rub:.2f}')}\n"
+        f"{t('wallet_card_confirm_coins', lang, coins=coins)}"
+        f"{promo_lines}\n\n"
+        f"{t('wallet_card_number_label', lang)}\n"
+        f"<code>{CARD_NUMBER}</code>\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"{t('wallet_card_note', lang)}",
+        reply_markup=kb([menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+
+@router.message(TopupStates.entering_card_proof)
+async def receive_card_proof(msg: Message, state: FSMContext):
+    if not (msg.photo or msg.document or msg.text):
+        return
+
+    uid = msg.from_user.id
+    lang = get_lang(uid)
+    data = await state.get_data()
+    coins = int(data.get("card_coins", 0))
+    pay_rub = float(data.get("card_pay_rub", 0))
+    promo_code = data.get("card_promo") or ""
+    await state.clear()
+
+    from config import ADMIN_ID
+    from aiogram import Bot
+    bot = Bot(token=BOT_TOKEN)
+
+    caption = (
+        f"💳  <b>Card Payment Proof</b>\n\n"
+        f"  User    @{msg.from_user.username or '—'} (<code>{uid}</code>)\n"
+        f"  Amount  <b>{pay_rub:.2f} ₽</b>  →  <b>{coins} coins</b>\n"
+        + (f"  Promo   <code>{promo_code}</code>\n" if promo_code else "")
+    )
+    promo_part = promo_code or "none"
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="✓  Confirm", callback_data=f"confirm_card_{uid}_{coins}_{promo_part}"),
+        InlineKeyboardButton(text="✕  Reject",  callback_data=f"reject_card_{uid}"),
+    ]])
+
+    if msg.photo:
+        await bot.send_photo(ADMIN_ID, msg.photo[-1].file_id, caption=caption, reply_markup=keyboard, parse_mode="HTML")
+    elif msg.document:
+        await bot.send_document(ADMIN_ID, msg.document.file_id, caption=caption, reply_markup=keyboard, parse_mode="HTML")
+    else:
+        await bot.send_message(
+            ADMIN_ID,
+            caption + f"\n\n  Proof text:\n<code>{msg.text}</code>",
+            reply_markup=keyboard, parse_mode="HTML"
+        )
+
+    await msg.answer(
+        f"{t('wallet_card_submitted_title', lang)}\n\n"
+        f"{t('wallet_card_submitted_body', lang)}",
+        reply_markup=kb([menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("confirm_card_"))
+async def admin_confirm_card(cb: CallbackQuery):
+    from config import ADMIN_ID
+    if cb.from_user.id != ADMIN_ID:
+        return
+    # format: confirm_card_{uid}_{coins}_{promo_or_none}
+    parts = cb.data.split("_")
+    uid = int(parts[2])
+    coins = int(parts[3])
+    promo_code = parts[4] if len(parts) > 4 and parts[4] != "none" else None
+
+    add_coins(uid, coins)
+    await _handle_referral_bonus(uid, coins, payment_type="card")
+    if promo_code:
+        use_promo_code(promo_code, uid)
+
+    from aiogram import Bot
+    bot = Bot(token=BOT_TOKEN)
+    user_lang = get_lang(uid)
+    balance = get_coins(uid)
+    await bot.send_message(
+        uid,
+        f"{t('wallet_card_success_title', user_lang)}\n\n"
+        f"{t('wallet_card_success_body', user_lang, coins=coins, balance=balance)}",
+        parse_mode="HTML"
+    )
+    await cb.message.edit_text(f"✓  Card confirmed — {coins} coins → user {uid}", parse_mode="HTML")
+
+@router.callback_query(F.data.startswith("reject_card_"))
+async def admin_reject_card(cb: CallbackQuery):
+    from config import ADMIN_ID
+    if cb.from_user.id != ADMIN_ID:
+        return
+    uid = int(cb.data.split("_")[-1])
+    from aiogram import Bot
+    bot = Bot(token=BOT_TOKEN)
+    user_lang = get_lang(uid)
+    await bot.send_message(
+        uid,
+        f"{t('wallet_card_rejected_title', user_lang)}\n\n"
+        f"{t('wallet_card_rejected_body', user_lang)}",
+        parse_mode="HTML"
+    )
+    await cb.message.edit_text(f"✕  Card rejected — user {uid}")
 
 # ── Admin confirm/reject ───────────────────────────────────────
 @router.callback_query(F.data.startswith("confirm_topup_"))
