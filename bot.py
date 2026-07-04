@@ -55,9 +55,8 @@ dp.include_router(orders_handler.router)
 ADMIN_KB = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="≡  All Orders"),    KeyboardButton(text="◈  Users")],
-        [KeyboardButton(text="＋  Add Coins"),     KeyboardButton(text="－  Remove Coins")],
-        [KeyboardButton(text="📤  Deliver"),        KeyboardButton(text="✕  Cancel Order")],
         [KeyboardButton(text="✉  Msg User"),       KeyboardButton(text="📢  Broadcast")],
+        [KeyboardButton(text="📤  Deliver"),        KeyboardButton(text="✕  Cancel Order")],
         [KeyboardButton(text="◌  Commands")],
     ],
     resize_keyboard=True,
@@ -185,7 +184,7 @@ async def onboard_lang_cb(cb: CallbackQuery, state: FSMContext):
 
 # ── Panel button router ───────────────────────────────────────
 ADMIN_PANEL_BUTTONS = {
-    "≡  All Orders", "✉  Msg User", "＋  Add Coins", "－  Remove Coins",
+    "≡  All Orders", "✉  Msg User",
     "📤  Deliver", "✕  Cancel Order", "◌  Admin Help", "◈  Users", "◌  Commands",
     "📢  Broadcast",
 }
