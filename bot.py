@@ -328,8 +328,8 @@ async def panel_router(msg: Message, state: FSMContext):
             "  → Attach file to deliver to user\n\n"
             "  /cancelorder <code>ORDER_ID</code>\n"
             "  → Cancel order and refund coins\n\n"
-            "  /balance\n"
-            "  → Check your coin balance\n\n"
+            "  /balance <code>USER_ID</code>\n"
+            "  → Check a user's coin balance\n\n"
             "  /cancel\n"
             "  → Reset your FSM state\n\n"
             "  /setblogger <code>USER_ID</code>\n"
@@ -643,8 +643,17 @@ async def del_account_cmd(msg: Message):
 
 @dp.message(Command("balance"))
 async def balance_cmd(msg: Message):
-    coins = get_coins(msg.from_user.id)
-    await msg.answer(f"◈  Your balance: <b>{coins} coins</b>", parse_mode="HTML")
+    parts = msg.text.strip().split()
+    if msg.from_user.id == ADMIN_ID and len(parts) >= 2 and parts[1].isdigit():
+        target_uid = int(parts[1])
+        coins = get_coins(target_uid)
+        await msg.answer(
+            f"◈  User <code>{target_uid}</code> balance: <b>{coins} coins</b>",
+            parse_mode="HTML"
+        )
+    else:
+        coins = get_coins(msg.from_user.id)
+        await msg.answer(f"◈  Your balance: <b>{coins} coins</b>", parse_mode="HTML")
 
 @dp.message(F.text.regexp(r"^/send_\d+$"))
 async def send_result_cmd(msg: Message, state: FSMContext):
