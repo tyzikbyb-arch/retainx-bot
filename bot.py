@@ -30,6 +30,10 @@ from aiogram.fsm.state import State, StatesGroup
 class OnboardStates(StatesGroup):
     selecting_lang = State()
 
+class BroadcastStates(StatesGroup):
+    waiting_message = State()
+    confirming      = State()
+
 from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
 from database import is_new_user, add_coins, get_coins, remove_coins, set_referred_by, get_lang, set_lang, update_username
 from keyboards import kb, menu_btn, client_kb, chunked
@@ -53,7 +57,8 @@ ADMIN_KB = ReplyKeyboardMarkup(
         [KeyboardButton(text="≡  All Orders"),    KeyboardButton(text="◈  Users")],
         [KeyboardButton(text="＋  Add Coins"),     KeyboardButton(text="－  Remove Coins")],
         [KeyboardButton(text="📤  Deliver"),        KeyboardButton(text="✕  Cancel Order")],
-        [KeyboardButton(text="✉  Msg User"),       KeyboardButton(text="◌  Commands")],
+        [KeyboardButton(text="✉  Msg User"),       KeyboardButton(text="📢  Broadcast")],
+        [KeyboardButton(text="◌  Commands")],
     ],
     resize_keyboard=True,
     persistent=True,
@@ -182,6 +187,7 @@ async def onboard_lang_cb(cb: CallbackQuery, state: FSMContext):
 ADMIN_PANEL_BUTTONS = {
     "≡  All Orders", "✉  Msg User", "＋  Add Coins", "－  Remove Coins",
     "📤  Deliver", "✕  Cancel Order", "◌  Admin Help", "◈  Users", "◌  Commands",
+    "📢  Broadcast",
 }
 PANEL_BUTTONS = CLIENT_TEXTS | ADMIN_PANEL_BUTTONS
 
@@ -287,6 +293,18 @@ async def panel_router(msg: Message, state: FSMContext):
             "Example:\n<code>/cancelorder 8</code>",
             parse_mode="HTML"
         )
+    elif text == "📢  Broadcast" and uid == ADMIN_ID:
+        from database import get_all_users
+        count = len(get_all_users())
+        await state.set_state(BroadcastStates.waiting_message)
+        await msg.answer(
+            f"📢  <b>Broadcast</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"Получатели: <b>{count} пользователей</b>\n\n"
+            f"Отправь сообщение для рассылки.\n"
+            f"Поддерживается: текст, фото, видео, документ, аудио.\n\n"
+            f"<i>/cancel — отменить</i>",
+            parse_mode="HTML"
+        )
     elif text == "◈  Users" and uid == ADMIN_ID:
         from database import get_all_users
         users = get_all_users()
@@ -315,7 +333,8 @@ async def panel_router(msg: Message, state: FSMContext):
             "  ✉  Msg User — send message to user\n"
             "  ＋  Add Coins — add coins to user\n"
             "  📤  Deliver — deliver file to user\n"
-            "  ✕  Cancel Order — cancel & refund\n\n"
+            "  ✕  Cancel Order — cancel & refund\n"
+            "  📢  Broadcast — send message to all users\n\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
             "<b>Commands:</b>\n"
             "  /msg <code>USER_ID TEXT</code>\n"
@@ -654,6 +673,69 @@ async def balance_cmd(msg: Message):
     else:
         coins = get_coins(msg.from_user.id)
         await msg.answer(f"◈  Your balance: <b>{coins} coins</b>", parse_mode="HTML")
+
+# ── Broadcast ─────────────────────────────────────────────────
+@dp.message(BroadcastStates.waiting_message, F.from_user.id == ADMIN_ID)
+async def broadcast_receive(msg: Message, state: FSMContext):
+    await state.update_data(bc_chat_id=msg.chat.id, bc_message_id=msg.message_id)
+    from database import get_all_users
+    count = len(get_all_users())
+    await state.set_state(BroadcastStates.confirming)
+    confirm_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=f"✓  Отправить {count} пользователям", callback_data="bc_confirm"),
+        InlineKeyboardButton(text="✕  Отмена", callback_data="bc_cancel"),
+    ]])
+    await msg.answer(
+        f"📢  Разослать это сообщение <b>{count} пользователям</b>?",
+        reply_markup=confirm_kb,
+        parse_mode="HTML"
+    )
+
+@dp.callback_query(BroadcastStates.confirming, F.data == "bc_cancel", F.from_user.id == ADMIN_ID)
+async def broadcast_cancel(cb: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await cb.answer("Отменено")
+    await cb.message.edit_text("✕  Рассылка отменена.")
+
+@dp.callback_query(BroadcastStates.confirming, F.data == "bc_confirm", F.from_user.id == ADMIN_ID)
+async def broadcast_confirm(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
+    data = await state.get_data()
+    bc_chat_id  = data.get("bc_chat_id")
+    bc_message_id = data.get("bc_message_id")
+    await state.clear()
+
+    from database import get_all_users
+    users = get_all_users()
+    total = len(users)
+
+    status = await cb.message.edit_text(f"⏳  Рассылка начата... 0 / {total}")
+
+    success = 0
+    failed  = 0
+    for i, user in enumerate(users):
+        try:
+            await bot.copy_message(
+                chat_id=int(user["uid"]),
+                from_chat_id=bc_chat_id,
+                message_id=bc_message_id
+            )
+            success += 1
+        except Exception:
+            failed += 1
+        if (i + 1) % 25 == 0:
+            try:
+                await status.edit_text(f"⏳  Рассылка... {i + 1} / {total}")
+            except Exception:
+                pass
+        await asyncio.sleep(0.05)
+
+    await status.edit_text(
+        f"✓  <b>Рассылка завершена</b>\n\n"
+        f"  Доставлено:       <b>{success}</b>\n"
+        f"  Не доставлено:  <b>{failed}</b>  (заблокировали бота)",
+        parse_mode="HTML"
+    )
 
 @dp.message(F.text.regexp(r"^/send_\d+$"))
 async def send_result_cmd(msg: Message, state: FSMContext):
