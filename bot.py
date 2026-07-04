@@ -53,8 +53,7 @@ ADMIN_KB = ReplyKeyboardMarkup(
         [KeyboardButton(text="≡  All Orders"),    KeyboardButton(text="◈  Users")],
         [KeyboardButton(text="＋  Add Coins"),     KeyboardButton(text="－  Remove Coins")],
         [KeyboardButton(text="📤  Deliver"),        KeyboardButton(text="✕  Cancel Order")],
-        [KeyboardButton(text="✉  Msg User"),       KeyboardButton(text="⊙  Balance")],
-        [KeyboardButton(text="◌  Commands")],
+        [KeyboardButton(text="✉  Msg User"),       KeyboardButton(text="◌  Commands")],
     ],
     resize_keyboard=True,
     persistent=True,
@@ -183,7 +182,6 @@ async def onboard_lang_cb(cb: CallbackQuery, state: FSMContext):
 ADMIN_PANEL_BUTTONS = {
     "≡  All Orders", "✉  Msg User", "＋  Add Coins", "－  Remove Coins",
     "📤  Deliver", "✕  Cancel Order", "◌  Admin Help", "◈  Users", "◌  Commands",
-    "⊙  Balance",
 }
 PANEL_BUTTONS = CLIENT_TEXTS | ADMIN_PANEL_BUTTONS
 
@@ -289,13 +287,6 @@ async def panel_router(msg: Message, state: FSMContext):
             "Example:\n<code>/cancelorder 8</code>",
             parse_mode="HTML"
         )
-    elif text == "⊙  Balance" and uid == ADMIN_ID:
-        await msg.answer(
-            "⊙  <b>Check User Balance</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-            "<code>/balance USER_ID</code>\n\n"
-            "Example:\n<code>/balance 939285095</code>",
-            parse_mode="HTML"
-        )
     elif text == "◈  Users" and uid == ADMIN_ID:
         from database import get_all_users
         users = get_all_users()
@@ -324,8 +315,7 @@ async def panel_router(msg: Message, state: FSMContext):
             "  ✉  Msg User — send message to user\n"
             "  ＋  Add Coins — add coins to user\n"
             "  📤  Deliver — deliver file to user\n"
-            "  ✕  Cancel Order — cancel & refund\n"
-            "  ⊙  Balance — check user coin balance\n\n"
+            "  ✕  Cancel Order — cancel & refund\n\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
             "<b>Commands:</b>\n"
             "  /msg <code>USER_ID TEXT</code>\n"
