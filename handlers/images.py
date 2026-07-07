@@ -203,6 +203,10 @@ async def img_edit_prompt(cb: CallbackQuery, state: FSMContext):
 # ── Confirm order ─────────────────────────────────────────────
 @router.callback_query(F.data == "img_confirm")
 async def image_confirm(cb: CallbackQuery, state: FSMContext):
+    import state as _state
+    if _state.MAINTENANCE:
+        await cb.answer("🔧 Бот на техобслуживании. Попробуйте позже.", show_alert=True)
+        return
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     coins = data.get("img_coins", 1)

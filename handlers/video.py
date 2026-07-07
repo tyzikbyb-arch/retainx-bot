@@ -1734,6 +1734,10 @@ async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, 
 
 async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     """Shared confirmation logic."""
+    import state as _state
+    if _state.MAINTENANCE:
+        await cb.answer("🔧 Бот на техобслуживании. Попробуйте позже.", show_alert=True)
+        return
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     coins = data.get("v_coins", 0)

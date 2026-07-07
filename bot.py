@@ -52,19 +52,23 @@ dp.include_router(admin_handler.router)
 dp.include_router(orders_handler.router)
 
 # ── Keyboards ─────────────────────────────────────────────────
-ADMIN_KB = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="≡  All Orders"),    KeyboardButton(text="◈  Users")],
-        [KeyboardButton(text="✉  Msg User"),       KeyboardButton(text="📢  Broadcast")],
-        [KeyboardButton(text="📤  Deliver"),        KeyboardButton(text="✕  Cancel Order")],
-        [KeyboardButton(text="◌  Commands")],
-    ],
-    resize_keyboard=True,
-    persistent=True,
-)
+def get_admin_kb():
+    import state as _state
+    maint_btn = "🔴 Maintenance ON" if _state.MAINTENANCE else "🔧 Maintenance OFF"
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="≡  All Orders"),    KeyboardButton(text="◈  Users")],
+            [KeyboardButton(text="✉  Msg User"),       KeyboardButton(text="📢  Broadcast")],
+            [KeyboardButton(text="📤  Deliver"),        KeyboardButton(text="✕  Cancel Order")],
+            [KeyboardButton(text="◌  Commands")],
+            [KeyboardButton(text=maint_btn)],
+        ],
+        resize_keyboard=True,
+        persistent=True,
+    )
 
 def get_kb(uid: int, lang: str = "en"):
-    return ADMIN_KB if uid == ADMIN_ID else client_kb(lang)
+    return get_admin_kb() if uid == ADMIN_ID else client_kb(lang)
 
 # ── Shared main-menu builders ────────────────────────────────
 def build_main_menu_text(coins: int, lang: str) -> str:
@@ -186,7 +190,7 @@ async def onboard_lang_cb(cb: CallbackQuery, state: FSMContext):
 ADMIN_PANEL_BUTTONS = {
     "≡  All Orders", "✉  Msg User",
     "📤  Deliver", "✕  Cancel Order", "◌  Admin Help", "◈  Users", "◌  Commands",
-    "📢  Broadcast",
+    "📢  Broadcast", "🔧 Maintenance OFF", "🔴 Maintenance ON",
 }
 PANEL_BUTTONS = CLIENT_TEXTS | ADMIN_PANEL_BUTTONS
 
@@ -304,6 +308,14 @@ async def panel_router(msg: Message, state: FSMContext):
             f"<i>/cancel — отменить</i>",
             parse_mode="HTML"
         )
+    elif text in ("🔧 Maintenance OFF", "🔴 Maintenance ON") and uid == ADMIN_ID:
+        import state as _state
+        _state.MAINTENANCE = not _state.MAINTENANCE
+        if _state.MAINTENANCE:
+            status_text = "🔴 <b>Техобслуживание ВКЛЮЧЕНО</b>\n\nНовые заказы заблокированы.\nПользователи видят сообщение об обслуживании."
+        else:
+            status_text = "✅ <b>Техобслуживание ВЫКЛЮЧЕНО</b>\n\nБот работает в обычном режиме."
+        await msg.answer(status_text, reply_markup=get_admin_kb(), parse_mode="HTML")
     elif text == "◈  Users" and uid == ADMIN_ID:
         from database import get_all_users
         users = get_all_users()
