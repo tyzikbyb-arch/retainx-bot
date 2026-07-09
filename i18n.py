@@ -19,6 +19,7 @@ STR = {
         "main_menu_title": "◈  <b>RetainX Studio</b>",
         "main_menu_balance": "  Balance   <b>{coins} coins</b>",
         "main_menu_desc": "  Generate AI video, images & audio\n  at the most competitive rates.",
+        "maintenance_banner": "⚠️  <b>Scheduled maintenance: July 10 – 13</b>\n      The bot may be temporarily unavailable.\n",
 
         "btn_video_generation": "▸  Video Generation",
         "btn_image_generation": "▸  Image Generation",
@@ -589,6 +590,7 @@ STR = {
         "main_menu_title": "◈  <b>RetainX Studio</b>",
         "main_menu_balance": "  Баланс   <b>{coins} монет</b>",
         "main_menu_desc": "  Генерация AI видео, изображений и аудио\n  по самым выгодным ценам.",
+        "maintenance_banner": "⚠️  <b>Технические работы: 10 – 13 июля</b>\n      Бот может быть временно недоступен.\n",
 
         "btn_video_generation": "▸  Генерация видео",
         "btn_image_generation": "▸  Генерация изображений",
@@ -1159,6 +1161,7 @@ STR = {
         "main_menu_title": "◈  <b>RetainX Studio</b>",
         "main_menu_balance": "  الرصيد   <b>{coins} عملة</b>",
         "main_menu_desc": "  إنشاء فيديو وصور وصوت بالذكاء الاصطناعي\n  بأنسب الأسعار.",
+        "maintenance_banner": "⚠️  <b>أعمال الصيانة: 10 – 13 يوليو</b>\n      قد يكون البوت غير متاح مؤقتاً.\n",
 
         "btn_video_generation": "▸  إنشاء الفيديو",
         "btn_image_generation": "▸  إنشاء الصور",

@@ -72,7 +72,13 @@ def get_kb(uid: int, lang: str = "en"):
 
 # ── Shared main-menu builders ────────────────────────────────
 def build_main_menu_text(coins: int, lang: str) -> str:
+    from datetime import date
+    today = date.today()
+    banner = ""
+    if date(2026, 7, 10) <= today <= date(2026, 7, 13):
+        banner = t("maintenance_banner", lang) + "\n"
     return (
+        f"{banner}"
         f"{t('main_menu_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('main_menu_balance', lang, coins=coins)}\n\n"
         f"{t('main_menu_desc', lang)}\n\n"
