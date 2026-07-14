@@ -1,8 +1,10 @@
 import os
+import asyncio
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.exceptions import TelegramRetryAfter
 from config import ADMIN_ID, BOT_TOKEN
 from database import get_order, update_order_status, add_coins, save_delivery, get_lang, set_blogger, get_is_blogger
 from keyboards import kb, menu_btn
@@ -147,55 +149,62 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
     await sp.stop(oid)
     bot = Bot(token=BOT_TOKEN)
 
-    try:
-        file_id = None
-        file_type = None
-        # Video/animation/document are always re-sent via send_document
-        # (not send_video/send_animation), saved as file_type="document" so
-        # any later re-send (handlers/orders.py "My Orders" detail view)
-        # also goes through send_document instead of resurrecting the GIF
-        # bug from a stale file_type. disable_content_type_detection stops
-        # Telegram from still auto-detecting a silent MP4 and rendering it
-        # as an auto-playing GIF-style preview even though it's sent as a
-        # plain document — matching the automated worker delivery path in
-        # playwright_worker.py.
-        if msg.video:
-            file_id = msg.video.file_id
-            file_type = "document"
-            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML",
-                                     disable_content_type_detection=True)
-        elif msg.animation:
-            file_id = msg.animation.file_id
-            file_type = "document"
-            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML",
-                                     disable_content_type_detection=True)
-        elif msg.document:
-            file_id = msg.document.file_id
-            file_type = "document"
-            await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML",
-                                     disable_content_type_detection=True)
-        elif msg.photo:
-            file_id = msg.photo[-1].file_id
-            file_type = "photo"
-            await bot.send_photo(uid, file_id, caption=caption, parse_mode="HTML")
-        elif msg.audio or msg.voice:
-            # Sent via send_document (not send_audio) so it doesn't join
-            # Telegram's chat-wide continuous-playback queue, same fix
-            # already applied to voiceover previews in handlers/voiceover.py.
-            file_id = (msg.audio or msg.voice).file_id
-            file_type = "document"
-            await bot.send_document(uid, file_id, thumbnail=_audio_thumb(), caption=caption, parse_mode="HTML",
-                                     disable_content_type_detection=True)
+    file_id = None
+    file_type = None
+    if msg.video:
+        file_id = msg.video.file_id;        file_type = "document"
+    elif msg.animation:
+        file_id = msg.animation.file_id;    file_type = "document"
+    elif msg.document:
+        file_id = msg.document.file_id;     file_type = "document"
+    elif msg.photo:
+        file_id = msg.photo[-1].file_id;    file_type = "photo"
+    elif msg.audio or msg.voice:
+        file_id = (msg.audio or msg.voice).file_id; file_type = "document"
 
+    delivered = False
+    for attempt in range(3):
+        try:
+            # Video/animation/document are always re-sent via send_document
+            # (not send_video/send_animation), saved as file_type="document" so
+            # any later re-send (handlers/orders.py "My Orders" detail view)
+            # also goes through send_document instead of resurrecting the GIF
+            # bug from a stale file_type. disable_content_type_detection stops
+            # Telegram from still auto-detecting a silent MP4 and rendering it
+            # as an auto-playing GIF-style preview even though it's sent as a
+            # plain document — matching the automated worker delivery path in
+            # playwright_worker.py.
+            if file_type == "photo":
+                await bot.send_photo(uid, file_id, caption=caption, parse_mode="HTML")
+            elif file_type == "document" and (msg.audio or msg.voice):
+                await bot.send_document(uid, file_id, thumbnail=_audio_thumb(),
+                                        caption=caption, parse_mode="HTML",
+                                        disable_content_type_detection=True)
+            else:
+                await bot.send_document(uid, file_id, caption=caption, parse_mode="HTML",
+                                        disable_content_type_detection=True)
+            delivered = True
+            break
+        except TelegramRetryAfter as e:
+            wait = e.retry_after + 2
+            await msg.answer(f"⏳ Telegram rate limit — ожидаю {wait}s и повторяю... (попытка {attempt + 1}/3)")
+            await asyncio.sleep(wait)
+        except Exception as e:
+            await msg.answer(f"❌ Failed to deliver: {e}")
+            await bot.session.close()
+            await state.clear()
+            return
+
+    if delivered:
         if order and file_id:
             save_delivery(oid, file_id, file_type)
         elif order:
             update_order_status(oid, "delivered")
         await msg.answer(f"✓  Delivered to user {uid}.")
-    except Exception as e:
-        await msg.answer(f"❌ Failed to deliver: {e}")
-    finally:
-        await bot.session.close()
+    else:
+        await msg.answer("❌ Failed to deliver after 3 attempts — Telegram rate limit. Try again later.")
+
+    await bot.session.close()
     await state.clear()
 
 @router.message(F.text.startswith("/setblogger"))
