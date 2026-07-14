@@ -593,7 +593,14 @@ async def cancelorder_cmd(msg: Message):
             return
         add_coins(order["user_id"], order["coins"])
         update_order_status(oid, "cancelled")
-        await bot.send_message(order["user_id"], f"◌  <b>Order #{oid} Cancelled</b>\n\n  <b>{order['coins']} coins</b> refunded.", parse_mode="HTML")
+        from keyboards import kb, menu_btn
+        _lang = get_lang(order["user_id"])
+        await bot.send_message(
+            order["user_id"],
+            f"◌  <b>Order #{oid} Cancelled</b>\n\n  <b>{order['coins']} coins</b> refunded.",
+            parse_mode="HTML",
+            reply_markup=kb([menu_btn(_lang)])
+        )
         await msg.answer(f"✓  Order #{oid} cancelled. {order['coins']} coins refunded.")
     except Exception as e:
         await msg.answer(f"Error: {e}")

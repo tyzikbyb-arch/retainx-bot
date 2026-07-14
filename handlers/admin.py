@@ -82,6 +82,7 @@ async def admin_cancel_with_reason(msg: Message, state: FSMContext):
     update_order_status(oid, "cancelled")
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
+    lang = get_lang(order["user_id"])
     if reason:
         user_text = (
             f"◌  <b>Order #{oid} Cancelled</b>\n\n"
@@ -95,7 +96,11 @@ async def admin_cancel_with_reason(msg: Message, state: FSMContext):
             f"  We apologise for the inconvenience."
         )
     try:
-        await bot.send_message(order["user_id"], user_text, parse_mode="HTML")
+        await bot.send_message(
+            order["user_id"], user_text,
+            parse_mode="HTML",
+            reply_markup=kb([menu_btn(lang)])
+        )
     except Exception:
         pass
     await bot.session.close()
