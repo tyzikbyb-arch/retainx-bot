@@ -59,7 +59,7 @@ async def _run(oid: int, chat_id: int, message_id: int, base_text: str, max_sec:
     bot = Bot(token=BOT_TOKEN)
     idx = 0
     elapsed = 0.0
-    interval = 0.9
+    interval = 4.0
     poll_every = 60  # seconds between DB status checks
     try:
         while elapsed < max_sec:
