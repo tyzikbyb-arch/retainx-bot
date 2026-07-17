@@ -44,6 +44,13 @@ def init_db():
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS file_type TEXT DEFAULT NULL")
             except Exception:
                 pass
+            # Fix missing SERIAL sequence on orders.id (table may have been created without one)
+            try:
+                cur.execute("CREATE SEQUENCE IF NOT EXISTS orders_id_seq")
+                cur.execute("SELECT setval('orders_id_seq', GREATEST(COALESCE((SELECT MAX(id) FROM orders), 0), 1))")
+                cur.execute("ALTER TABLE orders ALTER COLUMN id SET DEFAULT nextval('orders_id_seq')")
+            except Exception:
+                pass
             try:
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'en'")
             except Exception:
