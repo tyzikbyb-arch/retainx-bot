@@ -3,11 +3,10 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import IMAGE_TOOLS, usd_to_coins
-from database import get_coins, spend_coins, create_order, get_lang, add_coins
+from database import get_coins, spend_coins, create_order, get_lang, has_unlimited
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
 from handlers.attachments import file_too_large
-from handlers import spinner as sp
 import math
 
 router = Router()
@@ -16,7 +15,7 @@ class ImageStates(StatesGroup):
     entering_prompt = State()
     collecting_refs = State()
 
-# ── Category menu ─────────────────────────────────────────────
+# ── Category menu ─────────────────────────────────────────
 @router.callback_query(F.data == "cat_images")
 async def images_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
@@ -36,7 +35,7 @@ async def images_menu(cb: CallbackQuery, state: FSMContext):
         parse_mode="HTML"
     )
 
-# ── Tool selected ─────────────────────────────────────────────
+# ── Tool selected ─────────────────────────────────────────
 @router.callback_query(F.data.startswith("img_") & ~F.data.startswith("img_ar_") & ~F.data.startswith("img_q_") & ~F.data.startswith("img_confirm") & ~F.data.startswith("img_add") & ~F.data.startswith("img_ref") & ~F.data.startswith("img_to_") & ~F.data.startswith("img_edit"))
 async def image_tool_selected(cb: CallbackQuery, state: FSMContext):
     name = cb.data.replace("img_", "", 1)
@@ -74,7 +73,7 @@ async def image_tool_selected(cb: CallbackQuery, state: FSMContext):
     rows.append([back_btn("cat_images", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(text, reply_markup=kb(*rows), parse_mode="HTML")
 
-# ── Aspect ratio selected ─────────────────────────────────────
+# ── Aspect ratio selected ───────────────────────────────────
 @router.callback_query(F.data.startswith("img_ar_"))
 async def image_ar_selected(cb: CallbackQuery, state: FSMContext):
     ar = cb.data.replace("img_ar_", "")
@@ -86,7 +85,7 @@ async def image_ar_selected(cb: CallbackQuery, state: FSMContext):
     qualities = tool.get("quality", [])
 
     if not qualities:
-        # No quality step -- go to prompt
+        # No quality step — go to prompt
         await state.update_data(img_quality=None)
         await ask_prompt(cb, state, name, tool)
         return
@@ -102,7 +101,7 @@ async def image_ar_selected(cb: CallbackQuery, state: FSMContext):
         parse_mode="HTML"
     )
 
-# ── Quality selected ──────────────────────────────────────────
+# ── Quality selected ─────────────────────────────────────────
 @router.callback_query(F.data.startswith("img_q_"))
 async def image_quality_selected(cb: CallbackQuery, state: FSMContext):
     quality = cb.data.replace("img_q_", "")
@@ -158,7 +157,7 @@ def _get_img_coins(tool: dict, quality: str) -> int:
         return tool["coins_by_quality"].get(quality, tool.get("coins", 1))
     return tool.get("coins", usd_to_coins(tool.get("pricing", {}).get("per_gen", 0.05)))
 
-# ── Prompt entered ────────────────────────────────────────────
+# ── Prompt entered ─────────────────────────────────────────
 @router.message(ImageStates.entering_prompt)
 async def image_prompt_received(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
@@ -200,13 +199,9 @@ async def img_edit_prompt(cb: CallbackQuery, state: FSMContext):
     )
     await state.set_state(ImageStates.entering_prompt)
 
-# ── Confirm order ─────────────────────────────────────────────
+# ── Confirm order ─────────────────────────────────────────
 @router.callback_query(F.data == "img_confirm")
 async def image_confirm(cb: CallbackQuery, state: FSMContext):
-    import state as _state
-    if _state.MAINTENANCE:
-        await cb.answer("🔧 Бот на техобслуживании. Попробуйте позже.", show_alert=True)
-        return
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     coins = data.get("img_coins", 1)
@@ -224,9 +219,11 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    if not spend_coins(uid, coins):
-        await cb.answer(t("img_insufficient_coins", lang), show_alert=True)
-        return
+    if not has_unlimited(uid):
+        if not spend_coins(uid, coins):
+            await cb.answer(t("img_insufficient_coins", lang), show_alert=True)
+            return
+
     ar = data.get("img_ar")
     quality = data.get("img_quality")
     prompt = data.get("img_prompt")
@@ -234,37 +231,26 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
     price_usd = round(coins * 0.05, 2)
 
     params = {"aspect_ratio": ar, "quality": quality, "prompt": prompt, "refs": refs if refs else None}
-    try:
-        oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, name, params, coins, price_usd)
-    except Exception:
-        add_coins(uid, coins)
-        await state.clear()
-        await cb.message.edit_text(t("img_order_error", lang), reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
-        return
+    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, name, params, coins, price_usd)
 
     # Push to Redis queue for auto-generation
-    await _push_to_queue(oid, uid, tid, name, params, coins, price_usd, username=cb.from_user.username or cb.from_user.first_name or "")
+    await _push_to_queue(oid, uid, tid, name, params, coins, price_usd)
 
-    wait_min = sp.wait_minutes(name, "image")
-    base_text = (
+    await _notify_admin(cb, oid, name, params, coins, price_usd)
+
+    await cb.message.edit_text(
         f"{t('img_order_placed_title', lang, oid=oid)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('img_model_row', lang, name=name)}\n"
         f"{t('img_coins_deducted', lang, coins=coins)}\n\n"
-        f"{t('img_estimated_time', lang, minutes=wait_min)}\n\n"
-        f"{t('img_will_deliver', lang)}"
+        f"{t('img_estimated_time', lang)}\n\n"
+        f"{t('img_will_deliver', lang)}",
+        reply_markup=kb([menu_btn(lang)]),
+        parse_mode="HTML"
     )
-    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
-    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
-    # Clear state before notifying admin so a Telegram error can't leave FSM
-    # active and allow a second Confirm tap to double-charge.
     await state.clear()
-    try:
-        await _notify_admin(cb, oid, name, params, coins, price_usd)
-    except Exception:
-        pass
 
-async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float, username: str = ""):
+async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float):
     import logging, os, json
     log = logging.getLogger(__name__)
     try:
@@ -284,15 +270,8 @@ async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, 
             "type": "image",
         }
         await r.rpush("retainx:orders", json.dumps(order_data))
-        log.info(f"[QUEUE] Image order #{oid} pushed to queue")
-        from worker_monitor import check_workers_alive, send_no_workers_alert
-        if not await check_workers_alive(redis_url):
-            log.warning(f"[QUEUE] No live workers -- sending manual alert for image order #{oid}")
-            await send_no_workers_alert(
-                order_id=oid, user_id=uid, username=username,
-                tool=tool, params=params, coins=coins, redis_url=redis_url,
-            )
         await r.aclose()
+        log.info(f"[QUEUE] Image order #{oid} pushed to queue")
     except Exception as e:
         log.error(f"[QUEUE] Failed to push image order #{oid}: {e}")
 
