@@ -177,8 +177,11 @@ HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl
 @router.callback_query(F.data == "cat_video")
 async def video_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
-    lang = get_lang(cb.from_user.id)
-    buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in VIDEO_SUBCATS]
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    from database import has_unlimited
+    visible_subcats = [s for s in VIDEO_SUBCATS if not (s == "Avatar" and has_unlimited(uid))]
+    buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in visible_subcats]
     buttons.append([back_btn("main_menu", t("menu_main_menu", lang))])
     await cb.message.edit_text(
         f"{t('vid_menu_title', lang)}\n"
@@ -273,12 +276,14 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
         else:
             lines = "\n".join(f"  {k:<14}{v}" for k,v in params.items())
             sub = (await state.get_data()).get("v_sub","cat_video")
+            from database import has_unlimited
+            cost_short = "" if has_unlimited(cb.from_user.id) else f"  {t('vid_cost_label_short', lang, coins=coins)}\n\n"
             await cb.message.edit_text(
                 f"◈  <b>{name}</b>\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n\n"
                 f"  {TOOL_DESCS.get(name,'')}\n\n"
                 f"{lines}\n"
-                f"  {t('vid_cost_label_short', lang, coins=coins)}\n\n"
+                f"{cost_short}"
                 f"{t('vid_enter_prompt', lang)}",
                 reply_markup=kb([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)]), parse_mode="HTML"
             )
@@ -401,10 +406,12 @@ async def dur_selected(cb: CallbackQuery, state: FSMContext):
     await state.update_data(v_dur=dur, v_coins=coins, v_usd=usd)
 
     if tid in HAS_AUDIO:
+        from database import has_unlimited
+        cost_short = "" if has_unlimited(cb.from_user.id) else f"{t('vid_cost_label_short', lang, coins=coins)}\n\n"
         await cb.message.edit_text(
             f"◈  <b>{name}</b>  —  {res}  {dur}s\n"
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"{t('vid_cost_label_short', lang, coins=coins)}\n\n"
+            f"{cost_short}"
             f"{t('vid_include_audio', lang)}",
             reply_markup=kb(
                 [InlineKeyboardButton(text=t("vid_btn_with_audio", lang), callback_data="vaud_yes"),
@@ -432,8 +439,12 @@ async def audio_selected(cb: CallbackQuery, state: FSMContext):
     )
 
 async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
-    lang = get_lang(cb.from_user.id)
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    from database import has_unlimited
+    unlimited = has_unlimited(uid)
     audio_word = t("vid_audio_yes", lang) if audio else t("vid_audio_no", lang)
+    cost_line = "" if unlimited else f"{t('vid_cost_label', lang, coins=coins)}\n"
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -441,7 +452,7 @@ async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
         f"{t('vid_aspect_ratio_label', lang, ar=ar)}\n"
         f"{t('vid_duration_label', lang, dur=dur)}\n"
         f"{t('vid_audio_label', lang, audio=audio_word)}\n"
-        f"{t('vid_cost_label', lang, coins=coins)}\n\n"
+        f"{cost_line}\n"
         f"{t('vid_enter_prompt', lang)}",
         reply_markup=kb([back_btn(f"va_{str(ar).replace(':','x')}", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
@@ -642,13 +653,17 @@ async def video_uploaded(msg: Message, state: FSMContext):
     dub_lang = data.get("v_lang", "—")
     coins = data.get("v_coins", 0)
 
+    from database import has_unlimited
+    _unlimited = has_unlimited(msg.from_user.id)
+    cost_short = "" if _unlimited else f"{t('vid_cost_label_short', ui_lang, coins=coins)}\n\n"
+    _confirm_btn = t("vid_btn_confirm_order", ui_lang) if _unlimited else t("vid_btn_confirm", ui_lang, coins=coins)
     await msg.answer(
         f"{t('vid_video_received', ui_lang)}\n\n"
         f"◈  <b>{tool}</b>  —  {dub_lang}\n"
-        f"{t('vid_cost_label_short', ui_lang, coins=coins)}\n\n"
+        f"{cost_short}"
         f"{t('vid_add_notes_prompt', ui_lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text=t("vid_btn_confirm", ui_lang, coins=coins), callback_data="vid_confirm")],
+            [InlineKeyboardButton(text=_confirm_btn, callback_data="vid_confirm")],
             [InlineKeyboardButton(text=t("vid_btn_add_notes", ui_lang), callback_data="vid_add_notes")],
             [menu_btn(ui_lang)],
         ),
@@ -706,7 +721,11 @@ async def prompt_received(msg: Message, state: FSMContext):
     audio_word = t("vid_audio_yes", ui_lang) if audio else t("vid_audio_no", ui_lang)
     if tid not in no_res_tools: lines += t("vid_audio_label", ui_lang, audio=audio_word) + "\n"
     if attach_summary: lines += t("vid_attachments_label", ui_lang) + attach_summary
-    lines += t("vid_cost_label", ui_lang, coins=coins) + "\n"
+    from database import has_unlimited
+    unlimited = has_unlimited(msg.from_user.id)
+    if not unlimited:
+        lines += t("vid_cost_label", ui_lang, coins=coins) + "\n"
+    confirm_btn = t("vid_btn_confirm_order", ui_lang) if unlimited else t("vid_btn_confirm", ui_lang, coins=coins)
 
     await msg.answer(
         f"{t('vid_order_summary_title', ui_lang)}\n"
@@ -715,7 +734,7 @@ async def prompt_received(msg: Message, state: FSMContext):
         f"{t('vid_prompt_label', ui_lang)}\n<i>{prompt}</i>\n\n"
         f"━━━━━━━━━━━━━━━━━━━━",
         reply_markup=kb(
-            [InlineKeyboardButton(text=t("vid_btn_confirm", ui_lang, coins=coins), callback_data="vid_confirm")],
+            [InlineKeyboardButton(text=confirm_btn, callback_data="vid_confirm")],
             [InlineKeyboardButton(text=t("vid_btn_edit_prompt", ui_lang), callback_data="vid_edit")],
             [menu_btn(ui_lang)],
         ), parse_mode="HTML"

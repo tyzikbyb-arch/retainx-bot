@@ -112,15 +112,22 @@ async def image_quality_selected(cb: CallbackQuery, state: FSMContext):
     await ask_prompt(cb, state, name, tool)
 
 async def ask_prompt(cb: CallbackQuery, state: FSMContext, name: str, tool: dict):
-    lang = get_lang(cb.from_user.id)
+    uid = cb.from_user.id
+    lang = get_lang(uid)
     data = await state.get_data()
     ar = data.get("img_ar", "—")
     quality = data.get("img_quality", "—")
     coins = _get_img_coins(tool, quality)
-    user_coins = get_coins(cb.from_user.id)
+    user_coins = get_coins(uid)
     max_refs = tool.get("max_refs", 0)
     coins_word = t("coins_word", lang)
+    unlimited = has_unlimited(uid)
     await state.update_data(img_coins=coins, img_refs=[])
+
+    cost_lines = (
+        f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
+        f"  {t('img_balance_label', lang)}   {user_coins} {coins_word}\n"
+    ) if not unlimited else ""
 
     if max_refs > 0:
         await cb.message.edit_text(
@@ -128,8 +135,7 @@ async def ask_prompt(cb: CallbackQuery, state: FSMContext, name: str, tool: dict
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
             f"  {t('img_aspect_ratio_label', lang)}   {ar}\n"
             f"  {t('img_quality_label', lang)}           {quality or '—'}\n"
-            f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
-            f"  {t('img_balance_label', lang)}   {user_coins} {coins_word}\n\n"
+            f"{cost_lines}\n"
             f"{t('img_attach_optional', lang)}",
             reply_markup=kb(
                 [InlineKeyboardButton(text=t("img_btn_add_ref", lang, max=max_refs), callback_data="img_add_refs")],
@@ -144,8 +150,7 @@ async def ask_prompt(cb: CallbackQuery, state: FSMContext, name: str, tool: dict
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
             f"  {t('img_aspect_ratio_label', lang)}   {ar}\n"
             f"  {t('img_quality_label', lang)}           {quality or '—'}\n"
-            f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
-            f"  {t('img_balance_label', lang)}   {user_coins} {coins_word}\n\n"
+            f"{cost_lines}\n"
             f"{t('img_enter_prompt', lang)}",
             reply_markup=kb([back_btn(f"img_{name}", lang=lang), menu_btn(lang)]),
             parse_mode="HTML"
@@ -171,11 +176,14 @@ async def image_prompt_received(msg: Message, state: FSMContext):
 
     await state.update_data(img_prompt=prompt)
 
+    unlimited = has_unlimited(msg.from_user.id)
     params_text = f"  {t('img_model_label', lang)}           <b>{name}</b>\n  {t('img_aspect_ratio_label', lang)}   {ar}\n"
     if quality:
         params_text += f"  {t('img_quality_label', lang)}           {quality}\n"
-    params_text += f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
+    if not unlimited:
+        params_text += f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
 
+    confirm_btn = t("img_btn_confirm_free", lang) if unlimited else t("img_btn_confirm", lang, coins=coins)
     await msg.answer(
         f"{t('img_order_summary_title', lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -183,7 +191,7 @@ async def image_prompt_received(msg: Message, state: FSMContext):
         f"  {t('img_prompt_label', lang)}\n<i>{prompt}</i>\n\n"
         f"━━━━━━━━━━━━━━━━━━━━",
         reply_markup=kb(
-            [InlineKeyboardButton(text=t("img_btn_confirm", lang, coins=coins), callback_data="img_confirm")],
+            [InlineKeyboardButton(text=confirm_btn, callback_data="img_confirm")],
             [InlineKeyboardButton(text=t("img_btn_edit_prompt", lang), callback_data=f"img_edit_prompt")],
             [menu_btn(lang)],
         ),
