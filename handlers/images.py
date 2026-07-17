@@ -245,20 +245,23 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
     # Push to Redis queue for auto-generation
     await _push_to_queue(oid, uid, tid, name, params, coins, price_usd)
 
-    await _notify_admin(cb, oid, name, params, coins, price_usd)
-
+    from handlers import spinner as sp
     displayed_coins = 0 if unlimited else coins
-    await cb.message.edit_text(
+    base_text = (
         f"{t('img_order_placed_title', lang, oid=oid)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('img_model_row', lang, name=name)}\n"
         f"{t('img_coins_deducted', lang, coins=displayed_coins)}\n\n"
         f"{t('img_estimated_time', lang, minutes=2)}\n\n"
-        f"{t('img_will_deliver', lang)}",
-        reply_markup=kb([menu_btn(lang)]),
-        parse_mode="HTML"
+        f"{t('img_will_deliver', lang)}"
     )
+    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, 2)
     await state.clear()
+    try:
+        await _notify_admin(cb, oid, name, params, coins, price_usd)
+    except Exception:
+        pass
 
 async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float):
     import logging, os, json

@@ -1675,18 +1675,23 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     # Push to Redis queue for auto-generation
     await _push_to_queue(oid, uid, tid, tool, params, coins, usd)
 
-    await notify_admin(cb, oid, tool, params, coins, usd)
-
+    from handlers import spinner as sp
+    wait_min = sp.wait_minutes(tool, "video")
     displayed_coins = 0 if unlimited else coins
-    await cb.message.edit_text(
+    base_text = (
         f"{t('vid_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_model_row', lang, name=tool)}\n"
         f"{t('vid_coins_deducted', lang, coins=displayed_coins)}\n\n"
-        f"{t('vid_estimated_delivery', lang, minutes=10)}\n\n"
-        f"{t('vid_will_deliver', lang)}",
-        reply_markup=kb([menu_btn(lang)]), parse_mode="HTML"
+        f"{t('vid_estimated_delivery', lang, minutes=wait_min)}\n\n"
+        f"{t('vid_will_deliver', lang)}"
     )
+    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
     await state.clear()
+    try:
+        await notify_admin(cb, oid, tool, params, coins, usd)
+    except Exception:
+        pass
 
 # ═══════════════════════════════════════════════════════════
 # HEYGEN AVATAR 4 — Full flow
