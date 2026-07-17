@@ -53,6 +53,10 @@ def init_db():
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS can_buy_unlimited INTEGER DEFAULT 0")
             except Exception:
                 pass
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blogger INTEGER DEFAULT 0")
+            except Exception:
+                pass
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS artlist_accounts (
                     id SERIAL PRIMARY KEY,
@@ -70,7 +74,7 @@ def init_db():
             """)
         conn.commit()
 
-# ── User functions ─────────────────────────────────────────────
+# ── User functions ────────────────────────────────────────────
 def get_user(uid: int) -> dict:
     with get_conn() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -154,7 +158,7 @@ def set_lang(uid: int, lang: str):
             """, (uid, lang, int(time.time()), lang))
         conn.commit()
 
-# ── Unlimited pass functions ────────────────────────────────────────────
+# ── Unlimited pass functions ──────────────────────────────────
 def has_unlimited(uid: int) -> bool:
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -200,7 +204,7 @@ def set_can_buy_unlimited(uid: int, val: bool):
             """, (uid, int(time.time()), int(val), int(val)))
         conn.commit()
 
-# ── Order functions ───────────────────────────────────────────────
+# ── Order functions ───────────────────────────────────────────
 def create_order(user_id, username, tool, params, coins, price_usd) -> int:
     import json
     with get_conn() as conn:
@@ -316,7 +320,7 @@ def get_user_orders(uid: int) -> list:
                 result.append(d)
             return result
 
-# ── Artlist account pool ─────────────────────────────────────────────
+# ── Artlist account pool ─────────────────────────────────────
 def add_artlist_account(email: str, password: str, label: str = None) -> int:
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -358,6 +362,23 @@ def remove_artlist_account(account_id: int):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM artlist_accounts WHERE id = %s", (account_id,))
+        conn.commit()
+
+def get_is_blogger(uid: int) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT is_blogger FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return bool(row and row[0])
+
+def set_blogger(uid: int, val: bool):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (uid, coins, joined, is_blogger)
+                VALUES (%s, 0, %s, %s)
+                ON CONFLICT (uid) DO UPDATE SET is_blogger = %s
+            """, (uid, int(time.time()), int(val), int(val)))
         conn.commit()
 
 # Initialize on import
