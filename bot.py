@@ -1,4 +1,4 @@
-import asyncio, logging
+import asyncio, logging, os
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
@@ -41,20 +41,35 @@ dp.include_router(video.router)
 dp.include_router(admin_handler.router)
 dp.include_router(orders_handler.router)
 
+# ── Maintenance mode ──────────────────────────────────────────
+MAINTENANCE_FLAG = "/tmp/bot_maintenance.flag"
+
+def is_maintenance() -> bool:
+    return os.path.exists(MAINTENANCE_FLAG)
+
+def set_maintenance(on: bool):
+    if on:
+        open(MAINTENANCE_FLAG, "w").close()
+    elif os.path.exists(MAINTENANCE_FLAG):
+        os.remove(MAINTENANCE_FLAG)
+
 # ── Keyboards ─────────────────────────────────────────────────
-ADMIN_KB = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="≡  All Orders"),  KeyboardButton(text="◈  Users")],
-        [KeyboardButton(text="✉  Msg User"),    KeyboardButton(text="＋  Add Coins")],
-        [KeyboardButton(text="📤  Deliver"),     KeyboardButton(text="✕  Cancel Order")],
-        [KeyboardButton(text="◌  Commands")],
-    ],
-    resize_keyboard=True,
-    persistent=True,
-)
+def get_admin_kb() -> ReplyKeyboardMarkup:
+    maint_label = "🔧 Maintenance ON" if is_maintenance() else "🔧 Maintenance OFF"
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="≡  All Orders"),  KeyboardButton(text="◈  Users")],
+            [KeyboardButton(text="✉  Msg User"),    KeyboardButton(text="＋  Add Coins")],
+            [KeyboardButton(text="📤  Deliver"),     KeyboardButton(text="✕  Cancel Order")],
+            [KeyboardButton(text="📢 Broadcast"),    KeyboardButton(text=maint_label)],
+            [KeyboardButton(text="◌  Commands")],
+        ],
+        resize_keyboard=True,
+        persistent=True,
+    )
 
 def get_kb(uid: int, lang: str = "en"):
-    return ADMIN_KB if uid == ADMIN_ID else client_kb(lang)
+    return get_admin_kb() if uid == ADMIN_ID else client_kb(lang)
 
 # ── Shared main-menu builders ─────────────────────────────────
 def build_main_menu_text(coins: int, lang: str) -> str:
@@ -75,6 +90,24 @@ def build_main_menu_kb(coins: int, lang: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=t("btn_language", lang), callback_data="lang_menu")],
         [InlineKeyboardButton(text=t("btn_support", lang),  url="https://t.me/RetainXStudio")],
     )
+
+# ── Maintenance middleware ────────────────────────────────────
+@dp.message.outer_middleware()
+async def maintenance_msg_mw(handler, event: Message, data: dict):
+    if event.from_user.id != ADMIN_ID and is_maintenance():
+        await event.answer(
+            "🔧 <b>Технические работы</b>\n\nБот временно недоступен. Попробуйте позже.",
+            parse_mode="HTML"
+        )
+        return
+    return await handler(event, data)
+
+@dp.callback_query.outer_middleware()
+async def maintenance_cb_mw(handler, event: CallbackQuery, data: dict):
+    if event.from_user.id != ADMIN_ID and is_maintenance():
+        await event.answer("🔧 Технические работы. Бот временно недоступен.", show_alert=True)
+        return
+    return await handler(event, data)
 
 # ── /start ───────────────────────────────────────────────────
 @dp.message(CommandStart())
@@ -125,6 +158,7 @@ async def start(msg: Message, state: FSMContext):
 ADMIN_PANEL_BUTTONS = {
     "≡  All Orders", "✉  Msg User", "＋  Add Coins",
     "📤  Deliver", "✕  Cancel Order", "◌  Admin Help", "◈  Users", "◌  Commands",
+    "🔧 Maintenance ON", "🔧 Maintenance OFF", "📢 Broadcast",
 }
 PANEL_BUTTONS = CLIENT_TEXTS | ADMIN_PANEL_BUTTONS
 
@@ -246,7 +280,9 @@ async def panel_router(msg: Message, state: FSMContext):
             "  ✉  Msg User — send message to user\n"
             "  ＋  Add Coins — add coins to user\n"
             "  📤  Deliver — deliver file to user\n"
-            "  ✕  Cancel Order — cancel & refund\n\n"
+            "  ✕  Cancel Order — cancel & refund\n"
+            "  📢 Broadcast — send message to all users\n"
+            "  🔧 Maintenance — toggle maintenance mode\n\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
             "<b>Commands:</b>\n"
             "  /msg <code>USER_ID TEXT</code>\n"
@@ -257,6 +293,8 @@ async def panel_router(msg: Message, state: FSMContext):
             "  → Attach file to deliver to user\n\n"
             "  /cancelorder <code>ORDER_ID</code>\n"
             "  → Cancel order and refund coins\n\n"
+            "  /broadcast <code>TEXT</code>\n"
+            "  → Send message to all bot users\n\n"
             "  /balance\n"
             "  → Check your coin balance\n\n"
             "  /allow <code>USER_ID</code>\n"
@@ -276,6 +314,25 @@ async def panel_router(msg: Message, state: FSMContext):
             "  /delaccount <code>ID</code>\n"
             "  → Remove an account from the pool\n\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
+            parse_mode="HTML"
+        )
+
+    elif text in ("🔧 Maintenance ON", "🔧 Maintenance OFF") and uid == ADMIN_ID:
+        new_state = not is_maintenance()
+        set_maintenance(new_state)
+        label = "ON 🔴" if new_state else "OFF 🟢"
+        await msg.answer(
+            f"🔧 <b>Maintenance mode {label}</b>\n\n"
+            + ("Бот недоступен для пользователей." if new_state else "Бот снова доступен для пользователей."),
+            reply_markup=get_admin_kb(),
+            parse_mode="HTML"
+        )
+
+    elif text == "📢 Broadcast" and uid == ADMIN_ID:
+        await msg.answer(
+            "📢  <b>Broadcast</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<code>/broadcast Текст сообщения</code>\n\n"
+            "Отправит сообщение всем пользователям бота.",
             parse_mode="HTML"
         )
 
@@ -599,6 +656,30 @@ async def del_account_cmd(msg: Message):
     from database import remove_artlist_account
     remove_artlist_account(aid)
     await msg.answer(f"✓  Account #{aid} removed.")
+
+@dp.message(Command("broadcast"))
+async def broadcast_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split(None, 1)
+    if len(parts) < 2:
+        await msg.answer("Usage: <code>/broadcast Текст сообщения</code>", parse_mode="HTML")
+        return
+    text_to_send = parts[1]
+    from database import get_all_users
+    users = get_all_users()
+    sent, failed = 0, 0
+    for u in users:
+        try:
+            await bot.send_message(
+                u["uid"],
+                f"📢  <b>Сообщение от RetainX Studio</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{text_to_send}",
+                parse_mode="HTML"
+            )
+            sent += 1
+        except Exception:
+            failed += 1
+    await msg.answer(f"📢  Broadcast завершён.\n  ✓ Отправлено: <b>{sent}</b>\n  ✕ Ошибок: <b>{failed}</b>", parse_mode="HTML")
 
 @dp.message(Command("balance"))
 async def balance_cmd(msg: Message):
