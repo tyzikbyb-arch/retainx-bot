@@ -1615,7 +1615,11 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         return
 
     from database import spend_coins, create_order, has_unlimited
-    if not (has_unlimited(uid) and tid not in AVATAR_TOOL_IDS):
+    unlimited = has_unlimited(uid)
+    if unlimited and tid in AVATAR_TOOL_IDS:
+        await cb.answer(t("vid_avatar_blocked_unlimited", lang), show_alert=True)
+        return
+    if not unlimited:
         if not spend_coins(uid, coins):
             await cb.answer(t("vid_insufficient_coins", lang), show_alert=True)
             return
@@ -1654,11 +1658,12 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
 
     await notify_admin(cb, oid, tool, params, coins, usd)
 
+    displayed_coins = 0 if unlimited else coins
     await cb.message.edit_text(
         f"{t('vid_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_model_row', lang, name=tool)}\n"
-        f"{t('vid_coins_deducted', lang, coins=coins)}\n\n"
-        f"{t('vid_estimated_delivery', lang)}\n\n"
+        f"{t('vid_coins_deducted', lang, coins=displayed_coins)}\n\n"
+        f"{t('vid_estimated_delivery', lang, minutes=10)}\n\n"
         f"{t('vid_will_deliver', lang)}",
         reply_markup=kb([menu_btn(lang)]), parse_mode="HTML"
     )

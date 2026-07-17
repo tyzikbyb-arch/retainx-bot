@@ -15,7 +15,7 @@ class ImageStates(StatesGroup):
     entering_prompt = State()
     collecting_refs = State()
 
-# ── Category menu ─────────────────────────────────────────
+# ── Category menu ─────────────────────────────────────────────
 @router.callback_query(F.data == "cat_images")
 async def images_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
@@ -35,7 +35,7 @@ async def images_menu(cb: CallbackQuery, state: FSMContext):
         parse_mode="HTML"
     )
 
-# ── Tool selected ─────────────────────────────────────────
+# ── Tool selected ─────────────────────────────────────────────
 @router.callback_query(F.data.startswith("img_") & ~F.data.startswith("img_ar_") & ~F.data.startswith("img_q_") & ~F.data.startswith("img_confirm") & ~F.data.startswith("img_add") & ~F.data.startswith("img_ref") & ~F.data.startswith("img_to_") & ~F.data.startswith("img_edit"))
 async def image_tool_selected(cb: CallbackQuery, state: FSMContext):
     name = cb.data.replace("img_", "", 1)
@@ -73,7 +73,7 @@ async def image_tool_selected(cb: CallbackQuery, state: FSMContext):
     rows.append([back_btn("cat_images", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(text, reply_markup=kb(*rows), parse_mode="HTML")
 
-# ── Aspect ratio selected ───────────────────────────────────
+# ── Aspect ratio selected ─────────────────────────────────────
 @router.callback_query(F.data.startswith("img_ar_"))
 async def image_ar_selected(cb: CallbackQuery, state: FSMContext):
     ar = cb.data.replace("img_ar_", "")
@@ -101,7 +101,7 @@ async def image_ar_selected(cb: CallbackQuery, state: FSMContext):
         parse_mode="HTML"
     )
 
-# ── Quality selected ─────────────────────────────────────────
+# ── Quality selected ──────────────────────────────────────────
 @router.callback_query(F.data.startswith("img_q_"))
 async def image_quality_selected(cb: CallbackQuery, state: FSMContext):
     quality = cb.data.replace("img_q_", "")
@@ -157,7 +157,7 @@ def _get_img_coins(tool: dict, quality: str) -> int:
         return tool["coins_by_quality"].get(quality, tool.get("coins", 1))
     return tool.get("coins", usd_to_coins(tool.get("pricing", {}).get("per_gen", 0.05)))
 
-# ── Prompt entered ─────────────────────────────────────────
+# ── Prompt entered ────────────────────────────────────────────
 @router.message(ImageStates.entering_prompt)
 async def image_prompt_received(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
@@ -199,7 +199,7 @@ async def img_edit_prompt(cb: CallbackQuery, state: FSMContext):
     )
     await state.set_state(ImageStates.entering_prompt)
 
-# ── Confirm order ─────────────────────────────────────────
+# ── Confirm order ─────────────────────────────────────────────
 @router.callback_query(F.data == "img_confirm")
 async def image_confirm(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
@@ -219,7 +219,8 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    if not has_unlimited(uid):
+    unlimited = has_unlimited(uid)
+    if not unlimited:
         if not spend_coins(uid, coins):
             await cb.answer(t("img_insufficient_coins", lang), show_alert=True)
             return
@@ -238,12 +239,13 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
 
     await _notify_admin(cb, oid, name, params, coins, price_usd)
 
+    displayed_coins = 0 if unlimited else coins
     await cb.message.edit_text(
         f"{t('img_order_placed_title', lang, oid=oid)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('img_model_row', lang, name=name)}\n"
-        f"{t('img_coins_deducted', lang, coins=coins)}\n\n"
-        f"{t('img_estimated_time', lang)}\n\n"
+        f"{t('img_coins_deducted', lang, coins=displayed_coins)}\n\n"
+        f"{t('img_estimated_time', lang, minutes=2)}\n\n"
         f"{t('img_will_deliver', lang)}",
         reply_markup=kb([menu_btn(lang)]),
         parse_mode="HTML"
