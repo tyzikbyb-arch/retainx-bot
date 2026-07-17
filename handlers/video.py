@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from keyboards import kb, back_btn, menu_btn, chunked
 from handlers.attachments import get_attach_config, has_attachments, get_hint, get_prompt_label, file_too_large
-from database import get_coins, spend_coins, create_order, get_lang, add_coins
+from database import get_coins, spend_coins, create_order, get_lang
 from i18n import t
 from config import (
     usd_to_coins,
@@ -22,6 +22,9 @@ from config import (
 import math
 
 router = Router()
+
+# Avatar tool IDs excluded from unlimited pass
+AVATAR_TOOL_IDS = {"hga4", "hgtr", "eldb", "lips", "omni", "aur1", "fab1"}
 
 class VideoStates(StatesGroup):
     entering_prompt = State()
@@ -46,21 +49,24 @@ class VideoStates(StatesGroup):
 TOOL_IDS = {
     "sd20":   "Seedance 2.0",
     "sd20f":  "Seedance 2.0 Fast",
-    "hh10":   "Happy Horse 1.1",
+    "hh10":   "Happy Horse 1.0",
     "wan27":  "Wan 2.7",
     "veo31":  "Veo 3.1",
     "veo31f": "Veo 3.1 Fast",
     "veo31l": "Veo 3.1 Lite",
+    "veo31e": "Veo 3.1 Extend Video",
     "sora2":  "Sora 2 Pro",
     "ltx23":  "LTX 2.3 Pro",
     "kl30":   "Kling 3.0",
     "kl03":   "Kling O3",
+    "klmc":   "Kling 3.0 Motion Control",
     "klve":   "Kling O3 Video Edit",
     "hga4":   "HeyGen Avatar 4",
     "hgtr":   "HeyGen Translate",
     "eldb":   "ElevenLabs Dubbing",
     "lips":   "Lipsync v2 Pro",
     "omni":   "OmniHuman 1.5 Avatar",
+    "fab1":   "Fabric 1.0 Avatar",
     "aur1":   "Aurora Avatar",
     "grok":   "Grok Imagine 1.5",
 }
@@ -69,11 +75,12 @@ ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 TOOL_DESCS = {
     "Seedance 2.0":            "High-quality cinematic video generation up to 1080p with optional audio.",
     "Seedance 2.0 Fast":       "Faster variant of Seedance 2.0 — up to 720p, quicker turnaround.",
-    "Happy Horse 1.1":         "Smooth motion video generation with natural movement, up to 1080p.",
+    "Happy Horse 1.0":         "Smooth motion video generation with natural movement, up to 1080p.",
     "Wan 2.7":                 "Versatile multi-ratio video model with wide format support.",
     "Veo 3.1":                 "Google's flagship video model — cinematic quality up to 4K with audio.",
     "Veo 3.1 Fast":            "Veo 3.1 express mode — same quality, faster render times.",
     "Veo 3.1 Lite":            "Lightweight Veo model for quick, cost-effective generation.",
+    "Veo 3.1 Extend":          "Extend any existing video clip by 7 seconds using Veo.",
     "Sora 2 Pro":              "OpenAI's advanced video generation model with premium realism.",
     "LTX 2.3 Pro":             "High-framerate professional video — up to 4K at 50fps.",
     "Kling 3.0":               "One of the most powerful AI video models of 2026. Realistic motion, character consistency, built-in audio, image-to-video, up to 4K.",
@@ -92,9 +99,9 @@ TOOL_DESCS = {
 
 VIDEO_SUBCATS = {
     "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
-    "Premium":   ["veo31","veo31f","veo31l","sora2","ltx23"],
-    "Kling":     ["kl30","kl03","klve"],
-    "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1"],
+    "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
+    "Kling":     ["kl30","kl03","klmc","klve"],
+    "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
 def subcat_label(sub: str, lang: str = "en") -> str:
     return {
@@ -249,7 +256,9 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     # Fixed price tools
     fixed = {
+        "klmc": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"30 {t('vid_sec_word', lang)}"}, 1.00),
         "klve": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"10 {t('vid_sec_word', lang)}"}, 0.25),
+        "fab1": ({t("vid_type_word", lang): t("vid_avatar_video_word", lang)}, 0.90),
         # omni, aur1 handled separately
     }
     if tid in fixed:
@@ -274,6 +283,10 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
                 reply_markup=kb([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)]), parse_mode="HTML"
             )
             await state.set_state(VideoStates.entering_prompt)
+        return
+
+    if tid == "veo31e":
+        await show_veo_extend(cb, state)
         return
 
     if tid == "grok":
@@ -435,6 +448,31 @@ async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
     )
     await state.set_state(VideoStates.entering_prompt)
 
+# ── Veo Extend ────────────────────────────────────────────────
+async def show_veo_extend(cb, state):
+    lang = get_lang(cb.from_user.id)
+    await cb.message.edit_text(
+        f"{t('vid_extend_title', lang)}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_extend_desc', lang)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text=t("vid_extend_fast", lang), callback_data="vext_Fast")],
+            [InlineKeyboardButton(text=t("vid_extend_premium", lang), callback_data="vext_Premium")],
+            [back_btn("vsub_Premium", lang=lang), menu_btn(lang)],
+        ), parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("vext_"))
+async def veo_extend(cb: CallbackQuery, state: FSMContext):
+    mode = cb.data[5:]
+    usd = 0.70 if mode == "Fast" else 1.50
+    coins = usd_to_coins(usd)
+    await state.update_data(v_tool="Veo 3.1 Extend", v_tid="veo31e", v_coins=coins, v_usd=usd, v_ext_mode=mode,
+                            att_mode="free", att_start=None, att_end=None,
+                            att_imgs=[], att_vids=[], att_auds=[])
+    await _show_attach_menu(cb, state)
+    await state.set_state(VideoStates.attach_mode)
+
 # ── Grok ─────────────────────────────────────────────────────
 async def show_grok(cb, state):
     lang = get_lang(cb.from_user.id)
@@ -446,7 +484,7 @@ async def show_grok(cb, state):
         for s, usd in GROK_IMAGINE_15_PRICES.items()
     ]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("vsub_Standard", lang=lang), menu_btn(lang)])
+    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"{t('vid_grok_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -459,12 +497,9 @@ async def grok_dur(cb: CallbackQuery, state: FSMContext):
     sec = int(cb.data[6:])
     usd = GROK_IMAGINE_15_PRICES[sec]
     coins = usd_to_coins(usd)
-    await state.update_data(
-        v_tool="Grok Imagine 1.5", v_tid="grok", v_dur=sec, v_coins=coins, v_usd=usd,
-        v_res=None, v_ar=None,
-        att_mode="free", att_start=None, att_end=None, att_imgs=[], att_vids=[], att_auds=[],
-        sd_start=None, sd_end=None, sd_imgs=[], sd_vids=[], sd_auds=[],
-    )
+    await state.update_data(v_tool="Grok Imagine 1.5", v_tid="grok", v_dur=sec, v_coins=coins, v_usd=usd,
+                            att_mode="free", att_start=None, att_end=None,
+                            att_imgs=[], att_vids=[], att_auds=[])
     await _show_attach_menu(cb, state)
     await state.set_state(VideoStates.attach_mode)
 
@@ -584,69 +619,12 @@ async def eleven_lang(cb: CallbackQuery, state: FSMContext):
 @router.message(VideoStates.uploading_video)
 async def video_uploaded(msg: Message, state: FSMContext):
     ui_lang = get_lang(msg.from_user.id)
-
-    # Accept a URL link as alternative to a file upload (for videos > 20 MB)
-    if msg.text:
-        url = msg.text.strip()
-        if url.startswith("http://") or url.startswith("https://"):
-            await state.update_data(v_upload_url=url, v_upload_file_id=None, v_upload_file_type="url")
-            data = await state.get_data()
-            tool = data.get("v_tool", "—")
-            dub_lang = data.get("v_lang", "—")
-            coins = data.get("v_coins", 0)
-            received = "✓  Ссылка получена" if ui_lang == "ru" else "✓  Link received"
-            await msg.answer(
-                f"{received}\n\n"
-                f"◈  <b>{tool}</b>  —  {dub_lang}\n"
-                f"{t('vid_cost_label_short', ui_lang, coins=coins)}\n\n"
-                f"{t('vid_add_notes_prompt', ui_lang)}",
-                reply_markup=kb(
-                    [InlineKeyboardButton(text=t("vid_btn_confirm", ui_lang, coins=coins), callback_data="vid_confirm")],
-                    [InlineKeyboardButton(text=t("vid_btn_add_notes", ui_lang), callback_data="vid_add_notes")],
-                    [menu_btn(ui_lang)],
-                ),
-                parse_mode="HTML"
-            )
-            await state.update_data(v_prompt="—")
-            return
-        await msg.answer(t("vid_please_send_video", ui_lang))
-        return
-
     if not (msg.video or msg.document or msg.animation):
         await msg.answer(t("vid_please_send_video", ui_lang))
         return
     if file_too_large(msg):
-        if ui_lang == "ru":
-            await msg.answer(
-                "⚠️  Видео слишком большое (лимит Telegram — 20 МБ).\n\n"
-                "Загрузите видео на Google Drive или Dropbox и пришлите ссылку — бот скачает его сам."
-            )
-        else:
-            await msg.answer(
-                "⚠️  Video is too large (Telegram limit is 20 MB).\n\n"
-                "Upload your video to Google Drive or Dropbox and send the link here — the bot will download it automatically."
-            )
+        await msg.answer(t("err_file_too_large", ui_lang))
         return
-
-    if msg.video and msg.video.duration:
-        _d = await state.get_data()
-        v_dur = _d.get("v_dur")
-        if v_dur:
-            max_sec = v_dur * 60
-            if msg.video.duration > max_sec:
-                if ui_lang == "ru":
-                    await msg.answer(
-                        f"❌ Видео слишком длинное ({msg.video.duration} сек).\n"
-                        f"Вы выбрали {v_dur} мин — максимум {max_sec} сек.\n"
-                        f"Загрузите более короткий файл."
-                    )
-                else:
-                    await msg.answer(
-                        f"❌ Video is too long ({msg.video.duration}s).\n"
-                        f"You selected {v_dur} min — max is {max_sec}s.\n"
-                        f"Please upload a shorter file."
-                    )
-                return
 
     if msg.video:
         file_id = msg.video.file_id
@@ -767,9 +745,11 @@ async def _vid_confirm_legacy(cb: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    if not spend_coins(uid, coins):
-        await cb.answer("Insufficient coins. Please top up your wallet.", show_alert=True)
-        return
+    from database import has_unlimited
+    if not (has_unlimited(uid) and data.get("v_tid", "") not in AVATAR_TOOL_IDS):
+        if not spend_coins(uid, coins):
+            await cb.answer("Insufficient coins. Please top up your wallet.", show_alert=True)
+            return
     # Build attachments for Seedance 2.0
     attachments = {}
     if tool == "Seedance 2.0":
@@ -787,7 +767,6 @@ async def _vid_confirm_legacy(cb: CallbackQuery, state: FSMContext):
         "language":      data.get("v_lang"),
         "prompt":        prompt,
         "attachments":   attachments if attachments else None,
-        "upload_url":       data.get("v_upload_url"),
         "upload_file_id":   data.get("v_upload_file_id"),
         "upload_file_type": data.get("v_upload_file_type"),
     }
@@ -795,7 +774,7 @@ async def _vid_confirm_legacy(cb: CallbackQuery, state: FSMContext):
     oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
 
     # Push to Redis queue for auto-generation
-    await _push_to_queue(oid, uid, tid, tool, params, coins, usd, username=cb.from_user.username or cb.from_user.first_name or "")
+    await _push_to_queue(oid, uid, tid, tool, params, coins, usd)
 
     await notify_admin(cb, oid, tool, params, coins, usd)
 
@@ -850,9 +829,6 @@ async def notify_admin(cb, oid, tool, params, coins, usd):
     # Send uploaded video (HeyGen/ElevenLabs)
     upload_fid = p.get("upload_file_id")
     upload_ftype = p.get("upload_file_type")
-    upload_url = p.get("upload_url")
-    if upload_url and not upload_fid:
-        await bot.send_message(ADMIN_ID, f"🔗  Source video link for Order #{oid}:\n{upload_url}")
     if upload_fid:
         try:
             caption = f"◈  Source video for Order #{oid}"
@@ -1232,22 +1208,10 @@ def _build_attach_buttons(tid: str, data: dict, lang: str = "en") -> list:
         if exclusive and (start or end_):
             buttons.append([InlineKeyboardButton(text=t("vid_btn_clear", lang), callback_data="att_clear_startend")])
 
-    # Audio File doesn't conflict with Start & End Frame the way Image/Video
-    # Reference do (those genuinely share one exclusive Artlist input slot
-    # with Start&End Frame — see the #310/#339/#340/#363 investigations).
-    # So Audio stays visible/addable in both modes, and no longer blocks the
-    # "Start & End Frame" entry point from showing once attached.
+    # For exclusive tools, show img/vid/aud only if not in startend mode
     if exclusive and mode == "startend":
-        if max_auds > 0:
-            aud_label = t("vid_btn_audio_file", lang, count=len(auds), max=max_auds) if auds else t("vid_btn_audio_file_max", lang, max=max_auds)
-            buttons.append([InlineKeyboardButton(text=aud_label, callback_data="att_add_auds")])
+        pass  # hide other options
     else:
-        # Start & End Frame entry listed first so Audio File renders below it.
-        if start_frame and exclusive and not (imgs or vids):
-            se_text = t("vid_btn_start_end_frame", lang) if end_frame else t("vid_btn_start_frame_only", lang)
-            se_label = se_text.replace("◈", "✓", 1) if (start or end_) else se_text
-            buttons.append([InlineKeyboardButton(text=se_label, callback_data="att_startend_mode")])
-
         if max_imgs > 0 and not (exclusive and (start or end_)):
             img_label = t("vid_btn_image_ref", lang, count=len(imgs), max=max_imgs) if imgs else t("vid_btn_image_reference_max", lang, max=max_imgs)
             buttons.append([InlineKeyboardButton(text=img_label, callback_data="att_add_imgs")])
@@ -1258,6 +1222,12 @@ def _build_attach_buttons(tid: str, data: dict, lang: str = "en") -> list:
         if max_auds > 0:
             aud_label = t("vid_btn_audio_file", lang, count=len(auds), max=max_auds) if auds else t("vid_btn_audio_file_max", lang, max=max_auds)
             buttons.append([InlineKeyboardButton(text=aud_label, callback_data="att_add_auds")])
+
+        # Show startend option only if nothing else attached
+        if start_frame and exclusive and not (imgs or vids or auds):
+            se_text = t("vid_btn_start_end_frame", lang) if end_frame else t("vid_btn_start_frame_only", lang)
+            se_label = se_text.replace("◈", "✓", 1) if (start or end_) else se_text
+            buttons.append([InlineKeyboardButton(text=se_label, callback_data="att_startend_mode")])
 
     # Proceed button
     has_any = start or end_ or imgs or vids or auds
@@ -1438,89 +1408,15 @@ async def att_add_vids(cb: CallbackQuery, state: FSMContext):
 @router.message(VideoStates.collecting_vids)
 async def att_collect_vid(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
-
-    # Accept a URL link for minute-priced tools (lips) when video > 20 MB
-    if msg.text:
-        url = msg.text.strip()
-        if url.startswith("http://") or url.startswith("https://"):
-            data = await state.get_data()
-            tid = data.get("v_tid", "")
-            if tid in {"lips"}:
-                cfg = get_attach_config(tid)
-                max_vids = cfg.get("vid_refs", 3)
-                vids = data.get("att_vids", [])
-                if len(vids) >= max_vids:
-                    await msg.answer(t("vid_vid_max_reached_short", lang, max=max_vids))
-                    return
-                vids.append({"url": url, "type": "url", "ref": f"vid{len(vids)+1}"})
-                await state.update_data(att_vids=vids)
-                received = "✓  Ссылка получена" if lang == "ru" else "✓  Link received"
-                await msg.answer(
-                    f"{received} ({len(vids)}/{max_vids})",
-                    reply_markup=kb(
-                        [InlineKeyboardButton(text=t("btn_done", lang), callback_data="att_back")],
-                        [menu_btn(lang)]
-                    )
-                )
-                return
-        await msg.answer(t("vid_please_send_video_short", lang))
-        return
-
     if not (msg.video or msg.animation or (msg.document and msg.document.mime_type and msg.document.mime_type.startswith("video/"))):
         await msg.answer(t("vid_please_send_video_short", lang))
         return
     if file_too_large(msg):
-        _d = await state.get_data()
-        _tid = _d.get("v_tid", "")
-        if _tid in {"lips"}:
-            if lang == "ru":
-                await msg.answer(
-                    "⚠️  Видео слишком большое (лимит Telegram — 20 МБ).\n\n"
-                    "Загрузите видео на Google Drive или Dropbox и пришлите ссылку — бот скачает его сам."
-                )
-            else:
-                await msg.answer(
-                    "⚠️  Video is too large (Telegram limit is 20 MB).\n\n"
-                    "Upload your video to Google Drive or Dropbox and send the link here — the bot will download it automatically."
-                )
-        else:
-            await msg.answer(t("err_file_too_large", lang))
+        await msg.answer(t("err_file_too_large", lang))
         return
     data = await state.get_data()
     tid = data.get("v_tid", "")
     cfg = get_attach_config(tid)
-    max_dur = cfg.get("max_vid_duration")
-    if max_dur and msg.video and msg.video.duration and msg.video.duration > max_dur:
-        if lang == "ru":
-            await msg.answer(
-                f"❌ Видео слишком длинное ({msg.video.duration} сек).\n"
-                f"Для этой модели максимум — {max_dur} секунд.\n"
-                f"Загрузите более короткий клип."
-            )
-        else:
-            await msg.answer(
-                f"❌ Video is too long ({msg.video.duration}s).\n"
-                f"This model supports up to {max_dur} seconds.\n"
-                f"Please upload a shorter clip."
-            )
-        return
-    if tid in {"lips"}:
-        v_dur = data.get("v_dur")
-        if v_dur and msg.video and msg.video.duration and msg.video.duration > v_dur * 60:
-            max_sec = v_dur * 60
-            if lang == "ru":
-                await msg.answer(
-                    f"❌ Видео слишком длинное ({msg.video.duration} сек).\n"
-                    f"Вы выбрали {v_dur} мин — максимум {max_sec} сек.\n"
-                    f"Загрузите более короткий файл."
-                )
-            else:
-                await msg.answer(
-                    f"❌ Video is too long ({msg.video.duration}s).\n"
-                    f"You selected {v_dur} min — max is {max_sec}s.\n"
-                    f"Please upload a shorter file."
-                )
-            return
     max_vids = cfg.get("vid_refs", 3)
     vids = data.get("att_vids", [])
     if len(vids) >= max_vids:
@@ -1569,28 +1465,6 @@ async def att_collect_aud(msg: Message, state: FSMContext):
     tid = data.get("v_tid", "")
     cfg = get_attach_config(tid)
     max_auds = cfg.get("aud_refs", 3)
-    if tid in {"hga4", "omni", "aur1"}:
-        v_dur = data.get("v_dur")
-        aud_duration = None
-        if msg.audio:
-            aud_duration = msg.audio.duration
-        elif msg.voice:
-            aud_duration = msg.voice.duration
-        if v_dur and aud_duration and aud_duration > v_dur * 60:
-            max_sec = v_dur * 60
-            if lang == "ru":
-                await msg.answer(
-                    f"❌ Аудио слишком длинное ({aud_duration} сек).\n"
-                    f"Вы выбрали {v_dur} мин — максимум {max_sec} сек.\n"
-                    f"Загрузите более короткую запись."
-                )
-            else:
-                await msg.answer(
-                    f"❌ Audio is too long ({aud_duration}s).\n"
-                    f"You selected {v_dur} min — max is {max_sec}s.\n"
-                    f"Please upload a shorter recording."
-                )
-            return
     auds = data.get("att_auds", [])
     if len(auds) >= max_auds:
         await msg.answer(t("vid_aud_max_reached_short", lang, max=max_auds))
@@ -1696,7 +1570,7 @@ async def att_confirm_no_prompt(cb: CallbackQuery, state: FSMContext):
     await state.update_data(v_prompt="—")
     await _do_confirm(cb, state)
 
-async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float, username: str = ""):
+async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float):
     """Push order to Redis queue for auto-generation worker."""
     import logging
     log = logging.getLogger(__name__)
@@ -1720,24 +1594,13 @@ async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, 
             "usd": usd,
         }
         await r.rpush("retainx:orders", json.dumps(order_data))
-        log.info(f"[QUEUE] Order #{oid} pushed successfully to retainx:orders")
-        from worker_monitor import check_workers_alive, send_no_workers_alert
-        if not await check_workers_alive(redis_url):
-            log.warning(f"[QUEUE] No live workers — sending manual alert for order #{oid}")
-            await send_no_workers_alert(
-                order_id=oid, user_id=uid, username=username,
-                tool=tool, params=params, coins=coins, redis_url=redis_url,
-            )
         await r.aclose()
+        log.info(f"[QUEUE] Order #{oid} pushed successfully to retainx:orders")
     except Exception as e:
         log.error(f"[QUEUE] Failed to push order #{oid} to Redis: {e}")
 
 async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     """Shared confirmation logic."""
-    import state as _state
-    if _state.MAINTENANCE:
-        await cb.answer("🔧 Бот на техобслуживании. Попробуйте позже.", show_alert=True)
-        return
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     coins = data.get("v_coins", 0)
@@ -1751,24 +1614,26 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    from database import spend_coins, create_order
-    if not spend_coins(uid, coins):
-        await cb.answer(t("vid_insufficient_coins", lang), show_alert=True)
-        return
+    from database import spend_coins, create_order, has_unlimited
+    if not (has_unlimited(uid) and tid not in AVATAR_TOOL_IDS):
+        if not spend_coins(uid, coins):
+            await cb.answer(t("vid_insufficient_coins", lang), show_alert=True)
+            return
 
-    # Build unified attachments: sd_* first (legacy Seedance), att_* take precedence
+    # Build unified attachments
     attachments = {}
-    if data.get("sd_start"):   attachments["start"] = data["sd_start"]
-    if data.get("sd_end"):     attachments["end"]   = data["sd_end"]
-    if data.get("sd_imgs"):    attachments["imgs"]  = data["sd_imgs"]
-    if data.get("sd_vids"):    attachments["vids"]  = data["sd_vids"]
-    if data.get("sd_auds"):    attachments["auds"]  = data["sd_auds"]
-    # att_* fields overwrite sd_* so current-tool uploads always win
+    # Generic att_ fields
     if data.get("att_start"):  attachments["start"] = data["att_start"]
     if data.get("att_end"):    attachments["end"]   = data["att_end"]
     if data.get("att_imgs"):   attachments["imgs"]  = data["att_imgs"]
     if data.get("att_vids"):   attachments["vids"]  = data["att_vids"]
     if data.get("att_auds"):   attachments["auds"]  = data["att_auds"]
+    # Legacy sd_ fields (Seedance)
+    if data.get("sd_start"):   attachments["start"] = data["sd_start"]
+    if data.get("sd_end"):     attachments["end"]   = data["sd_end"]
+    if data.get("sd_imgs"):    attachments["imgs"]  = data["sd_imgs"]
+    if data.get("sd_vids"):    attachments["vids"]  = data["sd_vids"]
+    if data.get("sd_auds"):    attachments["auds"]  = data["sd_auds"]
 
     params = {
         "resolution":    data.get("v_res"),
@@ -1778,40 +1643,26 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         "language":      data.get("v_lang"),
         "prompt":        prompt,
         "attachments":   attachments if attachments else None,
-        "upload_url":       data.get("v_upload_url"),
         "upload_file_id":   data.get("v_upload_file_id"),
         "upload_file_type": data.get("v_upload_file_type"),
     }
     usd = data.get("v_usd", 0)
-    try:
-        oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
-    except Exception:
-        add_coins(uid, coins)
-        await state.clear()
-        await cb.message.edit_text(t("vid_order_error", lang), reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
-        return
+    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
 
     # Push to Redis queue for auto-generation
-    await _push_to_queue(oid, uid, tid, tool, params, coins, usd, username=cb.from_user.username or cb.from_user.first_name or "")
+    await _push_to_queue(oid, uid, tid, tool, params, coins, usd)
 
-    from handlers import spinner as sp
-    wait_min = sp.wait_minutes(tool, "video")
-    base_text = (
+    await notify_admin(cb, oid, tool, params, coins, usd)
+
+    await cb.message.edit_text(
         f"{t('vid_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_model_row', lang, name=tool)}\n"
         f"{t('vid_coins_deducted', lang, coins=coins)}\n\n"
-        f"{t('vid_estimated_delivery', lang, minutes=wait_min)}\n\n"
-        f"{t('vid_will_deliver', lang)}"
+        f"{t('vid_estimated_delivery', lang)}\n\n"
+        f"{t('vid_will_deliver', lang)}",
+        reply_markup=kb([menu_btn(lang)]), parse_mode="HTML"
     )
-    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
-    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
-    # Clear state before notifying admin — a Telegram API error in notify_admin
-    # must not leave FSM active so a second Confirm tap can't double-charge.
     await state.clear()
-    try:
-        await notify_admin(cb, oid, tool, params, coins, usd)
-    except Exception:
-        pass
 
 # ═══════════════════════════════════════════════════════════
 # HEYGEN AVATAR 4 — Full flow
