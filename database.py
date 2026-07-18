@@ -396,7 +396,7 @@ def set_blogger(uid: int, val: bool):
                 INSERT INTO users (uid, coins, joined, is_blogger)
                 VALUES (%s, 0, %s, %s)
                 ON CONFLICT (uid) DO UPDATE SET is_blogger = %s
-            """, (uid, int(time.time()), int(val), int(val)))
+            """, (uid, int(time.time()), val, val))
         conn.commit()
 
 # Initialize on import
