@@ -84,19 +84,19 @@ _TIER_ORDER = ["standard", "pro", "vip"]
 def _tier_info_text(tier: str) -> str:
     if tier == "standard":
         return (
-            "  ✓  Seedance · Happy Horse · Wan · Grok\n"
+            "  ✓  Seedance 2.0 Fast · Wan 2.7 · Grok 1.5\n"
+            "  ✓  LTX 2.3 Pro · Veo 3.1 Lite\n"
             "  ✓  Kling 3.0 · Kling O3\n"
-            "  ✓  Все форматы изображений\n"
-            "  ✕  Premium видео (Veo, Sora, LTX)\n"
+            "  ✕  Premium видео (Veo 3.1 Full, Sora 2)\n"
             "  ✕  Аудио / войсовер\n"
             "  ✕  Аватары\n"
-            "  ⬆  Разрешение до 1080p"
+            "  ⬆  Разрешение до 720p"
         )
     elif tier == "pro":
         return (
-            "  ✓  Всё из Стандарт\n"
-            "  ✓  Premium видео: Veo 3.1 · Sora 2 · LTX 2.3\n"
-            "  ✓  Аудио / войсовер (ElevenLabs, Artlist)\n"
+            "  ✓  Всё из Стандарт (до 1080p)\n"
+            "  ✓  Premium: Veo 3.1 · Veo 3.1 Fast · Sora 2\n"
+            "  ✓  Аудио / войсовер\n"
             "  ✕  Аватары\n"
             "  ⬆  Разрешение до 1080p"
         )
