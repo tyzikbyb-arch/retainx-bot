@@ -300,8 +300,8 @@ async def panel_router(msg: Message, state: FSMContext):
             "  → Check your coin balance\n\n"
             "  /allow <code>USER_ID</code>\n"
             "  → Open access to unlimited hour purchase\n\n"
-            "  /grant <code>USER_ID [minutes]</code>\n"
-            "  → Gift unlimited session (default 60 min)\n\n"
+            "  /grant <code>USER_ID [minutes] [standard|pro|vip]</code>\n"
+            "  → Gift unlimited session (default 60 min, standard tier)\n\n"
             "  /revoke <code>USER_ID</code>\n"
             "  → Remove unlimited purchase access\n\n"
             "  /cancel\n"
@@ -314,6 +314,10 @@ async def panel_router(msg: Message, state: FSMContext):
             "  → Change an account's status\n\n"
             "  /delaccount <code>ID</code>\n"
             "  → Remove an account from the pool\n\n"
+            "  /setblogger <code>USER_ID</code>\n"
+            "  → Grant blogger status to user\n\n"
+            "  /removeblogger <code>USER_ID</code>\n"
+            "  → Remove blogger status from user\n\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
             parse_mode="HTML"
         )
@@ -541,18 +545,26 @@ async def grant_unlimited_cmd(msg: Message):
         return
     parts = msg.text.strip().split()
     if len(parts) < 2:
-        await msg.answer("Usage: <code>/grant USER_ID [minutes=60]</code>\n\nДарит пользователю безлимит на указанное время.", parse_mode="HTML")
+        await msg.answer("Usage: <code>/grant USER_ID [minutes=60] [standard|pro|vip]</code>\n\nДарит пользователю безлимит на указанное время.", parse_mode="HTML")
         return
     try:
         uid = int(parts[1])
-        minutes = int(parts[2]) if len(parts) > 2 else 60
+        minutes = 60
+        tier = "standard"
+        for part in parts[2:]:
+            if part in ("standard", "pro", "vip"):
+                tier = part
+            else:
+                minutes = int(part)
         import datetime
-        until = set_unlimited(uid, minutes * 60)
+        until = set_unlimited(uid, minutes * 60, tier)
         until_str = datetime.datetime.fromtimestamp(until).strftime("%H:%M")
-        await msg.answer(f"⚡ Безлимит на <b>{minutes} мин</b> выдан пользователю <code>{uid}</code> (до {until_str}).", parse_mode="HTML")
+        from config import UNLIMITED_TIER_CONFIG
+        tier_name = UNLIMITED_TIER_CONFIG[tier]["name_ru"]
+        await msg.answer(f"⚡ Безлимит <b>{tier_name}</b> на <b>{minutes} мин</b> выдан пользователю <code>{uid}</code> (до {until_str}).", parse_mode="HTML")
         await bot.send_message(
             uid,
-            f"⚡  <b>Безлимит активирован!</b>\n\n"
+            f"⚡  <b>Безлимит {tier_name} активирован!</b>\n\n"
             f"  Вам подарили {minutes} минут безлимитной генерации.\n"
             f"  Действует до <b>{until_str}</b>.\n"
             "Генерируйте сколько угодно!",
