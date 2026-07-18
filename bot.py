@@ -26,7 +26,7 @@ except Exception:
 from aiogram.fsm.context import FSMContext
 
 from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS
-from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang, set_can_buy_unlimited, set_unlimited
+from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang, set_can_buy_unlimited, set_unlimited, get_unlimited_tier
 from keyboards import kb, menu_btn, client_kb
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
 from handlers import credits, images, video, voiceover, admin as admin_handler, orders as orders_handler
@@ -96,17 +96,16 @@ def build_main_menu_kb(coins: int, lang: str) -> InlineKeyboardMarkup:
 @dp.message.outer_middleware()
 async def maintenance_msg_mw(handler, event: Message, data: dict):
     if event.from_user.id != ADMIN_ID and is_maintenance():
-        await event.answer(
-            "🔧 <b>Технические работы</b>\n\nБот временно недоступен. Попробуйте позже.",
-            parse_mode="HTML"
-        )
+        lang = get_lang(event.from_user.id)
+        await event.answer(t("maintenance_msg", lang), parse_mode="HTML")
         return
     return await handler(event, data)
 
 @dp.callback_query.outer_middleware()
 async def maintenance_cb_mw(handler, event: CallbackQuery, data: dict):
     if event.from_user.id != ADMIN_ID and is_maintenance():
-        await event.answer("🔧 Технические работы. Бот временно недоступен.", show_alert=True)
+        lang = get_lang(event.from_user.id)
+        await event.answer(t("maintenance_alert", lang), show_alert=True)
         return
     return await handler(event, data)
 
@@ -363,15 +362,16 @@ async def lang_menu_cb(cb: CallbackQuery):
         reply_markup=kb(
             [InlineKeyboardButton(text=("✓  " if lang == "en" else "○  ") + "English",  callback_data="lang_set_en")],
             [InlineKeyboardButton(text=("✓  " if lang == "ru" else "○  ") + "Русский",  callback_data="lang_set_ru")],
+            [InlineKeyboardButton(text=("✓  " if lang == "ar" else "○  ") + "العربية", callback_data="lang_set_ar")],
             [InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")],
         ),
         parse_mode="HTML"
     )
 
-@dp.callback_query(F.data.in_({"lang_set_en", "lang_set_ru"}))
+@dp.callback_query(F.data.in_({"lang_set_en", "lang_set_ru", "lang_set_ar"}))
 async def lang_set_cb(cb: CallbackQuery):
     uid = cb.from_user.id
-    new_lang = "en" if cb.data == "lang_set_en" else "ru"
+    new_lang = {"lang_set_en": "en", "lang_set_ru": "ru", "lang_set_ar": "ar"}[cb.data]
     set_lang(uid, new_lang)
     coins = get_coins(uid)
     await cb.message.edit_text(

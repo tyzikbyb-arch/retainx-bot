@@ -39,7 +39,7 @@ async def show_wallet(target, state: FSMContext = None):
         tier = get_unlimited_tier(uid) or "standard"
         tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
         tier_name = tier_cfg["name_ru"] if lang == "ru" else tier_cfg["name_en"]
-        unlim_line = f"\n{tier_cfg['emoji']} <b>Безлимит {tier_name} активен</b> — ещё {mins}м {secs}с\n"
+        unlim_line = t("unlim_active_line", lang, emoji=tier_cfg["emoji"], name=tier_name, mins=mins, secs=secs)
 
     text = (
         f"{t('wallet_title', lang)}\n"
@@ -55,13 +55,13 @@ async def show_wallet(target, state: FSMContext = None):
         [InlineKeyboardButton(text=t("wallet_btn_add_coins", lang), callback_data="topup_start")],
     ]
     if not unlim_active:
-        buttons.append([InlineKeyboardButton(text="⚡  Безлимит — купить пакет", callback_data="unlimited_buy")])
-        buttons.append([InlineKeyboardButton(text="ℹ  О безлимитных пакетах",   callback_data="unlim_info")])
+        buttons.append([InlineKeyboardButton(text=t("unlim_btn_buy", lang), callback_data="unlimited_buy")])
+        buttons.append([InlineKeyboardButton(text=t("unlim_btn_info", lang), callback_data="unlim_info")])
     else:
         tier = get_unlimited_tier(uid) or "standard"
         tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
         tier_name = tier_cfg["name_ru"] if lang == "ru" else tier_cfg["name_en"]
-        buttons.append([InlineKeyboardButton(text=f"⚡  Безлимит {tier_name} активен ✓", callback_data="unlimited_status")])
+        buttons.append([InlineKeyboardButton(text=t("unlim_btn_active", lang, name=tier_name), callback_data="unlimited_status")])
     buttons.append([InlineKeyboardButton(text=t("wallet_btn_referral", lang), callback_data="referral_info")])
     buttons.append([menu_btn(lang)])
 
@@ -77,36 +77,15 @@ async def wallet_cb(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "unlimited_status")
 async def unlimited_status_cb(cb: CallbackQuery):
-    await cb.answer("⚡ Безлимит активен!", show_alert=False)
+    lang = get_lang(cb.from_user.id)
+    await cb.answer(t("unlim_active_toast", lang), show_alert=False)
 
 # ── Unlimited pass purchase — tiered coin flow ────────────────────────
 _TIER_ORDER = ["standard", "pro", "vip"]
 
-def _tier_info_text(tier: str) -> str:
-    if tier == "standard":
-        return (
-            "  ✓  Seedance 2.0 Fast · Wan 2.7 · Grok 1.5\n"
-            "  ✓  LTX 2.3 Pro · Veo 3.1 Lite\n"
-            "  ✓  Kling 3.0 · Kling O3\n"
-            "  ✕  Premium видео (Veo 3.1 Full, Sora 2)\n"
-            "  ✕  Аудио / войсовер\n"
-            "  ✕  Аватары\n"
-            "  ⬆  Разрешение до 720p"
-        )
-    elif tier == "pro":
-        return (
-            "  ✓  Всё из Стандарт (до 1080p)\n"
-            "  ✓  Premium: Veo 3.1 · Veo 3.1 Fast · Sora 2\n"
-            "  ✓  Аудио / войсовер\n"
-            "  ✕  Аватары\n"
-            "  ⬆  Разрешение до 1080p"
-        )
-    else:  # vip
-        return (
-            "  ✓  Всё из Про\n"
-            "  ✓  Разрешение до 4K\n"
-            "  ✕  Аватары"
-        )
+def _tier_info_text(tier: str, lang: str) -> str:
+    _key = {"standard": "unlim_tier_std_info", "pro": "unlim_tier_pro_info", "vip": "unlim_tier_vip_info"}
+    return t(_key.get(tier, "unlim_tier_std_info"), lang)
 
 @router.callback_query(F.data == "unlimited_buy")
 async def unlimited_buy(cb: CallbackQuery, state: FSMContext):
@@ -118,16 +97,16 @@ async def unlimited_buy(cb: CallbackQuery, state: FSMContext):
         price_1h = UNLIMITED_PLANS[tier][1]
         name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
         rows.append([InlineKeyboardButton(
-            text=f"{cfg['emoji']}  {name}  —  от {price_1h}◈",
+            text=t("unlim_info_tier_btn", lang, emoji=cfg["emoji"], name=name, coins=price_1h),
             callback_data=f"ulim_t_{tier}"
         )])
-    rows.append([InlineKeyboardButton(text="ℹ  Подробнее о пакетах", callback_data="unlim_info")])
+    rows.append([InlineKeyboardButton(text=t("unlim_btn_info", lang), callback_data="unlim_info")])
     rows.append([back_btn("wallet", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        "⚡  <b>Безлимитные пакеты</b>\n"
+        f"{t('unlim_buy_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Ваш баланс:  <b>{coins}◈</b>\n\n"
-        "  Выберите тариф:",
+        f"{t('unlim_buy_balance', lang, coins=coins)}\n\n"
+        f"{t('unlim_buy_select', lang)}",
         reply_markup=kb(*rows),
         parse_mode="HTML"
     )
@@ -143,19 +122,19 @@ async def unlim_tier_selected(cb: CallbackQuery, state: FSMContext):
     cfg = UNLIMITED_TIER_CONFIG[tier]
     name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
     plans = UNLIMITED_PLANS[tier]
-    info = _tier_info_text(tier)
+    info = _tier_info_text(tier, lang)
 
     rows = [
-        [InlineKeyboardButton(text=f"1 час  —  {plans[1]}◈", callback_data=f"ulim_d_{tier}_1")],
-        [InlineKeyboardButton(text=f"2 часа  —  {plans[2]}◈  (−10%/ч)", callback_data=f"ulim_d_{tier}_2")],
-        [InlineKeyboardButton(text=f"3 часа  —  {plans[3]}◈  (−20%/ч)", callback_data=f"ulim_d_{tier}_3")],
+        [InlineKeyboardButton(text=t("unlim_dur_1h", lang, coins=plans[1]), callback_data=f"ulim_d_{tier}_1")],
+        [InlineKeyboardButton(text=t("unlim_dur_2h", lang, coins=plans[2]), callback_data=f"ulim_d_{tier}_2")],
+        [InlineKeyboardButton(text=t("unlim_dur_3h", lang, coins=plans[3]), callback_data=f"ulim_d_{tier}_3")],
         [back_btn("unlimited_buy", lang=lang), menu_btn(lang)],
     ]
     await cb.message.edit_text(
-        f"⚡  <b>Безлимит {name}</b>\n"
+        f"{t('unlim_tier_title', lang, name=name)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{info}\n\n"
-        "  Выберите длительность:",
+        f"{t('unlim_select_duration', lang)}",
         reply_markup=kb(*rows),
         parse_mode="HTML"
     )
@@ -179,21 +158,20 @@ async def unlim_duration_selected(cb: CallbackQuery, state: FSMContext):
     user_coins = get_coins(cb.from_user.id)
 
     if user_coins < coins_cost:
-        await cb.answer(f"Недостаточно монет. Нужно {coins_cost}◈, у вас {user_coins}◈.", show_alert=True)
+        await cb.answer(t("unlim_not_enough", lang, need=coins_cost, have=user_coins), show_alert=True)
         return
 
-    hour_word = {1: "час", 2: "часа", 3: "часа"}.get(hours, "ч")
     await cb.message.edit_text(
-        f"⚡  <b>Подтверждение покупки</b>\n"
+        f"{t('unlim_confirm_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Тариф:          <b>{name}</b>\n"
-        f"  Длительность:  <b>{hours} {hour_word}</b>\n"
-        f"  Стоимость:     <b>{coins_cost}◈</b>\n"
-        f"  Ваш баланс:   <b>{user_coins}◈</b>\n\n"
+        f"{t('unlim_confirm_tier', lang, name=name)}\n"
+        f"{t('unlim_confirm_dur', lang, hours=hours)}\n"
+        f"{t('unlim_confirm_cost', lang, cost=coins_cost)}\n"
+        f"{t('unlim_confirm_balance', lang, coins=user_coins)}\n\n"
         "━━━━━━━━━━━━━━━━━━━━",
         reply_markup=kb(
             [InlineKeyboardButton(
-                text=f"✓  Активировать — {coins_cost}◈",
+                text=t("unlim_btn_activate", lang, cost=coins_cost),
                 callback_data=f"ulim_c_{tier}_{hours}"
             )],
             [back_btn(f"ulim_t_{tier}", lang=lang), menu_btn(lang)],
@@ -214,12 +192,12 @@ async def unlim_confirm(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(uid)
 
     if tier not in UNLIMITED_TIER_CONFIG or hours not in UNLIMITED_PLANS.get(tier, {}):
-        await cb.answer("Ошибка. Попробуйте снова.", show_alert=True)
+        await cb.answer(t("unlim_error_retry", lang), show_alert=True)
         return
 
     coins_cost = UNLIMITED_PLANS[tier][hours]
     if not spend_coins(uid, coins_cost):
-        await cb.answer("Недостаточно монет. Пополните баланс.", show_alert=True)
+        await cb.answer(t("unlim_no_balance", lang), show_alert=True)
         return
 
     duration_secs = hours * 3600
@@ -227,111 +205,39 @@ async def unlim_confirm(cb: CallbackQuery, state: FSMContext):
     until_str = datetime.datetime.fromtimestamp(until).strftime("%H:%M")
     cfg = UNLIMITED_TIER_CONFIG[tier]
     name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
-    hour_word = {1: "час", 2: "часа", 3: "часа"}.get(hours, "ч")
 
     await cb.message.edit_text(
-        f"⚡  <b>Безлимит {name} активирован!</b>\n"
+        f"{t('unlim_activated_title', lang, name=name)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Действует до  <b>{until_str}</b>  ({hours} {hour_word})\n"
-        "  Генерируйте сколько угодно!\n\n"
-        f"  Списано:  <b>{coins_cost}◈</b>",
+        f"{t('unlim_activated_body', lang, time=until_str, hours=hours, cost=coins_cost)}",
         reply_markup=kb([menu_btn(lang)]),
         parse_mode="HTML"
     )
     await cb.answer()
 
 # ── Unlimited info section ───────────────────────────────────────────────
-def _build_tier_page(tier: str) -> str:
+def _build_tier_page(tier: str, lang: str) -> str:
     p = UNLIMITED_PLANS[tier]
-    if tier == "standard":
-        return (
-            "⚡  <b>Безлимит Standard</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "  Генерируйте видео и изображения без\n"
-            "  ограничений — монеты не списываются.\n\n"
-            "<b>📹 Видео — Standard:</b>\n"
-            "  • Seedance 2.0 Fast\n"
-            "  • Wan 2.7\n"
-            "  • LTX 2.3 Pro\n"
-            "  • Veo 3.1 Lite\n"
-            "  • Grok Imagine 1.5  <i>(макс. 480p)</i>\n\n"
-            "<b>🎬 Видео — Kling:</b>\n"
-            "  • Kling 3.0\n"
-            "  • Kling O3\n\n"
-            "  ✕  Premium видео (Veo 3.1, Sora 2)\n"
-            "  ✕  Аудио и голос\n"
-            "  ✕  Аватары\n\n"
-            "  ⬆  Разрешение: до 720p\n\n"
-            "<b>💰 Стоимость:</b>\n"
-            f"  1 час   →  <b>{p[1]}◈</b>\n"
-            f"  2 часа  →  <b>{p[2]}◈</b>  <i>(−10% за час)</i>\n"
-            f"  3 часа  →  <b>{p[3]}◈</b>  <i>(−20% за час)</i>"
-        )
-    elif tier == "pro":
-        return (
-            "⚡⚡  <b>Безлимит Pro</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "  Всё из Standard плюс Premium-модели\n"
-            "  и аудио — в качестве до 1080p.\n\n"
-            "<b>📹 Видео — Standard (до 1080p):</b>\n"
-            "  • Seedance 2.0 Fast · Wan 2.7\n"
-            "  • LTX 2.3 Pro · Veo 3.1 Lite\n"
-            "  • Grok Imagine 1.5\n\n"
-            "<b>🎬 Видео — Kling (до 1080p):</b>\n"
-            "  • Kling 3.0 · Kling O3\n\n"
-            "<b>🏆 Premium видео (до 1080p):</b>\n"
-            "  • Veo 3.1 · Veo 3.1 Fast\n"
-            "  • Sora 2 Pro\n\n"
-            "<b>🎙 Аудио и голос:</b>\n"
-            "  • ElevenLabs · Artlist и др.\n\n"
-            "  ✕  Аватары\n\n"
-            "  ⬆  Разрешение: до 1080p\n\n"
-            "<b>💰 Стоимость:</b>\n"
-            f"  1 час   →  <b>{p[1]}◈</b>\n"
-            f"  2 часа  →  <b>{p[2]}◈</b>  <i>(−10% за час)</i>\n"
-            f"  3 часа  →  <b>{p[3]}◈</b>  <i>(−20% за час)</i>"
-        )
-    else:  # vip
-        return (
-            "♛  <b>Безлимит VIP</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "  Максимальный пакет — всё из Pro\n"
-            "  с разрешением до 4K.\n\n"
-            "  ✓  Все модели из Pro\n\n"
-            "<b>📹 Standard-видео (до 4K):</b>\n"
-            "  • LTX 2.3 Pro  <i>(720p / 1080p / 2K / 4K)</i>\n"
-            "  • Seedance 2.0 Fast · Wan 2.7\n"
-            "  • Veo 3.1 Lite · Grok Imagine 1.5\n\n"
-            "<b>🎬 Kling (до 4K):</b>\n"
-            "  • Kling 3.0 · Kling O3\n\n"
-            "<b>🏆 Premium видео (до 4K):</b>\n"
-            "  • Veo 3.1 · Veo 3.1 Fast\n"
-            "  • Sora 2 Pro\n\n"
-            "<b>🎙 Аудио и голос</b>\n\n"
-            "  ✕  Аватары\n\n"
-            "  ⬆  Разрешение: до 4K\n\n"
-            "<b>💰 Стоимость:</b>\n"
-            f"  1 час   →  <b>{p[1]}◈</b>\n"
-            f"  2 часа  →  <b>{p[2]}◈</b>  <i>(−10% за час)</i>\n"
-            f"  3 часа  →  <b>{p[3]}◈</b>  <i>(−20% за час)</i>"
-        )
+    _key = {"standard": "unlim_page_std", "pro": "unlim_page_pro", "vip": "unlim_page_vip"}
+    return t(_key[tier], lang, p1=p[1], p2=p[2], p3=p[3])
 
 @router.callback_query(F.data == "unlim_info")
 async def unlim_info(cb: CallbackQuery):
     lang = get_lang(cb.from_user.id)
-    rows = [
-        [InlineKeyboardButton(text="⚡  Standard  —  от 268◈",   callback_data="ulim_info_standard")],
-        [InlineKeyboardButton(text="⚡⚡  Pro  —  от 662◈",      callback_data="ulim_info_pro")],
-        [InlineKeyboardButton(text="♛  VIP  —  от 1 619◈",      callback_data="ulim_info_vip")],
-        [back_btn("unlimited_buy", lang=lang), menu_btn(lang)],
-    ]
+    rows = []
+    for tier in _TIER_ORDER:
+        cfg = UNLIMITED_TIER_CONFIG[tier]
+        price_1h = UNLIMITED_PLANS[tier][1]
+        name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
+        rows.append([InlineKeyboardButton(
+            text=t("unlim_info_tier_btn", lang, emoji=cfg["emoji"], name=name, coins=price_1h),
+            callback_data=f"ulim_info_{tier}"
+        )])
+    rows.append([back_btn("unlimited_buy", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        "⚡  <b>Безлимитные пакеты</b>\n"
+        f"{t('unlim_info_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  Генерируйте неограниченно в течение\n"
-        "  1, 2 или 3 часов — без списания монет\n"
-        "  за каждый запрос.\n\n"
-        "  Выберите пакет чтобы узнать подробнее:",
+        f"{t('unlim_info_body', lang)}",
         reply_markup=kb(*rows),
         parse_mode="HTML",
     )
@@ -355,10 +261,10 @@ async def unlim_info_tier(cb: CallbackQuery):
     rows = []
     if nav_row:
         rows.append(nav_row)
-    rows.append([InlineKeyboardButton(text=f"🛒  Купить {_label[tier]}", callback_data=f"ulim_t_{tier}")])
+    rows.append([InlineKeyboardButton(text=t("unlim_btn_buy_plan", lang, label=_label[tier]), callback_data=f"ulim_t_{tier}")])
     rows.append([back_btn("unlim_info", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
-        _build_tier_page(tier),
+        _build_tier_page(tier, lang),
         reply_markup=kb(*rows),
         parse_mode="HTML",
     )
@@ -557,6 +463,7 @@ async def _send_for_manual_review(msg: Message, tx_hash: str, amount: float, coi
         f"  <i>Auto-verify could not confirm. Please check manually.</i>",
         reply_markup=keyboard, parse_mode="HTML"
     )
+    await bot.session.close()
     lang = get_lang(uid)
     await msg.answer(
         f"{t('wallet_review_title', lang)}\n\n"
@@ -594,10 +501,11 @@ async def successful_stars_payment(msg: Message):
     if payload.startswith("unlimited_hour_"):
         until = set_unlimited(uid, 3600, "standard")
         until_str = datetime.datetime.fromtimestamp(until).strftime("%H:%M")
+        cfg = UNLIMITED_TIER_CONFIG["standard"]
+        name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
         await msg.answer(
-            "⚡  <b>Безлимит активирован!</b>\n\n"
-            f"  Действует до  <b>{until_str}</b>  (1 час)\n"
-            "  Генерируйте сколько угодно!",
+            f"{t('unlim_activated_title', lang, name=name)}\n\n"
+            f"{t('unlim_activated_body', lang, time=until_str, hours=1, cost=0)}",
             parse_mode="HTML"
         )
         return

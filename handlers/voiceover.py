@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, Buffered
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import coins_to_usd, UNLIMITED_TIER_CONFIG
-from database import get_coins, spend_coins, create_order, get_lang, has_unlimited, get_unlimited_tier
+from database import get_coins, add_coins, spend_coins, create_order, get_lang, has_unlimited, get_unlimited_tier
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
 import voice_catalog as vc

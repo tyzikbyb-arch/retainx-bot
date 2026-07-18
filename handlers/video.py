@@ -264,7 +264,8 @@ def _sd_attach_kb(data: dict, lang: str = "en") -> list:
     has_any = start or end or imgs or vids or auds
     prompt_label = t("vid_btn_write_prompt", lang) if has_any else t("vid_btn_skip_write_prompt", lang)
     buttons.append([InlineKeyboardButton(text=prompt_label, callback_data="sd_to_prompt")])
-    buttons.append([back_btn("vt_sd20", lang=lang), menu_btn(lang)])  # sd20/sd20f share same menu
+    tid = data.get("v_tid", "sd20")
+    buttons.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
     return buttons
 
 @router.callback_query(F.data.startswith("vt_"))
@@ -1213,8 +1214,9 @@ async def sd_to_prompt(cb: CallbackQuery, state: FSMContext):
         tier = get_unlimited_tier(cb.from_user.id) or "standard"
         tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
         sd_resolutions = filter_resolutions(sd_resolutions, tier_cfg["max_resolution"])
+    tid = data.get("v_tid", "sd20")
     res_rows = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in sd_resolutions]
-    res_rows.append([back_btn("vt_sd20", lang=lang), menu_btn(lang)])
+    res_rows.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>Seedance 2.0</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"

@@ -582,6 +582,129 @@ STR = {
         "order_status_delivered": "Delivered",
         "order_status_cancelled": "Cancelled",
         "order_your_result": "◈  Your generated result",
+
+        # ── Maintenance ──────────────────────────────────────────
+        "maintenance_msg": "🔧 <b>Maintenance</b>\n\nThe bot is temporarily unavailable. Please try again later.",
+        "maintenance_alert": "🔧 Maintenance. The bot is temporarily unavailable.",
+
+        # ── Unlimited pass UI ────────────────────────────────────
+        "unlim_active_line": "\n{emoji} <b>Unlimited {name} active</b> — {mins}m {secs}s left\n",
+        "unlim_btn_buy": "⚡  Unlimited — buy a plan",
+        "unlim_btn_active": "⚡  Unlimited {name} active ✓",
+        "unlim_active_toast": "⚡ Unlimited is active!",
+        "unlim_buy_title": "⚡  <b>Unlimited Plans</b>",
+        "unlim_buy_balance": "  Your balance:  <b>{coins}◈</b>",
+        "unlim_buy_select": "  Choose a plan:",
+        "unlim_btn_info": "ℹ  Plan details",
+        "unlim_dur_1h": "1 hour  —  {coins}◈",
+        "unlim_dur_2h": "2 hours  —  {coins}◈  (−10%/h)",
+        "unlim_dur_3h": "3 hours  —  {coins}◈  (−20%/h)",
+        "unlim_select_duration": "  Choose duration:",
+        "unlim_not_enough": "Not enough coins. Need {need}◈, you have {have}◈.",
+        "unlim_confirm_title": "⚡  <b>Confirm Purchase</b>",
+        "unlim_confirm_tier": "  Plan:              <b>{name}</b>",
+        "unlim_confirm_dur": "  Duration:         <b>{hours} h</b>",
+        "unlim_confirm_cost": "  Cost:               <b>{cost}◈</b>",
+        "unlim_confirm_balance": "  Your balance:   <b>{coins}◈</b>",
+        "unlim_btn_activate": "✓  Activate — {cost}◈",
+        "unlim_error_retry": "Error. Please try again.",
+        "unlim_no_balance": "Not enough coins. Top up your balance.",
+        "unlim_activated_title": "⚡  <b>Unlimited {name} activated!</b>",
+        "unlim_activated_body": "  Active until  <b>{time}</b>  ({hours} h)\n  Generate as much as you want!\n\n  Deducted:  <b>{cost}◈</b>",
+        "unlim_info_title": "⚡  <b>Unlimited Plans</b>",
+        "unlim_info_body": "  Generate unlimited for 1, 2, or 3 hours —\n  no coins deducted per request.\n\n  Choose a plan to learn more:",
+        "unlim_btn_buy_plan": "🛒  Buy {label}",
+        "unlim_tier_std_info": (
+            "  ✓  Seedance 2.0 Fast · Wan 2.7 · Grok 1.5\n"
+            "  ✓  LTX 2.3 Pro · Veo 3.1 Lite · Kling 3.0 · Kling O3\n"
+            "  ✕  Premium video (Veo 3.1, Sora 2)\n"
+            "  ✕  Audio / voiceover\n"
+            "  ✕  Avatars\n"
+            "  ⬆  Resolution up to 720p"
+        ),
+        "unlim_tier_pro_info": (
+            "  ✓  Everything from Standard (up to 1080p)\n"
+            "  ✓  Premium: Veo 3.1 · Veo 3.1 Fast · Sora 2\n"
+            "  ✓  Audio / voiceover\n"
+            "  ✕  Avatars\n"
+            "  ⬆  Resolution up to 1080p"
+        ),
+        "unlim_tier_vip_info": (
+            "  ✓  Everything from Pro\n"
+            "  ✓  Resolution up to 4K\n"
+            "  ✕  Avatars"
+        ),
+        "unlim_page_std": (
+            "⚡  <b>Unlimited Standard</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Generate videos and images without limits\n"
+            "  — no coins deducted per request.\n\n"
+            "<b>📹 Video — Standard:</b>\n"
+            "  • Seedance 2.0 Fast\n"
+            "  • Wan 2.7\n"
+            "  • LTX 2.3 Pro\n"
+            "  • Veo 3.1 Lite\n"
+            "  • Grok Imagine 1.5  <i>(max. 480p)</i>\n\n"
+            "<b>🎬 Video — Kling:</b>\n"
+            "  • Kling 3.0\n"
+            "  • Kling O3\n\n"
+            "  ✕  Premium video (Veo 3.1, Sora 2)\n"
+            "  ✕  Audio & Voice\n"
+            "  ✕  Avatars\n\n"
+            "  ⬆  Resolution: up to 720p\n\n"
+            "<b>💰 Pricing:</b>\n"
+            "  1 hour   →  <b>{p1}◈</b>\n"
+            "  2 hours  →  <b>{p2}◈</b>  <i>(−10% per hour)</i>\n"
+            "  3 hours  →  <b>{p3}◈</b>  <i>(−20% per hour)</i>"
+        ),
+        "unlim_page_pro": (
+            "⚡⚡  <b>Unlimited Pro</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Everything from Standard plus Premium models\n"
+            "  and audio — up to 1080p.\n\n"
+            "<b>📹 Video — Standard (up to 1080p):</b>\n"
+            "  • Seedance 2.0 Fast · Wan 2.7\n"
+            "  • LTX 2.3 Pro · Veo 3.1 Lite\n"
+            "  • Grok Imagine 1.5\n\n"
+            "<b>🎬 Video — Kling (up to 1080p):</b>\n"
+            "  • Kling 3.0 · Kling O3\n\n"
+            "<b>🏆 Premium video (up to 1080p):</b>\n"
+            "  • Veo 3.1 · Veo 3.1 Fast\n"
+            "  • Sora 2 Pro\n\n"
+            "<b>🎙 Audio & Voice:</b>\n"
+            "  • ElevenLabs · Artlist & others\n\n"
+            "  ✕  Avatars\n\n"
+            "  ⬆  Resolution: up to 1080p\n\n"
+            "<b>💰 Pricing:</b>\n"
+            "  1 hour   →  <b>{p1}◈</b>\n"
+            "  2 hours  →  <b>{p2}◈</b>  <i>(−10% per hour)</i>\n"
+            "  3 hours  →  <b>{p3}◈</b>  <i>(−20% per hour)</i>"
+        ),
+        "unlim_page_vip": (
+            "♛  <b>Unlimited VIP</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Maximum plan — everything from Pro\n"
+            "  with resolution up to 4K.\n\n"
+            "  ✓  All models from Pro\n\n"
+            "<b>📹 Standard video (up to 4K):</b>\n"
+            "  • LTX 2.3 Pro  <i>(720p / 1080p / 2K / 4K)</i>\n"
+            "  • Seedance 2.0 Fast · Wan 2.7\n"
+            "  • Veo 3.1 Lite · Grok Imagine 1.5\n\n"
+            "<b>🎬 Kling (up to 4K):</b>\n"
+            "  • Kling 3.0 · Kling O3\n\n"
+            "<b>🏆 Premium video (up to 4K):</b>\n"
+            "  • Veo 3.1 · Veo 3.1 Fast\n"
+            "  • Sora 2 Pro\n\n"
+            "<b>🎙 Audio & Voice</b>\n\n"
+            "  ✕  Avatars\n\n"
+            "  ⬆  Resolution: up to 4K\n\n"
+            "<b>💰 Pricing:</b>\n"
+            "  1 hour   →  <b>{p1}◈</b>\n"
+            "  2 hours  →  <b>{p2}◈</b>  <i>(−10% per hour)</i>\n"
+            "  3 hours  →  <b>{p3}◈</b>  <i>(−20% per hour)</i>"
+        ),
+        "unlim_tier_title": "⚡  <b>Unlimited {name}</b>",
+        "unlim_info_tier_btn": "{emoji}  {name}  —  from {coins}◈",
     },
     "ru": {
         "welcome_title": "◈  <b>Добро пожаловать в RetainX Studio</b>",
@@ -1164,6 +1287,129 @@ STR = {
         "order_status_delivered": "Доставлен",
         "order_status_cancelled": "Отменён",
         "order_your_result": "◈  Ваш результат",
+
+        # ── Maintenance ──────────────────────────────────────────
+        "maintenance_msg": "🔧 <b>Технические работы</b>\n\nБот временно недоступен. Попробуйте позже.",
+        "maintenance_alert": "🔧 Технические работы. Бот временно недоступен.",
+
+        # ── Unlimited pass UI ────────────────────────────────────
+        "unlim_active_line": "\n{emoji} <b>Безлимит {name} активен</b> — осталось {mins}м {secs}с\n",
+        "unlim_btn_buy": "⚡  Безлимит — купить пакет",
+        "unlim_btn_active": "⚡  Безлимит {name} активен ✓",
+        "unlim_active_toast": "⚡ Безлимит активен!",
+        "unlim_buy_title": "⚡  <b>Безлимитные пакеты</b>",
+        "unlim_buy_balance": "  Ваш баланс:  <b>{coins}◈</b>",
+        "unlim_buy_select": "  Выберите тариф:",
+        "unlim_btn_info": "ℹ  Подробнее о пакетах",
+        "unlim_dur_1h": "1 час  —  {coins}◈",
+        "unlim_dur_2h": "2 часа  —  {coins}◈  (−10%/ч)",
+        "unlim_dur_3h": "3 часа  —  {coins}◈  (−20%/ч)",
+        "unlim_select_duration": "  Выберите длительность:",
+        "unlim_not_enough": "Недостаточно монет. Нужно {need}◈, у вас {have}◈.",
+        "unlim_confirm_title": "⚡  <b>Подтверждение покупки</b>",
+        "unlim_confirm_tier": "  Тариф:          <b>{name}</b>",
+        "unlim_confirm_dur": "  Длительность:  <b>{hours} ч</b>",
+        "unlim_confirm_cost": "  Стоимость:     <b>{cost}◈</b>",
+        "unlim_confirm_balance": "  Ваш баланс:   <b>{coins}◈</b>",
+        "unlim_btn_activate": "✓  Активировать — {cost}◈",
+        "unlim_error_retry": "Ошибка. Попробуйте снова.",
+        "unlim_no_balance": "Недостаточно монет. Пополните баланс.",
+        "unlim_activated_title": "⚡  <b>Безлимит {name} активирован!</b>",
+        "unlim_activated_body": "  Действует до  <b>{time}</b>  ({hours} ч)\n  Генерируйте сколько угодно!\n\n  Списано:  <b>{cost}◈</b>",
+        "unlim_info_title": "⚡  <b>Безлимитные пакеты</b>",
+        "unlim_info_body": "  Генерируйте неограниченно в течение\n  1, 2 или 3 часов — без списания монет\n  за каждый запрос.\n\n  Выберите пакет чтобы узнать подробнее:",
+        "unlim_btn_buy_plan": "🛒  Купить {label}",
+        "unlim_tier_std_info": (
+            "  ✓  Seedance 2.0 Fast · Wan 2.7 · Grok 1.5\n"
+            "  ✓  LTX 2.3 Pro · Veo 3.1 Lite · Kling 3.0 · Kling O3\n"
+            "  ✕  Premium видео (Veo 3.1, Sora 2)\n"
+            "  ✕  Аудио / войсовер\n"
+            "  ✕  Аватары\n"
+            "  ⬆  Разрешение до 720p"
+        ),
+        "unlim_tier_pro_info": (
+            "  ✓  Всё из Стандарт (до 1080p)\n"
+            "  ✓  Premium: Veo 3.1 · Veo 3.1 Fast · Sora 2\n"
+            "  ✓  Аудио / войсовер\n"
+            "  ✕  Аватары\n"
+            "  ⬆  Разрешение до 1080p"
+        ),
+        "unlim_tier_vip_info": (
+            "  ✓  Всё из Про\n"
+            "  ✓  Разрешение до 4K\n"
+            "  ✕  Аватары"
+        ),
+        "unlim_page_std": (
+            "⚡  <b>Безлимит Standard</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Генерируйте видео и изображения без\n"
+            "  ограничений — монеты не списываются.\n\n"
+            "<b>📹 Видео — Standard:</b>\n"
+            "  • Seedance 2.0 Fast\n"
+            "  • Wan 2.7\n"
+            "  • LTX 2.3 Pro\n"
+            "  • Veo 3.1 Lite\n"
+            "  • Grok Imagine 1.5  <i>(макс. 480p)</i>\n\n"
+            "<b>🎬 Видео — Kling:</b>\n"
+            "  • Kling 3.0\n"
+            "  • Kling O3\n\n"
+            "  ✕  Premium видео (Veo 3.1, Sora 2)\n"
+            "  ✕  Аудио и голос\n"
+            "  ✕  Аватары\n\n"
+            "  ⬆  Разрешение: до 720p\n\n"
+            "<b>💰 Стоимость:</b>\n"
+            "  1 час   →  <b>{p1}◈</b>\n"
+            "  2 часа  →  <b>{p2}◈</b>  <i>(−10% за час)</i>\n"
+            "  3 часа  →  <b>{p3}◈</b>  <i>(−20% за час)</i>"
+        ),
+        "unlim_page_pro": (
+            "⚡⚡  <b>Безлимит Pro</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Всё из Standard плюс Premium-модели\n"
+            "  и аудио — в качестве до 1080p.\n\n"
+            "<b>📹 Видео — Standard (до 1080p):</b>\n"
+            "  • Seedance 2.0 Fast · Wan 2.7\n"
+            "  • LTX 2.3 Pro · Veo 3.1 Lite\n"
+            "  • Grok Imagine 1.5\n\n"
+            "<b>🎬 Видео — Kling (до 1080p):</b>\n"
+            "  • Kling 3.0 · Kling O3\n\n"
+            "<b>🏆 Premium видео (до 1080p):</b>\n"
+            "  • Veo 3.1 · Veo 3.1 Fast\n"
+            "  • Sora 2 Pro\n\n"
+            "<b>🎙 Аудио и голос:</b>\n"
+            "  • ElevenLabs · Artlist и др.\n\n"
+            "  ✕  Аватары\n\n"
+            "  ⬆  Разрешение: до 1080p\n\n"
+            "<b>💰 Стоимость:</b>\n"
+            "  1 час   →  <b>{p1}◈</b>\n"
+            "  2 часа  →  <b>{p2}◈</b>  <i>(−10% за час)</i>\n"
+            "  3 часа  →  <b>{p3}◈</b>  <i>(−20% за час)</i>"
+        ),
+        "unlim_page_vip": (
+            "♛  <b>Безлимит VIP</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Максимальный пакет — всё из Pro\n"
+            "  с разрешением до 4K.\n\n"
+            "  ✓  Все модели из Pro\n\n"
+            "<b>📹 Standard-видео (до 4K):</b>\n"
+            "  • LTX 2.3 Pro  <i>(720p / 1080p / 2K / 4K)</i>\n"
+            "  • Seedance 2.0 Fast · Wan 2.7\n"
+            "  • Veo 3.1 Lite · Grok Imagine 1.5\n\n"
+            "<b>🎬 Kling (до 4K):</b>\n"
+            "  • Kling 3.0 · Kling O3\n\n"
+            "<b>🏆 Premium видео (до 4K):</b>\n"
+            "  • Veo 3.1 · Veo 3.1 Fast\n"
+            "  • Sora 2 Pro\n\n"
+            "<b>🎙 Аудио и голос</b>\n\n"
+            "  ✕  Аватары\n\n"
+            "  ⬆  Разрешение: до 4K\n\n"
+            "<b>💰 Стоимость:</b>\n"
+            "  1 час   →  <b>{p1}◈</b>\n"
+            "  2 часа  →  <b>{p2}◈</b>  <i>(−10% за час)</i>\n"
+            "  3 часа  →  <b>{p3}◈</b>  <i>(−20% за час)</i>"
+        ),
+        "unlim_tier_title": "⚡  <b>Безлимит {name}</b>",
+        "unlim_info_tier_btn": "{emoji}  {name}  —  от {coins}◈",
     },
     "ar": {
         "welcome_title": "◈  <b>مرحباً بك في RetainX Studio</b>",
@@ -1746,6 +1992,129 @@ STR = {
         "order_status_delivered": "مُسلَّم",
         "order_status_cancelled": "ملغى",
         "order_your_result": "◈  نتيجتك",
+
+        # ── Maintenance ──────────────────────────────────────────
+        "maintenance_msg": "🔧 <b>صيانة</b>\n\nالبوت غير متاح مؤقتاً. يرجى المحاولة لاحقاً.",
+        "maintenance_alert": "🔧 الصيانة. البوت غير متاح مؤقتاً.",
+
+        # ── Unlimited pass UI ────────────────────────────────────
+        "unlim_active_line": "\n{emoji} <b>اشتراك {name} لا محدود نشط</b> — {mins}د {secs}ث متبقية\n",
+        "unlim_btn_buy": "⚡  لا محدود — شراء خطة",
+        "unlim_btn_active": "⚡  لا محدود {name} نشط ✓",
+        "unlim_active_toast": "⚡ الاشتراك اللامحدود نشط!",
+        "unlim_buy_title": "⚡  <b>خطط لا محدود</b>",
+        "unlim_buy_balance": "  رصيدك:  <b>{coins}◈</b>",
+        "unlim_buy_select": "  اختر خطة:",
+        "unlim_btn_info": "ℹ  تفاصيل الخطط",
+        "unlim_dur_1h": "ساعة  —  {coins}◈",
+        "unlim_dur_2h": "ساعتان  —  {coins}◈  (−10%/س)",
+        "unlim_dur_3h": "3 ساعات  —  {coins}◈  (−20%/س)",
+        "unlim_select_duration": "  اختر المدة:",
+        "unlim_not_enough": "عملات غير كافية. تحتاج {need}◈، لديك {have}◈.",
+        "unlim_confirm_title": "⚡  <b>تأكيد الشراء</b>",
+        "unlim_confirm_tier": "  الخطة:      <b>{name}</b>",
+        "unlim_confirm_dur": "  المدة:         <b>{hours} س</b>",
+        "unlim_confirm_cost": "  التكلفة:      <b>{cost}◈</b>",
+        "unlim_confirm_balance": "  رصيدك:      <b>{coins}◈</b>",
+        "unlim_btn_activate": "✓  تفعيل — {cost}◈",
+        "unlim_error_retry": "خطأ. يرجى المحاولة مجدداً.",
+        "unlim_no_balance": "عملات غير كافية. أعد شحن رصيدك.",
+        "unlim_activated_title": "⚡  <b>اشتراك {name} اللامحدود مُفعَّل!</b>",
+        "unlim_activated_body": "  نشط حتى  <b>{time}</b>  ({hours} س)\n  أنشئ بلا حدود!\n\n  المُخصوم:  <b>{cost}◈</b>",
+        "unlim_info_title": "⚡  <b>خطط لا محدود</b>",
+        "unlim_info_body": "  أنشئ بلا حدود لمدة 1 أو 2 أو 3 ساعات —\n  بدون خصم عملات لكل طلب.\n\n  اختر خطة لمعرفة التفاصيل:",
+        "unlim_btn_buy_plan": "🛒  شراء {label}",
+        "unlim_tier_std_info": (
+            "  ✓  Seedance 2.0 Fast · Wan 2.7 · Grok 1.5\n"
+            "  ✓  LTX 2.3 Pro · Veo 3.1 Lite · Kling 3.0 · Kling O3\n"
+            "  ✕  فيديو بريميوم (Veo 3.1، Sora 2)\n"
+            "  ✕  صوت / تعليق صوتي\n"
+            "  ✕  الصور الرمزية\n"
+            "  ⬆  دقة حتى 720p"
+        ),
+        "unlim_tier_pro_info": (
+            "  ✓  كل شيء من Standard (حتى 1080p)\n"
+            "  ✓  بريميوم: Veo 3.1 · Veo 3.1 Fast · Sora 2\n"
+            "  ✓  صوت / تعليق صوتي\n"
+            "  ✕  الصور الرمزية\n"
+            "  ⬆  دقة حتى 1080p"
+        ),
+        "unlim_tier_vip_info": (
+            "  ✓  كل شيء من Pro\n"
+            "  ✓  دقة حتى 4K\n"
+            "  ✕  الصور الرمزية"
+        ),
+        "unlim_page_std": (
+            "⚡  <b>Standard لا محدود</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  أنشئ فيديوهات وصوراً بلا حدود\n"
+            "  — بدون خصم عملات لكل طلب.\n\n"
+            "<b>📹 فيديو — Standard:</b>\n"
+            "  • Seedance 2.0 Fast\n"
+            "  • Wan 2.7\n"
+            "  • LTX 2.3 Pro\n"
+            "  • Veo 3.1 Lite\n"
+            "  • Grok Imagine 1.5  <i>(حد أقصى 480p)</i>\n\n"
+            "<b>🎬 فيديو — Kling:</b>\n"
+            "  • Kling 3.0\n"
+            "  • Kling O3\n\n"
+            "  ✕  فيديو بريميوم (Veo 3.1، Sora 2)\n"
+            "  ✕  صوت\n"
+            "  ✕  الصور الرمزية\n\n"
+            "  ⬆  الدقة: حتى 720p\n\n"
+            "<b>💰 التسعير:</b>\n"
+            "  ساعة   →  <b>{p1}◈</b>\n"
+            "  ساعتان  →  <b>{p2}◈</b>  <i>(−10% في الساعة)</i>\n"
+            "  3 ساعات  →  <b>{p3}◈</b>  <i>(−20% في الساعة)</i>"
+        ),
+        "unlim_page_pro": (
+            "⚡⚡  <b>Pro لا محدود</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  كل شيء من Standard بالإضافة إلى نماذج\n"
+            "  بريميوم وصوت — حتى 1080p.\n\n"
+            "<b>📹 فيديو — Standard (حتى 1080p):</b>\n"
+            "  • Seedance 2.0 Fast · Wan 2.7\n"
+            "  • LTX 2.3 Pro · Veo 3.1 Lite\n"
+            "  • Grok Imagine 1.5\n\n"
+            "<b>🎬 فيديو — Kling (حتى 1080p):</b>\n"
+            "  • Kling 3.0 · Kling O3\n\n"
+            "<b>🏆 فيديو بريميوم (حتى 1080p):</b>\n"
+            "  • Veo 3.1 · Veo 3.1 Fast\n"
+            "  • Sora 2 Pro\n\n"
+            "<b>🎙 صوت:</b>\n"
+            "  • ElevenLabs · Artlist وغيرها\n\n"
+            "  ✕  الصور الرمزية\n\n"
+            "  ⬆  الدقة: حتى 1080p\n\n"
+            "<b>💰 التسعير:</b>\n"
+            "  ساعة   →  <b>{p1}◈</b>\n"
+            "  ساعتان  →  <b>{p2}◈</b>  <i>(−10% في الساعة)</i>\n"
+            "  3 ساعات  →  <b>{p3}◈</b>  <i>(−20% في الساعة)</i>"
+        ),
+        "unlim_page_vip": (
+            "♛  <b>VIP لا محدود</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  الخطة القصوى — كل شيء من Pro\n"
+            "  بدقة حتى 4K.\n\n"
+            "  ✓  جميع نماذج Pro\n\n"
+            "<b>📹 فيديو Standard (حتى 4K):</b>\n"
+            "  • LTX 2.3 Pro  <i>(720p / 1080p / 2K / 4K)</i>\n"
+            "  • Seedance 2.0 Fast · Wan 2.7\n"
+            "  • Veo 3.1 Lite · Grok Imagine 1.5\n\n"
+            "<b>🎬 Kling (حتى 4K):</b>\n"
+            "  • Kling 3.0 · Kling O3\n\n"
+            "<b>🏆 فيديو بريميوم (حتى 4K):</b>\n"
+            "  • Veo 3.1 · Veo 3.1 Fast\n"
+            "  • Sora 2 Pro\n\n"
+            "<b>🎙 صوت</b>\n\n"
+            "  ✕  الصور الرمزية\n\n"
+            "  ⬆  الدقة: حتى 4K\n\n"
+            "<b>💰 التسعير:</b>\n"
+            "  ساعة   →  <b>{p1}◈</b>\n"
+            "  ساعتان  →  <b>{p2}◈</b>  <i>(−10% في الساعة)</i>\n"
+            "  3 ساعات  →  <b>{p3}◈</b>  <i>(−20% في الساعة)</i>"
+        ),
+        "unlim_tier_title": "⚡  <b>لا محدود {name}</b>",
+        "unlim_info_tier_btn": "{emoji}  {name}  —  من {coins}◈",
     },
 }
 
