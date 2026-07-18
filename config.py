@@ -233,6 +233,9 @@ UNLIMITED_TIER_CONFIG = {
         "name_en": "Standard",
         "emoji": "⚡",
         "subcats": ["Standard", "Kling"],
+        "subcat_overrides": {
+            "Standard": ["sd20f", "wan27", "grok", "ltx23", "veo31l"],
+        },
         "max_resolution": "720p",
         "voiceover": False,
     },

@@ -98,8 +98,8 @@ TOOL_DESCS = {
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["sd20f","wan27","grok","ltx23","veo31l"],
-    "Premium":   ["veo31","veo31f","veo31e","sora2"],
+    "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
+    "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
@@ -205,13 +205,16 @@ async def video_subcat(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(uid)
     from database import has_unlimited, get_unlimited_tier
     from config import UNLIMITED_TIER_CONFIG
+    tids = VIDEO_SUBCATS.get(sub, [])
     if has_unlimited(uid):
         tier = get_unlimited_tier(uid) or "standard"
         tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
         if sub not in tier_cfg["subcats"]:
             await cb.answer(t("vid_subcat_tier_alert", lang), show_alert=True)
             return
-    tids = VIDEO_SUBCATS.get(sub, [])
+        overrides = tier_cfg.get("subcat_overrides", {})
+        if sub in overrides:
+            tids = overrides[sub]
     buttons = [[InlineKeyboardButton(text=TOOL_IDS[tid], callback_data=f"vt_{tid}")] for tid in tids]
     buttons.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
