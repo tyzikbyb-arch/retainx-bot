@@ -1,6 +1,7 @@
 import os
 import asyncio
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -209,7 +210,7 @@ async def admin_deliver_file(msg: Message, state: FSMContext):
     await bot.session.close()
     await state.clear()
 
-@router.message(F.text.startswith("/setblogger"))
+@router.message(Command("setblogger"))
 async def cmd_set_blogger(msg: Message):
     if msg.from_user.id != ADMIN_ID:
         return
@@ -223,7 +224,7 @@ async def cmd_set_blogger(msg: Message):
     status = "already was" if already else "✓ set"
     await msg.answer(f"Blogger {status}: user {uid}")
 
-@router.message(F.text.startswith("/removeblogger"))
+@router.message(Command("removeblogger"))
 async def cmd_remove_blogger(msg: Message):
     if msg.from_user.id != ADMIN_ID:
         return
