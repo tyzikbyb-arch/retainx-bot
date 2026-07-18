@@ -56,6 +56,7 @@ async def show_wallet(target, state: FSMContext = None):
     ]
     if not unlim_active:
         buttons.append([InlineKeyboardButton(text="⚡  Безлимит — купить пакет", callback_data="unlimited_buy")])
+        buttons.append([InlineKeyboardButton(text="ℹ  О безлимитных пакетах",   callback_data="unlim_info")])
     else:
         tier = get_unlimited_tier(uid) or "standard"
         tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
@@ -120,6 +121,7 @@ async def unlimited_buy(cb: CallbackQuery, state: FSMContext):
             text=f"{cfg['emoji']}  {name}  —  от {price_1h}◈",
             callback_data=f"ulim_t_{tier}"
         )])
+    rows.append([InlineKeyboardButton(text="ℹ  Подробнее о пакетах", callback_data="unlim_info")])
     rows.append([back_btn("wallet", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         "⚡  <b>Безлимитные пакеты</b>\n"
@@ -235,6 +237,130 @@ async def unlim_confirm(cb: CallbackQuery, state: FSMContext):
         f"  Списано:  <b>{coins_cost}◈</b>",
         reply_markup=kb([menu_btn(lang)]),
         parse_mode="HTML"
+    )
+    await cb.answer()
+
+# ── Unlimited info section ───────────────────────────────────────────────
+def _build_tier_page(tier: str) -> str:
+    p = UNLIMITED_PLANS[tier]
+    if tier == "standard":
+        return (
+            "⚡  <b>Безлимит Standard</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Генерируйте видео и изображения без\n"
+            "  ограничений — монеты не списываются.\n\n"
+            "<b>📹 Видео — Standard:</b>\n"
+            "  • Seedance 2.0 Fast\n"
+            "  • Wan 2.7\n"
+            "  • LTX 2.3 Pro\n"
+            "  • Veo 3.1 Lite\n"
+            "  • Grok Imagine 1.5  <i>(макс. 480p)</i>\n\n"
+            "<b>🎬 Видео — Kling:</b>\n"
+            "  • Kling 3.0\n"
+            "  • Kling O3\n\n"
+            "  ✕  Premium видео (Veo 3.1, Sora 2)\n"
+            "  ✕  Аудио и голос\n"
+            "  ✕  Аватары\n\n"
+            "  ⬆  Разрешение: до 720p\n\n"
+            "<b>💰 Стоимость:</b>\n"
+            f"  1 час   →  <b>{p[1]}◈</b>\n"
+            f"  2 часа  →  <b>{p[2]}◈</b>  <i>(−10% за час)</i>\n"
+            f"  3 часа  →  <b>{p[3]}◈</b>  <i>(−20% за час)</i>"
+        )
+    elif tier == "pro":
+        return (
+            "⚡⚡  <b>Безлимит Pro</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Всё из Standard плюс Premium-модели\n"
+            "  и аудио — в качестве до 1080p.\n\n"
+            "<b>📹 Видео — Standard (до 1080p):</b>\n"
+            "  • Seedance 2.0 Fast · Wan 2.7\n"
+            "  • LTX 2.3 Pro · Veo 3.1 Lite\n"
+            "  • Grok Imagine 1.5\n\n"
+            "<b>🎬 Видео — Kling (до 1080p):</b>\n"
+            "  • Kling 3.0 · Kling O3\n\n"
+            "<b>🏆 Premium видео (до 1080p):</b>\n"
+            "  • Veo 3.1 · Veo 3.1 Fast\n"
+            "  • Sora 2 Pro\n\n"
+            "<b>🎙 Аудио и голос:</b>\n"
+            "  • ElevenLabs · Artlist и др.\n\n"
+            "  ✕  Аватары\n\n"
+            "  ⬆  Разрешение: до 1080p\n\n"
+            "<b>💰 Стоимость:</b>\n"
+            f"  1 час   →  <b>{p[1]}◈</b>\n"
+            f"  2 часа  →  <b>{p[2]}◈</b>  <i>(−10% за час)</i>\n"
+            f"  3 часа  →  <b>{p[3]}◈</b>  <i>(−20% за час)</i>"
+        )
+    else:  # vip
+        return (
+            "♛  <b>Безлимит VIP</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Максимальный пакет — всё из Pro\n"
+            "  с разрешением до 4K.\n\n"
+            "  ✓  Все модели из Pro\n\n"
+            "<b>📹 Standard-видео (до 4K):</b>\n"
+            "  • LTX 2.3 Pro  <i>(720p / 1080p / 2K / 4K)</i>\n"
+            "  • Seedance 2.0 Fast · Wan 2.7\n"
+            "  • Veo 3.1 Lite · Grok Imagine 1.5\n\n"
+            "<b>🎬 Kling (до 4K):</b>\n"
+            "  • Kling 3.0 · Kling O3\n\n"
+            "<b>🏆 Premium видео (до 4K):</b>\n"
+            "  • Veo 3.1 · Veo 3.1 Fast\n"
+            "  • Sora 2 Pro\n\n"
+            "<b>🎙 Аудио и голос</b>\n\n"
+            "  ✕  Аватары\n\n"
+            "  ⬆  Разрешение: до 4K\n\n"
+            "<b>💰 Стоимость:</b>\n"
+            f"  1 час   →  <b>{p[1]}◈</b>\n"
+            f"  2 часа  →  <b>{p[2]}◈</b>  <i>(−10% за час)</i>\n"
+            f"  3 часа  →  <b>{p[3]}◈</b>  <i>(−20% за час)</i>"
+        )
+
+@router.callback_query(F.data == "unlim_info")
+async def unlim_info(cb: CallbackQuery):
+    lang = get_lang(cb.from_user.id)
+    rows = [
+        [InlineKeyboardButton(text="⚡  Standard  —  от 268◈",   callback_data="ulim_info_standard")],
+        [InlineKeyboardButton(text="⚡⚡  Pro  —  от 662◈",      callback_data="ulim_info_pro")],
+        [InlineKeyboardButton(text="♛  VIP  —  от 1 619◈",      callback_data="ulim_info_vip")],
+        [back_btn("unlimited_buy", lang=lang), menu_btn(lang)],
+    ]
+    await cb.message.edit_text(
+        "⚡  <b>Безлимитные пакеты</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "  Генерируйте неограниченно в течение\n"
+        "  1, 2 или 3 часов — без списания монет\n"
+        "  за каждый запрос.\n\n"
+        "  Выберите пакет чтобы узнать подробнее:",
+        reply_markup=kb(*rows),
+        parse_mode="HTML",
+    )
+    await cb.answer()
+
+@router.callback_query(F.data.startswith("ulim_info_"))
+async def unlim_info_tier(cb: CallbackQuery):
+    tier = cb.data[10:]
+    if tier not in UNLIMITED_TIER_CONFIG:
+        await cb.answer()
+        return
+    lang = get_lang(cb.from_user.id)
+    nav = {"standard": ("pro", "vip"), "pro": ("standard", "vip"), "vip": ("pro", None)}
+    prev_tier, next_tier = nav[tier]
+    _label = {"standard": "⚡  Standard", "pro": "⚡⚡  Pro", "vip": "♛  VIP"}
+    nav_row = []
+    if prev_tier:
+        nav_row.append(InlineKeyboardButton(text=f"←  {_label[prev_tier]}", callback_data=f"ulim_info_{prev_tier}"))
+    if next_tier:
+        nav_row.append(InlineKeyboardButton(text=f"{_label[next_tier]}  →", callback_data=f"ulim_info_{next_tier}"))
+    rows = []
+    if nav_row:
+        rows.append(nav_row)
+    rows.append([InlineKeyboardButton(text=f"🛒  Купить {_label[tier]}", callback_data=f"ulim_t_{tier}")])
+    rows.append([back_btn("unlim_info", lang=lang), menu_btn(lang)])
+    await cb.message.edit_text(
+        _build_tier_page(tier),
+        reply_markup=kb(*rows),
+        parse_mode="HTML",
     )
     await cb.answer()
 
