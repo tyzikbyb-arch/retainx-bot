@@ -231,6 +231,11 @@ STR = {
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  Resolution: 720p\n\n  Select duration:",
 
+        "vid_extend_title": "◈  <b>Veo 3.1 — Extend Video</b>",
+        "vid_extend_desc": "  Extend your video with additional seconds.\n\n  Select the extension tier:",
+        "vid_extend_fast":    "⚡  Fast",
+        "vid_extend_premium": "◈  Premium",
+
         "vid_unknown_tool_alert": "Unknown tool",
         "vid_select_lang_label": "◈  Select target language:",
         "vid_translate_cost": "  Cost   <b>{coins} coins</b>",
@@ -804,6 +809,11 @@ STR = {
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  Разрешение: 720p\n\n  Выберите длительность:",
 
+        "vid_extend_title": "◈  <b>Veo 3.1 — Продление видео</b>",
+        "vid_extend_desc": "  Продлите ваше видео на дополнительные секунды.\n\n  Выберите тариф:",
+        "vid_extend_fast":    "⚡  Быстро",
+        "vid_extend_premium": "◈  Премиум",
+
         "vid_unknown_tool_alert": "Неизвестный инструмент",
         "vid_select_lang_label": "◈  Выберите целевой язык:",
         "vid_translate_cost": "  Стоимость   <b>{coins} монет</b>",
@@ -1376,6 +1386,11 @@ STR = {
 
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  الدقة: 720p\n\n  اختر المدة:",
+
+        "vid_extend_title": "◈  <b>Veo 3.1 — تمديد الفيديو</b>",
+        "vid_extend_desc": "  مدّد الفيديو بثوانٍ إضافية.\n\n  اختر المستوى:",
+        "vid_extend_fast":    "⚡  سريع",
+        "vid_extend_premium": "◈  بريميوم",
 
         "vid_unknown_tool_alert": "أداة غير معروفة",
         "vid_select_lang_label": "◈  اختر اللغة المستهدفة:",

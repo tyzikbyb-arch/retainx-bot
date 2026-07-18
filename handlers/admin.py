@@ -82,6 +82,8 @@ async def admin_cancel_with_reason(msg: Message, state: FSMContext):
         reason = ""
     add_coins(order["user_id"], order["coins"])
     update_order_status(oid, "cancelled")
+    from handlers import spinner as sp
+    await sp.stop(oid)
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
     lang = get_lang(order["user_id"])

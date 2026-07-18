@@ -516,7 +516,7 @@ async def _handle_referral_bonus(uid: int, coins_added: int):
             await bot.send_message(
                 ref_uid,
                 f"{t('wallet_referral_bonus_title', ref_lang)}\n\n"
-                f"{t('wallet_referral_bonus_body', ref_lang, bonus=bonus)}",
+                f"{t('wallet_referral_bonus_body', ref_lang, bonus=bonus, percentage=REFERRAL_PERCENT)}",
                 parse_mode="HTML"
             )
 

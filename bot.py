@@ -509,6 +509,8 @@ async def cancelorder_cmd(msg: Message):
             return
         add_coins(order["user_id"], order["coins"])
         update_order_status(oid, "cancelled")
+        from handlers import spinner as sp
+        await sp.stop(oid)
         await bot.send_message(order["user_id"], f"◌  <b>Order #{oid} Cancelled</b>\n\n  <b>{order['coins']} coins</b> refunded.", parse_mode="HTML")
         await msg.answer(f"✓  Order #{oid} cancelled. {order['coins']} coins refunded.")
     except Exception as e:

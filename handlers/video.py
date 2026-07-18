@@ -495,7 +495,7 @@ async def show_grok(cb, state):
         for s, usd in GROK_IMAGINE_15_PRICES.items()
     ]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
+    rows.append([back_btn("vsub_Standard", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"{t('vid_grok_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"

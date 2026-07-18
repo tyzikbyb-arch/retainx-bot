@@ -20,9 +20,6 @@ STATUS_KEY = {
     "cancelled":  "order_status_cancelled",
 }
 
-@router.message(F.text == "📋  Orders")
-async def orders_from_reply(msg: Message, state: FSMContext):
-    await show_orders(msg, msg.from_user.id)
 
 @router.callback_query(F.data == "my_orders")
 async def orders_cb(cb: CallbackQuery):
