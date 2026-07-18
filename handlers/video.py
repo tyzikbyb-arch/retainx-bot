@@ -98,7 +98,7 @@ TOOL_DESCS = {
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["wan27","grok","ltx23","veo31l"],
+    "Standard":  ["sd20f","wan27","grok","ltx23","veo31l"],
     "Premium":   ["veo31","veo31f","veo31e","sora2"],
     "Kling":     ["kl30","kl03"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
