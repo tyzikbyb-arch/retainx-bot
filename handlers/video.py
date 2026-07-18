@@ -98,9 +98,9 @@ TOOL_DESCS = {
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
-    "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
-    "Kling":     ["kl30","kl03","klmc","klve"],
+    "Standard":  ["wan27","grok","ltx23","veo31l"],
+    "Premium":   ["veo31","veo31f","veo31e","sora2"],
+    "Kling":     ["kl30","kl03"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
 def subcat_label(sub: str, lang: str = "en") -> str:
@@ -136,7 +136,7 @@ def get_resolutions(tid: str):
         "veo31f":["720p","1080p","4K"],
         "veo31l":["720p","1080p"],
         "sora2": ["720p","1080p"],
-        "ltx23": ["1080p","2K","4K"],
+        "ltx23": ["720p","1080p","2K","4K"],
         "kl30":  ["720p","1080p","4K"],
         "kl03":  ["720p","1080p","4K"],
     }.get(tid, ["720p","1080p"])
@@ -276,8 +276,6 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     # Fixed price tools
     fixed = {
-        "klmc": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"30 {t('vid_sec_word', lang)}"}, 1.00),
-        "klve": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"10 {t('vid_sec_word', lang)}"}, 0.25),
         "fab1": ({t("vid_type_word", lang): t("vid_avatar_video_word", lang)}, 0.90),
         # omni, aur1 handled separately
     }
