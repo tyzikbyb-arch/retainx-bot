@@ -218,11 +218,14 @@ async def cmd_set_blogger(msg: Message):
     if len(parts) < 2 or not parts[1].isdigit():
         await msg.answer("Usage: /setblogger USER_ID")
         return
-    uid = int(parts[1])
-    already = get_is_blogger(uid)
-    set_blogger(uid, True)
-    status = "already was" if already else "✓ set"
-    await msg.answer(f"Blogger {status}: user {uid}")
+    try:
+        uid = int(parts[1])
+        already = get_is_blogger(uid)
+        set_blogger(uid, True)
+        status = "already was" if already else "✓ set"
+        await msg.answer(f"Blogger {status}: user {uid}")
+    except Exception as e:
+        await msg.answer(f"❌ Error: {e}")
 
 @router.message(Command("removeblogger"))
 async def cmd_remove_blogger(msg: Message):
@@ -232,6 +235,9 @@ async def cmd_remove_blogger(msg: Message):
     if len(parts) < 2 or not parts[1].isdigit():
         await msg.answer("Usage: /removeblogger USER_ID")
         return
-    uid = int(parts[1])
-    set_blogger(uid, False)
-    await msg.answer(f"✓ Blogger status removed: user {uid}")
+    try:
+        uid = int(parts[1])
+        set_blogger(uid, False)
+        await msg.answer(f"✓ Blogger status removed: user {uid}")
+    except Exception as e:
+        await msg.answer(f"❌ Error: {e}")
