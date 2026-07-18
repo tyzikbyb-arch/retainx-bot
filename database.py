@@ -64,6 +64,10 @@ def init_db():
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blogger INTEGER DEFAULT 0")
             except Exception:
                 pass
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS unlimited_tier TEXT DEFAULT NULL")
+            except Exception:
+                pass
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS artlist_accounts (
                     id SERIAL PRIMARY KEY,
@@ -182,17 +186,24 @@ def get_unlimited_until(uid: int):
             row = cur.fetchone()
             return row[0] if row else None
 
-def set_unlimited(uid: int, duration_seconds: int = 3600) -> int:
+def set_unlimited(uid: int, duration_seconds: int = 3600, tier: str = None) -> int:
     until = int(time.time()) + duration_seconds
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO users (uid, coins, joined, unlimited_until)
-                VALUES (%s, 0, %s, %s)
-                ON CONFLICT (uid) DO UPDATE SET unlimited_until = %s
-            """, (uid, int(time.time()), until, until))
+                INSERT INTO users (uid, coins, joined, unlimited_until, unlimited_tier)
+                VALUES (%s, 0, %s, %s, %s)
+                ON CONFLICT (uid) DO UPDATE SET unlimited_until = %s, unlimited_tier = %s
+            """, (uid, int(time.time()), until, tier, until, tier))
         conn.commit()
     return until
+
+def get_unlimited_tier(uid: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT unlimited_tier FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return row[0] if row else None
 
 def can_buy_unlimited(uid: int) -> bool:
     with get_conn() as conn:

@@ -223,3 +223,55 @@ AURORA_AVATAR_PRICES = {
     11: 28.8, 12: 31.5, 13: 34.2, 14: 36.9, 15: 39.6,
 }
 
+# ─── UNLIMITED PASS ───────────────────────────────────────────
+RESOLUTION_ORDER = ["480p", "720p", "1080p", "2K", "4K"]
+
+UNLIMITED_TIER_CONFIG = {
+    "standard": {
+        "name_ru": "Стандарт",
+        "name_en": "Standard",
+        "emoji": "⚡",
+        "subcats": ["Standard", "Kling"],
+        "max_resolution": "1080p",
+        "voiceover": False,
+    },
+    "pro": {
+        "name_ru": "Про",
+        "name_en": "Pro",
+        "emoji": "⚡⚡",
+        "subcats": ["Standard", "Kling", "Premium"],
+        "max_resolution": "1080p",
+        "voiceover": True,
+    },
+    "vip": {
+        "name_ru": "VIP",
+        "name_en": "VIP",
+        "emoji": "♛",
+        "subcats": ["Standard", "Kling", "Premium"],
+        "max_resolution": "4K",
+        "voiceover": True,
+    },
+}
+
+# Coin prices per tier × duration (hours)
+# Standard: 990₽/hr · Pro: 2450₽/hr · VIP: 5990₽/hr (1 coin = 3.70₽)
+# 2hr = 10% cheaper per hour · 3hr = 20% cheaper per hour
+UNLIMITED_PLANS = {
+    "standard": {1: 268, 2: 482, 3: 642},
+    "pro":      {1: 662, 2: 1192, 3: 1589},
+    "vip":      {1: 1619, 2: 2914, 3: 3886},
+}
+
+def filter_resolutions(resolutions: list, max_res: str) -> list:
+    """Filter resolution list to only include options up to max_res."""
+    if max_res not in RESOLUTION_ORDER:
+        return resolutions
+    max_idx = RESOLUTION_ORDER.index(max_res)
+    result = []
+    for r in resolutions:
+        if r not in RESOLUTION_ORDER:
+            result.append(r)
+        elif RESOLUTION_ORDER.index(r) <= max_idx:
+            result.append(r)
+    return result
+

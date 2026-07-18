@@ -6,8 +6,8 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN
-from database import get_coins, add_coins, get_referred_by, get_lang, has_unlimited, get_unlimited_until, set_unlimited, can_buy_unlimited
+from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, UNLIMITED_TIER_CONFIG, UNLIMITED_PLANS
+from database import get_coins, add_coins, spend_coins, get_referred_by, get_lang, has_unlimited, get_unlimited_until, get_unlimited_tier, set_unlimited, can_buy_unlimited
 from keyboards import kb, back_btn, menu_btn
 from i18n import t
 
@@ -15,13 +15,9 @@ router = Router()
 
 TRON_API = "https://apilist.tronscanapi.com/api/transaction-info"
 
-UNLIMITED_STARS = 2200   # ≈ $22 / 2000₽
-UNLIMITED_USD   = 22.0
-
 class TopupStates(StatesGroup):
     entering_amount = State()
     entering_tx = State()
-    entering_unlimited_tx = State()
 
 # ── Wallet ─────────────────────────────────────────────────────────────
 async def show_wallet(target, state: FSMContext = None):
@@ -40,7 +36,10 @@ async def show_wallet(target, state: FSMContext = None):
         remaining = max(0, until_ts - int(time.time()))
         mins = remaining // 60
         secs = remaining % 60
-        unlim_line = f"\n⚡ <b>Безлимит активен</b> — ещё {mins}м {secs}с\n"
+        tier = get_unlimited_tier(uid) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        tier_name = tier_cfg["name_ru"] if lang == "ru" else tier_cfg["name_en"]
+        unlim_line = f"\n{tier_cfg['emoji']} <b>Безлимит {tier_name} активен</b> — ещё {mins}м {secs}с\n"
 
     text = (
         f"{t('wallet_title', lang)}\n"
@@ -52,14 +51,16 @@ async def show_wallet(target, state: FSMContext = None):
         "━━━━━━━━━━━━━━━━━━━━"
     )
 
-    can_buy = can_buy_unlimited(uid)
     buttons = [
         [InlineKeyboardButton(text=t("wallet_btn_add_coins", lang), callback_data="topup_start")],
     ]
-    if can_buy and not unlim_active:
-        buttons.append([InlineKeyboardButton(text="⚡  Безлимит 1 час", callback_data="unlimited_buy")])
-    elif unlim_active:
-        buttons.append([InlineKeyboardButton(text="⚡  Безлимит активен ✓", callback_data="unlimited_status")])
+    if not unlim_active:
+        buttons.append([InlineKeyboardButton(text="⚡  Безлимит — купить пакет", callback_data="unlimited_buy")])
+    else:
+        tier = get_unlimited_tier(uid) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        tier_name = tier_cfg["name_ru"] if lang == "ru" else tier_cfg["name_en"]
+        buttons.append([InlineKeyboardButton(text=f"⚡  Безлимит {tier_name} активен ✓", callback_data="unlimited_status")])
     buttons.append([InlineKeyboardButton(text=t("wallet_btn_referral", lang), callback_data="referral_info")])
     buttons.append([menu_btn(lang)])
 
@@ -77,150 +78,165 @@ async def wallet_cb(cb: CallbackQuery, state: FSMContext):
 async def unlimited_status_cb(cb: CallbackQuery):
     await cb.answer("⚡ Безлимит активен!", show_alert=False)
 
-# ── Unlimited pass purchase ───────────────────────────────────────────
+# ── Unlimited pass purchase — tiered coin flow ────────────────────────
+_TIER_ORDER = ["standard", "pro", "vip"]
+
+def _tier_info_text(tier: str) -> str:
+    if tier == "standard":
+        return (
+            "  ✓  Seedance · Happy Horse · Wan · Grok\n"
+            "  ✓  Kling 3.0 · Kling O3\n"
+            "  ✓  Все форматы изображений\n"
+            "  ✕  Premium видео (Veo, Sora, LTX)\n"
+            "  ✕  Аудио / войсовер\n"
+            "  ✕  Аватары\n"
+            "  ⬆  Разрешение до 1080p"
+        )
+    elif tier == "pro":
+        return (
+            "  ✓  Всё из Стандарт\n"
+            "  ✓  Premium видео: Veo 3.1 · Sora 2 · LTX 2.3\n"
+            "  ✓  Аудио / войсовер (ElevenLabs, Artlist)\n"
+            "  ✕  Аватары\n"
+            "  ⬆  Разрешение до 1080p"
+        )
+    else:  # vip
+        return (
+            "  ✓  Всё из Про\n"
+            "  ✓  Разрешение до 4K\n"
+            "  ✕  Аватары"
+        )
+
 @router.callback_query(F.data == "unlimited_buy")
 async def unlimited_buy(cb: CallbackQuery, state: FSMContext):
-    uid = cb.from_user.id
-    lang = get_lang(uid)
-    if not can_buy_unlimited(uid):
-        await cb.answer("Доступ не открыт.", show_alert=True)
-        return
-    await cb.message.edit_text(
-        "⚡  <b>Безлимит на 1 час</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "  ✓  Все модели изображений\n"
-        "  ✓  Все модели видео\n"
-        "  ✓  Аудио / дублирование\n"
-        "  ✕  Аватары (HeyGen, OmniHuman, Aurora, Fabric, Lipsync)\n\n"
-        f"  Цена:  <b>{UNLIMITED_STARS} ⭐  или  ${UNLIMITED_USD:.0f} USDT</b>\n\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "  Выберите способ оплаты:",
-        reply_markup=kb(
-            [InlineKeyboardButton(text=f"⭐  {UNLIMITED_STARS} Telegram Stars", callback_data="unlimited_pay_stars")],
-            [InlineKeyboardButton(text=f"💎  ${UNLIMITED_USD:.0f} USDT (TRC20)",  callback_data="unlimited_pay_usdt")],
-            [back_btn("wallet", lang=lang), menu_btn(lang)],
-        ),
-        parse_mode="HTML"
-    )
-
-@router.callback_query(F.data == "unlimited_pay_stars")
-async def unlimited_pay_stars(cb: CallbackQuery):
-    from aiogram import Bot
     lang = get_lang(cb.from_user.id)
-    bot = Bot(token=BOT_TOKEN)
-    await bot.send_invoice(
-        chat_id=cb.from_user.id,
-        title="⚡ Безлимит на 1 час",
-        description="Неограниченная генерация на 1 час (все модели кроме аватаров)",
-        payload=f"unlimited_hour_{cb.from_user.id}",
-        currency="XTR",
-        prices=[LabeledPrice(label="Безлимит 1 час", amount=UNLIMITED_STARS)],
-        provider_token="",
+    coins = get_coins(cb.from_user.id)
+    rows = []
+    for tier in _TIER_ORDER:
+        cfg = UNLIMITED_TIER_CONFIG[tier]
+        price_1h = UNLIMITED_PLANS[tier][1]
+        name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
+        rows.append([InlineKeyboardButton(
+            text=f"{cfg['emoji']}  {name}  —  от {price_1h}◈",
+            callback_data=f"ulim_t_{tier}"
+        )])
+    rows.append([back_btn("wallet", lang=lang), menu_btn(lang)])
+    await cb.message.edit_text(
+        "⚡  <b>Безлимитные пакеты</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  Ваш баланс:  <b>{coins}◈</b>\n\n"
+        "  Выберите тариф:",
+        reply_markup=kb(*rows),
+        parse_mode="HTML"
     )
     await cb.answer()
 
-@router.callback_query(F.data == "unlimited_pay_usdt")
-async def unlimited_pay_usdt(cb: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data.startswith("ulim_t_"))
+async def unlim_tier_selected(cb: CallbackQuery, state: FSMContext):
+    tier = cb.data[7:]
+    if tier not in UNLIMITED_TIER_CONFIG:
+        await cb.answer()
+        return
     lang = get_lang(cb.from_user.id)
-    await state.update_data(unlimited_usdt_amount=UNLIMITED_USD)
+    cfg = UNLIMITED_TIER_CONFIG[tier]
+    name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
+    plans = UNLIMITED_PLANS[tier]
+    info = _tier_info_text(tier)
+
+    rows = [
+        [InlineKeyboardButton(text=f"1 час  —  {plans[1]}◈", callback_data=f"ulim_d_{tier}_1")],
+        [InlineKeyboardButton(text=f"2 часа  —  {plans[2]}◈  (−10%/ч)", callback_data=f"ulim_d_{tier}_2")],
+        [InlineKeyboardButton(text=f"3 часа  —  {plans[3]}◈  (−20%/ч)", callback_data=f"ulim_d_{tier}_3")],
+        [back_btn("unlimited_buy", lang=lang), menu_btn(lang)],
+    ]
     await cb.message.edit_text(
-        "💎  <b>Оплата USDT (TRC20)</b>\n"
+        f"⚡  <b>Безлимит {name}</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  Отправьте ровно  <b>${UNLIMITED_USD:.2f} USDT</b>\n"
-        "  Сеть: TRC20 (Tron)\n\n"
-        "  Адрес кошелька:\n"
-        f"  <code>{USDT_WALLET}</code>\n\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "  После отправки вставьте хэш транзакции:",
-        reply_markup=kb([back_btn("unlimited_buy", lang=lang), menu_btn(lang)]),
+        f"{info}\n\n"
+        "  Выберите длительность:",
+        reply_markup=kb(*rows),
         parse_mode="HTML"
     )
-    await state.set_state(TopupStates.entering_unlimited_tx)
+    await cb.answer()
 
-@router.message(TopupStates.entering_unlimited_tx)
-async def receive_unlimited_tx(msg: Message, state: FSMContext):
-    lang = get_lang(msg.from_user.id)
-    tx_hash = msg.text.strip()
-    uid = msg.from_user.id
-    data = await state.get_data()
-    amount = float(data.get("unlimited_usdt_amount", UNLIMITED_USD))
+@router.callback_query(F.data.startswith("ulim_d_"))
+async def unlim_duration_selected(cb: CallbackQuery, state: FSMContext):
+    parts = cb.data[7:].split("_")
+    if len(parts) != 2:
+        await cb.answer()
+        return
+    tier, hours_str = parts[0], parts[1]
+    hours = int(hours_str)
+    if tier not in UNLIMITED_TIER_CONFIG or hours not in UNLIMITED_PLANS.get(tier, {}):
+        await cb.answer()
+        return
+    lang = get_lang(cb.from_user.id)
+    cfg = UNLIMITED_TIER_CONFIG[tier]
+    name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
+    coins_cost = UNLIMITED_PLANS[tier][hours]
+    user_coins = get_coins(cb.from_user.id)
 
-    await msg.answer("⏳ Проверяем транзакцию...")
+    if user_coins < coins_cost:
+        await cb.answer(f"Недостаточно монет. Нужно {coins_cost}◈, у вас {user_coins}◈.", show_alert=True)
+        return
 
-    try:
-        verified, actual_amount = await verify_tron_tx(tx_hash, amount)
-        if verified:
-            until = set_unlimited(uid)
-            until_str = datetime.datetime.fromtimestamp(until).strftime("%H:%M")
-            await msg.answer(
-                "⚡  <b>Безлимит активирован!</b>\n\n"
-                f"  Действует до  <b>{until_str}</b>  (1 час)\n"
-                "  Генерируйте сколько угодно!",
-                reply_markup=kb([menu_btn(lang)]),
-                parse_mode="HTML"
-            )
-            await state.clear()
-        else:
-            await _send_unlimited_for_review(msg, tx_hash, amount, uid)
-            await state.clear()
-    except Exception:
-        await _send_unlimited_for_review(msg, tx_hash, amount, uid)
-        await state.clear()
-
-async def _send_unlimited_for_review(msg: Message, tx_hash: str, amount: float, uid: int):
-    from config import ADMIN_ID
-    from aiogram import Bot
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-    bot = Bot(token=BOT_TOKEN)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="⚡ Подтвердить безлимит", callback_data=f"confirm_unlimited_{uid}"),
-        InlineKeyboardButton(text="✕  Отклонить",           callback_data=f"reject_unlimited_{uid}"),
-    ]])
-    await bot.send_message(
-        ADMIN_ID,
-        f"⚡  <b>Безлимит — Проверка вручную</b>\n\n"
-        f"  Пользователь  <code>{uid}</code>  (@{msg.from_user.username or '—'})\n"
-        f"  Сумма         <b>${amount:.2f} USDT</b>\n\n"
-        f"  TX Hash:\n<code>{tx_hash}</code>",
-        reply_markup=keyboard, parse_mode="HTML"
+    hour_word = {1: "час", 2: "часа", 3: "часа"}.get(hours, "ч")
+    await cb.message.edit_text(
+        f"⚡  <b>Подтверждение покупки</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  Тариф:          <b>{name}</b>\n"
+        f"  Длительность:  <b>{hours} {hour_word}</b>\n"
+        f"  Стоимость:     <b>{coins_cost}◈</b>\n"
+        f"  Ваш баланс:   <b>{user_coins}◈</b>\n\n"
+        "━━━━━━━━━━━━━━━━━━━━",
+        reply_markup=kb(
+            [InlineKeyboardButton(
+                text=f"✓  Активировать — {coins_cost}◈",
+                callback_data=f"ulim_c_{tier}_{hours}"
+            )],
+            [back_btn(f"ulim_t_{tier}", lang=lang), menu_btn(lang)],
+        ),
+        parse_mode="HTML"
     )
+    await cb.answer()
+
+@router.callback_query(F.data.startswith("ulim_c_"))
+async def unlim_confirm(cb: CallbackQuery, state: FSMContext):
+    parts = cb.data[7:].split("_")
+    if len(parts) != 2:
+        await cb.answer()
+        return
+    tier, hours_str = parts[0], parts[1]
+    hours = int(hours_str)
+    uid = cb.from_user.id
     lang = get_lang(uid)
-    await msg.answer(
-        f"{t('wallet_review_title', lang)}\n\n"
-        f"{t('wallet_review_body', lang)}",
+
+    if tier not in UNLIMITED_TIER_CONFIG or hours not in UNLIMITED_PLANS.get(tier, {}):
+        await cb.answer("Ошибка. Попробуйте снова.", show_alert=True)
+        return
+
+    coins_cost = UNLIMITED_PLANS[tier][hours]
+    if not spend_coins(uid, coins_cost):
+        await cb.answer("Недостаточно монет. Пополните баланс.", show_alert=True)
+        return
+
+    duration_secs = hours * 3600
+    until = set_unlimited(uid, duration_secs, tier)
+    until_str = datetime.datetime.fromtimestamp(until).strftime("%H:%M")
+    cfg = UNLIMITED_TIER_CONFIG[tier]
+    name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
+    hour_word = {1: "час", 2: "часа", 3: "часа"}.get(hours, "ч")
+
+    await cb.message.edit_text(
+        f"⚡  <b>Безлимит {name} активирован!</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  Действует до  <b>{until_str}</b>  ({hours} {hour_word})\n"
+        "  Генерируйте сколько угодно!\n\n"
+        f"  Списано:  <b>{coins_cost}◈</b>",
         reply_markup=kb([menu_btn(lang)]),
         parse_mode="HTML"
     )
-
-@router.callback_query(F.data.startswith("confirm_unlimited_"))
-async def admin_confirm_unlimited(cb: CallbackQuery):
-    from config import ADMIN_ID
-    if cb.from_user.id != ADMIN_ID:
-        return
-    uid = int(cb.data.replace("confirm_unlimited_", ""))
-    until = set_unlimited(uid)
-    until_str = datetime.datetime.fromtimestamp(until).strftime("%H:%M")
-    from aiogram import Bot
-    bot = Bot(token=BOT_TOKEN)
-    await bot.send_message(
-        uid,
-        "⚡  <b>Безлимит активирован!</b>\n\n"
-        f"  Действует до  <b>{until_str}</b>  (1 час)\n"
-        "  Генерируйте сколько угодно!",
-        parse_mode="HTML"
-    )
-    await cb.message.edit_text(f"⚡ Безлимит активирован для пользователя {uid} до {until_str}.")
-
-@router.callback_query(F.data.startswith("reject_unlimited_"))
-async def admin_reject_unlimited(cb: CallbackQuery):
-    from config import ADMIN_ID
-    if cb.from_user.id != ADMIN_ID:
-        return
-    uid = int(cb.data.replace("reject_unlimited_", ""))
-    from aiogram import Bot
-    bot = Bot(token=BOT_TOKEN)
-    await bot.send_message(uid, "❌ Транзакция не подтверждена. Обратитесь в поддержку.")
-    await cb.message.edit_text(f"✕ Безлимит отклонён для пользователя {uid}.")
+    await cb.answer()
 
 # ── Top-up start ─────────────────────────────────────────────────────────
 @router.callback_query(F.data == "topup_start")
@@ -450,7 +466,7 @@ async def successful_stars_payment(msg: Message):
     uid = msg.from_user.id
 
     if payload.startswith("unlimited_hour_"):
-        until = set_unlimited(uid)
+        until = set_unlimited(uid, 3600, "standard")
         until_str = datetime.datetime.fromtimestamp(until).strftime("%H:%M")
         await msg.answer(
             "⚡  <b>Безлимит активирован!</b>\n\n"

@@ -4,8 +4,8 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, BufferedInputFile, InputMediaDocument
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from config import coins_to_usd
-from database import get_coins, spend_coins, create_order, get_lang
+from config import coins_to_usd, UNLIMITED_TIER_CONFIG
+from database import get_coins, spend_coins, create_order, get_lang, has_unlimited, get_unlimited_tier
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
 import voice_catalog as vc
@@ -379,7 +379,18 @@ def _model_price_badge(model: dict) -> str:
 @router.callback_query(F.data == "cat_audio")
 async def voiceover_model_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
-    lang = get_lang(cb.from_user.id)
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    unlim = has_unlimited(uid)
+    if unlim:
+        tier = get_unlimited_tier(uid) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        if not tier_cfg["voiceover"]:
+            await cb.answer(
+                "⚡ Аудио не входит в безлимит Стандарт.\nОплатите монетами или перейдите на Про / VIP.",
+                show_alert=True,
+            )
+            return
     buttons = [
         InlineKeyboardButton(text=f"{m['name']}   {_model_price_badge(m)}", callback_data=f"vo_model_{m['id']}")
         for m in vc.list_models()
@@ -965,9 +976,16 @@ async def voiceover_confirm(cb: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    if not spend_coins(uid, price_coins):
-        await cb.answer(t("vo_insufficient_coins", lang), show_alert=True)
-        return
+    unlim = has_unlimited(uid)
+    voiceover_covered = False
+    if unlim:
+        tier = get_unlimited_tier(uid) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        voiceover_covered = tier_cfg.get("voiceover", False)
+    if not voiceover_covered:
+        if not spend_coins(uid, price_coins):
+            await cb.answer(t("vo_insufficient_coins", lang), show_alert=True)
+            return
 
     params = {
         "voice_id": voice_id,

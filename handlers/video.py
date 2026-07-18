@@ -179,8 +179,16 @@ async def video_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
     uid = cb.from_user.id
     lang = get_lang(uid)
-    from database import has_unlimited
-    visible_subcats = [s for s in VIDEO_SUBCATS if not (s == "Avatar" and has_unlimited(uid))]
+    from database import has_unlimited, get_unlimited_tier
+    from config import UNLIMITED_TIER_CONFIG
+    unlim = has_unlimited(uid)
+    if unlim:
+        tier = get_unlimited_tier(uid) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        allowed = set(tier_cfg["subcats"])
+        visible_subcats = [s for s in VIDEO_SUBCATS if s in allowed]
+    else:
+        visible_subcats = list(VIDEO_SUBCATS.keys())
     buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in visible_subcats]
     buttons.append([back_btn("main_menu", t("menu_main_menu", lang))])
     await cb.message.edit_text(
@@ -329,6 +337,12 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     # Resolution step
     resolutions = get_resolutions(tid)
+    from database import has_unlimited, get_unlimited_tier
+    from config import UNLIMITED_TIER_CONFIG, filter_resolutions
+    if has_unlimited(cb.from_user.id):
+        tier = get_unlimited_tier(cb.from_user.id) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        resolutions = filter_resolutions(resolutions, tier_cfg["max_resolution"])
     sub = (await state.get_data()).get("v_sub","cat_video")
     buttons = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in resolutions]
     buttons.append([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)])
@@ -1169,17 +1183,21 @@ async def sd_to_prompt(cb: CallbackQuery, state: FSMContext):
     if attach_lines:
         hint = t("vid_attached_files_label", lang, lines=attach_lines)
 
+    from database import has_unlimited, get_unlimited_tier
+    from config import UNLIMITED_TIER_CONFIG, filter_resolutions
+    sd_resolutions = ["480p", "720p", "1080p"]
+    if has_unlimited(cb.from_user.id):
+        tier = get_unlimited_tier(cb.from_user.id) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        sd_resolutions = filter_resolutions(sd_resolutions, tier_cfg["max_resolution"])
+    res_rows = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in sd_resolutions]
+    res_rows.append([back_btn("vt_sd20", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>Seedance 2.0</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{hint}\n"
         f"{t('vid_now_select_resolution', lang)}",
-        reply_markup=kb(
-            [InlineKeyboardButton(text="480p", callback_data="vr_480p")],
-            [InlineKeyboardButton(text="720p", callback_data="vr_720p")],
-            [InlineKeyboardButton(text="1080p", callback_data="vr_1080p")],
-            [back_btn("vt_sd20", lang=lang), menu_btn(lang)],
-        ),
+        reply_markup=kb(*res_rows),
         parse_mode="HTML"
     )
 
@@ -1529,6 +1547,12 @@ async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
     if tid in NEEDS_RESOLUTION:
         # Go to resolution selection first
         resolutions = get_resolutions(tid)
+        from database import has_unlimited, get_unlimited_tier
+        from config import UNLIMITED_TIER_CONFIG, filter_resolutions
+        if has_unlimited(cb.from_user.id):
+            tier = get_unlimited_tier(cb.from_user.id) or "standard"
+            tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+            resolutions = filter_resolutions(resolutions, tier_cfg["max_resolution"])
         name = tool
         buttons = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in resolutions]
         buttons.append([back_btn("att_back", lang=lang), menu_btn(lang)])
