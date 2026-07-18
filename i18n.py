@@ -233,6 +233,7 @@ STR = {
 
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  Resolution: 720p\n\n  Select duration:",
+        "vid_grok_res_select": "  Resolution: {res}\n\n  Select duration:",
 
         "vid_extend_title": "◈  <b>Veo 3.1 — Extend Video</b>",
         "vid_extend_desc": "  Extend your video with additional seconds.\n\n  Select the extension tier:",
@@ -814,6 +815,7 @@ STR = {
 
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  Разрешение: 720p\n\n  Выберите длительность:",
+        "vid_grok_res_select": "  Разрешение: {res}\n\n  Выберите длительность:",
 
         "vid_extend_title": "◈  <b>Veo 3.1 — Продление видео</b>",
         "vid_extend_desc": "  Продлите ваше видео на дополнительные секунды.\n\n  Выберите тариф:",
@@ -1395,6 +1397,7 @@ STR = {
 
         "vid_grok_title": "◈  <b>Grok Imagine 1.5</b>",
         "vid_grok_resolution_line": "  الدقة: 720p\n\n  اختر المدة:",
+        "vid_grok_res_select": "  الدقة: {res}\n\n  اختر المدة:",
 
         "vid_extend_title": "◈  <b>Veo 3.1 — تمديد الفيديو</b>",
         "vid_extend_desc": "  مدّد الفيديو بثوانٍ إضافية.\n\n  اختر المستوى:",

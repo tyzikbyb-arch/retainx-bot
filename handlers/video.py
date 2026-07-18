@@ -509,8 +509,18 @@ async def veo_extend(cb: CallbackQuery, state: FSMContext):
     await state.set_state(VideoStates.attach_mode)
 
 # ── Grok ─────────────────────────────────────────────────────
+def _grok_resolution(uid: int) -> str:
+    from database import has_unlimited, get_unlimited_tier
+    if has_unlimited(uid):
+        tier = get_unlimited_tier(uid) or "standard"
+        if tier == "standard":
+            return "480p"
+    return "720p"
+
 async def show_grok(cb, state):
-    lang = get_lang(cb.from_user.id)
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    res = _grok_resolution(uid)
     buttons = [
         InlineKeyboardButton(
             text=f"{s}s — {usd_to_coins(usd)}◈",
@@ -523,16 +533,19 @@ async def show_grok(cb, state):
     await cb.message.edit_text(
         f"{t('vid_grok_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('vid_grok_resolution_line', lang)}",
+        f"{t('vid_grok_res_select', lang, res=res)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vgrok_"))
 async def grok_dur(cb: CallbackQuery, state: FSMContext):
     sec = int(cb.data[6:])
+    uid = cb.from_user.id
     usd = GROK_IMAGINE_15_PRICES[sec]
     coins = usd_to_coins(usd)
+    res = _grok_resolution(uid)
     await state.update_data(v_tool="Grok Imagine 1.5", v_tid="grok", v_dur=sec, v_coins=coins, v_usd=usd,
+                            v_res=res,
                             att_mode="free", att_start=None, att_end=None,
                             att_imgs=[], att_vids=[], att_auds=[])
     await _show_attach_menu(cb, state)
