@@ -386,10 +386,12 @@ async def voiceover_model_menu(cb: CallbackQuery, state: FSMContext):
         tier = get_unlimited_tier(uid) or "standard"
         tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
         if not tier_cfg["voiceover"]:
-            await cb.answer(
-                "⚡ Аудио не входит в безлимит Стандарт.\nОплатите монетами или перейдите на Про / VIP.",
-                show_alert=True,
+            await cb.message.edit_text(
+                f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_pro_vip_body', lang)}",
+                reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
+                parse_mode="HTML",
             )
+            await cb.answer()
             return
     buttons = [
         InlineKeyboardButton(text=f"{m['name']}   {_model_price_badge(m)}", callback_data=f"vo_model_{m['id']}")

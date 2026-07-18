@@ -34,6 +34,9 @@ STR = {
 
         "audio_title": "◌  <b>Audio & Voice</b>",
         "audio_body": "  Coming soon.\n\n  We are integrating voice synthesis\n  and music generation tools.\n\n  Stay tuned.",
+        "audio_pro_vip_body": "  Audio & Voice is available on\n  <b>Pro</b> and <b>VIP</b> unlimited plans.\n\n  Upgrade your plan to access\n  voice synthesis and audio generation.",
+
+        "vid_subcat_tier_alert": "This category is not included in your current plan.",
 
         "vo_select_model": "  Select a voice AI model:",
         "vo_select_category": "  Select a voice category:",
@@ -612,6 +615,9 @@ STR = {
 
         "audio_title": "◌  <b>Аудио и голос</b>",
         "audio_body": "  Скоро будет доступно.\n\n  Мы интегрируем инструменты синтеза\n  речи и генерации музыки.\n\n  Следите за обновлениями.",
+        "audio_pro_vip_body": "  Аудио и голос доступны на тарифах\n  безлимит <b>Про</b> и <b>VIP</b>.\n\n  Перейдите на более высокий тариф,\n  чтобы получить доступ к синтезу речи\n  и генерации аудио.",
+
+        "vid_subcat_tier_alert": "Эта категория не входит в ваш текущий тариф.",
 
         "vo_select_model": "  Выберите модель ИИ-голоса:",
         "vo_select_category": "  Выберите категорию голоса:",
@@ -1190,6 +1196,9 @@ STR = {
 
         "audio_title": "◌  <b>الصوت</b>",
         "audio_body": "  قريباً.\n\n  نحن نعمل على دمج أدوات\n  تركيب الصوت وتوليد الموسيقى.\n\n  ترقّب التحديثات.",
+        "audio_pro_vip_body": "  الصوت متاح في خطط البرو والـ VIP\n  غير المحدودة.\n\n  قم بالترقية للوصول إلى\n  تركيب الصوت وتوليد الصوت.",
+
+        "vid_subcat_tier_alert": "هذه الفئة غير مشمولة في خطتك الحالية.",
 
         "vo_select_model": "  اختر نموذج الذكاء الاصطناعي للصوت:",
         "vo_select_category": "  اختر فئة الصوت:",

@@ -201,7 +201,16 @@ async def video_menu(cb: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("vsub_"))
 async def video_subcat(cb: CallbackQuery, state: FSMContext):
     sub = cb.data[5:]
-    lang = get_lang(cb.from_user.id)
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    from database import has_unlimited, get_unlimited_tier
+    from config import UNLIMITED_TIER_CONFIG
+    if has_unlimited(uid):
+        tier = get_unlimited_tier(uid) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        if sub not in tier_cfg["subcats"]:
+            await cb.answer(t("vid_subcat_tier_alert", lang), show_alert=True)
+            return
     tids = VIDEO_SUBCATS.get(sub, [])
     buttons = [[InlineKeyboardButton(text=TOOL_IDS[tid], callback_data=f"vt_{tid}")] for tid in tids]
     buttons.append([back_btn("cat_video", lang=lang), menu_btn(lang)])

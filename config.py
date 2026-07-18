@@ -232,7 +232,7 @@ UNLIMITED_TIER_CONFIG = {
         "name_en": "Standard",
         "emoji": "⚡",
         "subcats": ["Standard", "Kling"],
-        "max_resolution": "1080p",
+        "max_resolution": "720p",
         "voiceover": False,
     },
     "pro": {
