@@ -68,6 +68,10 @@ def init_db():
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS unlimited_tier TEXT DEFAULT NULL")
             except Exception:
                 pass
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ref_first_done BOOLEAN DEFAULT FALSE")
+            except Exception:
+                pass
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS artlist_accounts (
                     id SERIAL PRIMARY KEY,
@@ -151,6 +155,31 @@ def get_referred_by(uid: int):
             cur.execute("SELECT referred_by FROM users WHERE uid = %s", (uid,))
             row = cur.fetchone()
             return row[0] if row else None
+
+def get_referral_count(uid: int) -> int:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM users WHERE referred_by = %s", (uid,))
+            return cur.fetchone()[0]
+
+def get_referral_buyers_count(uid: int) -> int:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM users WHERE referred_by = %s AND ref_first_done = TRUE", (uid,))
+            return cur.fetchone()[0]
+
+def is_ref_first_topup_done(uid: int) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT ref_first_done FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return bool(row[0]) if row else False
+
+def mark_ref_first_topup_done(uid: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET ref_first_done = TRUE WHERE uid = %s", (uid,))
+        conn.commit()
 
 def get_lang(uid: int) -> str:
     with get_conn() as conn:
