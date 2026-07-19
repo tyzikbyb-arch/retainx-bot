@@ -789,7 +789,7 @@ STR = {
         "wallet_tx_already_used": "⚠️  This transaction has already been used. Please use a different transaction.",
 
         "wallet_referral_bonus_title": "◈  <b>Referral Bonus</b>",
-        "wallet_referral_bonus_body": "  Your referral made a payment.\n  You received <b>{bonus} ₽</b> ({percentage}%) to your referral balance.",
+        "wallet_referral_bonus_body": "  Your referral made a payment.\n  You received <b>{bonus} ◈</b> ({percentage}%) as a referral bonus.",
 
         "referral_friend_joined": "👤  <b>New referral!</b>\n\n  {username} joined via your link.\n  You'll earn a bonus when they make their first purchase.",
 
@@ -1804,7 +1804,7 @@ STR = {
         "wallet_tx_already_used": "⚠️  Эта транзакция уже была использована. Используйте другую транзакцию.",
 
         "wallet_referral_bonus_title": "◈  <b>Реферальный бонус</b>",
-        "wallet_referral_bonus_body": "  Ваш реферал совершил платёж.\n  Вам начислено <b>{bonus} ₽</b> ({percentage}%) на реферальный баланс.",
+        "wallet_referral_bonus_body": "  Ваш реферал совершил платёж.\n  Вам начислено <b>{bonus} ◈</b> ({percentage}%) в качестве реферального бонуса.",
 
         "referral_friend_joined": "👤  <b>Новый реферал!</b>\n\n  {username} перешёл по вашей ссылке.\n  Вы получите бонус когда он совершит первую покупку.",
 
@@ -2817,7 +2817,7 @@ STR = {
         "wallet_tx_already_used": "⚠️  تم استخدام هذه المعاملة من قبل. يرجى استخدام معاملة مختلفة.",
 
         "wallet_referral_bonus_title": "◈  <b>مكافأة الإحالة</b>",
-        "wallet_referral_bonus_body": "  قام المُحال منك بدفعة.\n  حصلت على <b>{bonus} ₽</b> ({percentage}%) في رصيد إحالتك.",
+        "wallet_referral_bonus_body": "  قام المُحال منك بدفعة.\n  حصلت على <b>{bonus} ◈</b> ({percentage}%) كمكافأة إحالة.",
 
         "referral_friend_joined": "👤  <b>إحالة جديدة!</b>\n\n  {username} انضم عبر رابطك.\n  ستحصل على مكافأة عند أول عملية شراء له.",
 

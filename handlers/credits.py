@@ -6,8 +6,8 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, BOT_TOKEN, UNLIMITED_TIER_CONFIG, UNLIMITED_PLANS
-from database import get_coins, add_coins, spend_coins, get_referred_by, get_lang, has_unlimited, get_unlimited_until, get_unlimited_tier, set_unlimited, can_buy_unlimited
+from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, REFERRAL_TIERS, REFERRAL_JOIN_BONUS, BOT_TOKEN, UNLIMITED_TIER_CONFIG, UNLIMITED_PLANS
+from database import get_coins, add_coins, spend_coins, get_referred_by, get_lang, has_unlimited, get_unlimited_until, get_unlimited_tier, set_unlimited, can_buy_unlimited, get_referral_count, get_referral_buyers_count, is_ref_first_topup_done, mark_ref_first_topup_done
 from keyboards import kb, back_btn, menu_btn
 from i18n import t
 
@@ -556,36 +556,83 @@ async def admin_reject_topup(cb: CallbackQuery):
 
 async def _handle_referral_bonus(uid: int, coins_added: int):
     ref_uid = get_referred_by(uid)
-    if ref_uid:
-        bonus = round(coins_added * REFERRAL_PERCENT / 100)
-        if bonus > 0:
-            add_coins(ref_uid, bonus)
-            from aiogram import Bot
-            bot = Bot(token=BOT_TOKEN)
-            ref_lang = get_lang(ref_uid)
-            await bot.send_message(
-                ref_uid,
-                f"{t('wallet_referral_bonus_title', ref_lang)}\n\n"
-                f"{t('wallet_referral_bonus_body', ref_lang, bonus=bonus, percentage=REFERRAL_PERCENT)}",
-                parse_mode="HTML"
-            )
+    if not ref_uid:
+        return
+
+    ref_count = get_referral_count(ref_uid)
+    first_done = is_ref_first_topup_done(uid)
+
+    tier = REFERRAL_TIERS[0]
+    for t_item in REFERRAL_TIERS:
+        if ref_count >= t_item["min"]:
+            tier = t_item
+
+    percentage = tier["first"] if not first_done else tier["repeat"]
+    if not first_done:
+        mark_ref_first_topup_done(uid)
+
+    bonus = round(coins_added * percentage / 100)
+    if bonus <= 0:
+        return
+
+    add_coins(ref_uid, bonus)
+    from aiogram import Bot
+    bot = Bot(token=BOT_TOKEN)
+    ref_lang = get_lang(ref_uid)
+    await bot.send_message(
+        ref_uid,
+        f"{t('wallet_referral_bonus_title', ref_lang)}\n\n"
+        f"{t('wallet_referral_bonus_body', ref_lang, bonus=bonus, percentage=percentage)}",
+        parse_mode="HTML"
+    )
+    await bot.session.close()
 
 # ── Referral info ───────────────────────────────────────────────────────────
 @router.callback_query(F.data == "referral_info")
 async def referral_info(cb: CallbackQuery):
-    lang = get_lang(cb.from_user.id)
-    bot_username = "RetainXStudio"
-    link = f"https://t.me/{bot_username}?start=ref_{cb.from_user.id}"
+    import urllib.parse
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+
+    ref_count = get_referral_count(uid)
+    buyers = get_referral_buyers_count(uid)
+
+    tier = REFERRAL_TIERS[0]
+    for t_item in REFERRAL_TIERS:
+        if ref_count >= t_item["min"]:
+            tier = t_item
+
+    tier_name = tier["name_ru"] if lang == "ru" else tier["name_en"]
+    if tier["next"] is None:
+        tier_line = t("wallet_referral_tier_max", lang, name=tier_name)
+    else:
+        next_idx = REFERRAL_TIERS.index(tier) + 1
+        next_tier = REFERRAL_TIERS[next_idx]
+        next_name = next_tier["name_ru"] if lang == "ru" else next_tier["name_en"]
+        needed = tier["next"] - ref_count
+        tier_line = t("wallet_referral_tier_line", lang, name=tier_name, next=f"{needed} → {next_name}")
+
+    link = f"https://t.me/RetainXStudioBot?start=ref_{uid}"
+    share_text = t("wallet_referral_share_text", lang) + link
+    tg_share = f"https://t.me/share/url?url={urllib.parse.quote(link)}&text={urllib.parse.quote(share_text)}"
+
     text = (
         f"{t('wallet_referral_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('wallet_referral_desc', lang)}\n\n"
+        f"{tier_line}\n"
+        f"{t('wallet_referral_rate', lang, first=tier['first'], repeat=tier['repeat'])}\n\n"
+        f"{t('wallet_referral_stats_line', lang, count=ref_count, buyers=buyers)}\n\n"
+        f"{t('wallet_referral_join_bonus_note', lang, bonus=REFERRAL_JOIN_BONUS)}\n\n"
         f"{t('wallet_referral_link_label', lang)}\n"
         f"<code>{link}</code>\n\n"
-        f"{t('wallet_referral_share', lang)}"
+        "━━━━━━━━━━━━━━━━━━━━"
     )
     await cb.message.edit_text(
         text,
-        reply_markup=kb([back_btn("wallet", lang=lang), menu_btn(lang)]),
+        reply_markup=kb(
+            [InlineKeyboardButton(text=t("wallet_referral_share_btn", lang), url=tg_share)],
+            [back_btn("wallet", lang=lang), menu_btn(lang)],
+        ),
         parse_mode="HTML"
     )
+    await cb.answer()

@@ -25,7 +25,7 @@ except Exception:
 
 from aiogram.fsm.context import FSMContext
 
-from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS
+from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
 from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang, set_can_buy_unlimited, set_unlimited, get_unlimited_tier
 from keyboards import kb, menu_btn, client_kb
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
@@ -120,17 +120,22 @@ async def start(msg: Message, state: FSMContext):
     # Check BEFORE any DB write so referral insertion can't shadow new-user status
     new = is_new_user(uid)
 
-    args = msg.text.split()
-    if len(args) > 1 and args[1].startswith("ref_"):
-        try:
-            ref_id = int(args[1].replace("ref_", ""))
-            if ref_id != uid:
-                set_referred_by(uid, ref_id)
-        except ValueError:
-            pass
-
+    ref_id = None
     if new:
-        add_coins(uid, WELCOME_BONUS)
+        args = msg.text.split()
+        if len(args) > 1 and args[1].startswith("ref_"):
+            try:
+                candidate = int(args[1].replace("ref_", ""))
+                if candidate != uid:
+                    ref_id = candidate
+                    set_referred_by(uid, candidate)
+            except ValueError:
+                pass
+
+    total_bonus = 0
+    if new:
+        total_bonus = WELCOME_BONUS + (REFERRAL_JOIN_BONUS if ref_id else 0)
+        add_coins(uid, total_bonus)
 
     coins = get_coins(uid)
     lang = get_lang(uid)
@@ -142,7 +147,7 @@ async def start(msg: Message, state: FSMContext):
             "━━━━━━━━━━━━━━━━━━━━\n\n"
             f"{t('welcome_body', lang)}\n\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            f"{t('welcome_bonus', lang, bonus=WELCOME_BONUS, coins=coins)}"
+            f"{t('welcome_bonus', lang, bonus=total_bonus, coins=coins)}"
         )
         keyboard = kb(
             [InlineKeyboardButton(text=t("btn_start_generating", lang), callback_data="cat_video")],
