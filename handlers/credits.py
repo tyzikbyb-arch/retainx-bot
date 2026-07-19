@@ -559,17 +559,18 @@ async def _handle_referral_bonus(uid: int, coins_added: int):
     if not ref_uid:
         return
 
-    ref_count = get_referral_count(ref_uid)
     first_done = is_ref_first_topup_done(uid)
+    if not first_done:
+        mark_ref_first_topup_done(uid)
 
+    # Tier based on buyers count (mark first done BEFORE counting so this buyer is included)
+    buyers = get_referral_buyers_count(ref_uid)
     tier = REFERRAL_TIERS[0]
     for t_item in REFERRAL_TIERS:
-        if ref_count >= t_item["min"]:
+        if buyers >= t_item["min"]:
             tier = t_item
 
     percentage = tier["first"] if not first_done else tier["repeat"]
-    if not first_done:
-        mark_ref_first_topup_done(uid)
 
     bonus = round(coins_added * percentage / 100)
     if bonus <= 0:
@@ -597,20 +598,27 @@ async def referral_info(cb: CallbackQuery):
     ref_count = get_referral_count(uid)
     buyers = get_referral_buyers_count(uid)
 
+    # Tier is based on buyers (number of referrals who made a purchase)
     tier = REFERRAL_TIERS[0]
     for t_item in REFERRAL_TIERS:
-        if ref_count >= t_item["min"]:
+        if buyers >= t_item["min"]:
             tier = t_item
 
     tier_name = tier["name_ru"] if lang == "ru" else tier["name_en"]
+
+    BAR_LEN = 10
     if tier["next"] is None:
-        tier_line = t("wallet_referral_tier_max", lang, name=tier_name)
+        tier_block = t("wallet_referral_tier_max", lang, name=tier_name)
     else:
         next_idx = REFERRAL_TIERS.index(tier) + 1
         next_tier = REFERRAL_TIERS[next_idx]
         next_name = next_tier["name_ru"] if lang == "ru" else next_tier["name_en"]
-        needed = tier["next"] - ref_count
-        tier_line = t("wallet_referral_tier_line", lang, name=tier_name, next=f"{needed} → {next_name}")
+        filled = min(BAR_LEN, round(buyers / tier["next"] * BAR_LEN))
+        bar = "▓" * filled + "░" * (BAR_LEN - filled)
+        tier_block = (
+            f"  ◉  <b>{tier_name}</b>\n"
+            f"  [{bar}]  {buyers} / {tier['next']} → {next_name}"
+        )
 
     link = f"https://t.me/RetainXStudioBot?start=ref_{uid}"
     share_text = t("wallet_referral_share_text", lang) + link
@@ -619,7 +627,7 @@ async def referral_info(cb: CallbackQuery):
     text = (
         f"{t('wallet_referral_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{tier_line}\n"
+        f"{tier_block}\n"
         f"{t('wallet_referral_rate', lang, first=tier['first'], repeat=tier['repeat'])}\n\n"
         f"{t('wallet_referral_stats_line', lang, count=ref_count, buyers=buyers)}\n\n"
         f"{t('wallet_referral_join_bonus_note', lang, bonus=REFERRAL_JOIN_BONUS)}\n\n"
