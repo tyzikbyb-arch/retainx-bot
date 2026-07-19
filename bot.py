@@ -29,12 +29,13 @@ from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS
 from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang, set_can_buy_unlimited, set_unlimited, get_unlimited_tier
 from keyboards import kb, menu_btn, client_kb
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
-from handlers import credits, images, video, voiceover, admin as admin_handler, orders as orders_handler
+from handlers import credits, images, video, voiceover, admin as admin_handler, orders as orders_handler, help as help_handler
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=storage, events_isolation=events_isolation)
 
+dp.include_router(help_handler.router)
 dp.include_router(credits.router)
 dp.include_router(images.router)
 dp.include_router(video.router)
@@ -87,7 +88,8 @@ def build_main_menu_kb(coins: int, lang: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=t("btn_image_generation", lang), callback_data="cat_images")],
         [InlineKeyboardButton(text=t("btn_audio_voice", lang),      callback_data="cat_audio")],
         [InlineKeyboardButton(text=t("btn_wallet_coins", lang, coins=coins), callback_data="wallet")],
-        [InlineKeyboardButton(text=t("btn_pricing", lang),  callback_data="pricing_menu")],
+        [InlineKeyboardButton(text=t("btn_pricing", lang),  callback_data="pricing_menu"),
+         InlineKeyboardButton(text=t("btn_help", lang),     callback_data="help_main")],
         [InlineKeyboardButton(text=t("btn_language", lang), callback_data="lang_menu")],
         [InlineKeyboardButton(text=t("btn_support", lang),  url="https://t.me/RetainXStudio")],
     )

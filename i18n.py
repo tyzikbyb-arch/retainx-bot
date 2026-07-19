@@ -31,6 +31,314 @@ STR = {
         "btn_start_generating": "▸  Start Generating",
         "btn_view_pricing": "◎  View Pricing",
         "btn_back": "←  Back",
+        "btn_help": "📖  Help",
+
+        # ── Help pages ──
+        "help_main_text": (
+            "📖  <b>Help — RetainX Studio</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Select a section for detailed info:"
+        ),
+        "help_start_text": (
+            "🚀  <b>Getting Started</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Coin System</b>\n"
+            "  1 coin = $0.05   ·   $1 = 20 coins\n"
+            "  Minimum top-up: $2 (40 coins)\n\n"
+            "  <b>How It Works</b>\n"
+            "  1 · Choose a type — Video, Image or Audio\n"
+            "  2 · Select a model and parameters\n"
+            "  3 · Enter your prompt in any language\n"
+            "  4 · Get your result in ~2 minutes\n\n"
+            "  <b>Welcome Bonus</b>\n"
+            "  20 free coins on first launch 🎁\n\n"
+            "  <b>Promo Codes</b>\n"
+            "  Use /promo [CODE] to activate\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_video_text": (
+            "🎬  <b>Video Generation</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Standard</b>  (available to all)\n"
+            "  Seedance 2.0 Fast · Wan 2.7 · LTX 2.3 Pro\n"
+            "  Veo 3.1 Lite · Grok 1.5\n\n"
+            "  <b>Kling</b>  (available to all)\n"
+            "  Kling 3.0 · Kling O3  ·  up to 4K\n\n"
+            "  <b>Premium</b>  (Pro / VIP Unlimited)\n"
+            "  Veo 3.1 Full · Veo 3.1 Fast · Sora 2 Pro\n\n"
+            "  <b>Avatar & Dubbing</b>\n"
+            "  HeyGen · ElevenLabs · Lipsync · OmniHuman\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "  Tap a section for details ↓"
+        ),
+        "help_vid_std_text": (
+            "▸  <b>Standard Video Models</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>Seedance 2.0 Fast</b>\n"
+            "  480p / 720p  ·  4–15 sec\n"
+            "  from 5◈ (480p 4s)  to 45◈ (720p 15s)\n\n"
+            "<b>Wan 2.7</b>\n"
+            "  720p / 1080p  ·  2–15 sec\n"
+            "  from 4◈ (720p 2s)  to 45◈ (1080p 15s)\n\n"
+            "<b>LTX 2.3 Pro</b>\n"
+            "  720p / 1080p / 2K / 4K  ·  6–10 sec\n"
+            "  from 6◈ (720p)  to 75◈ (4K 10s)\n\n"
+            "<b>Veo 3.1 Lite</b>\n"
+            "  720p / 1080p  ·  4–8 sec\n"
+            "  from 3◈ (720p 4s)  to 8◈ (1080p 8s)\n\n"
+            "<b>Grok 1.5</b>\n"
+            "  Up to 15 sec  ·  4◈/sec  (60◈ for 15s)\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_vid_prem_text": (
+            "★  <b>Premium Video Models</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "  ⚠️ Requires Unlimited Pro / VIP plan\n\n"
+            "<b>Veo 3.1 Full</b>  (best Google quality)\n"
+            "  720p / 1080p / 4K  ·  4–8 sec\n"
+            "  from 15◈ (720p 4s)  to 58◈ (4K 8s)\n\n"
+            "<b>Veo 3.1 Fast</b>\n"
+            "  720p / 1080p / 4K  ·  4–8 sec\n"
+            "  from 8◈ (720p 4s)  to 40◈ (4K 8s)\n\n"
+            "<b>Sora 2 Pro</b>  (OpenAI)\n"
+            "  720p / 1080p  ·  4–12 sec\n"
+            "  from 26◈ (720p 4s)  to 114◈ (1080p 12s)\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_vid_kling_text": (
+            "◉  <b>Kling Video Models</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>Kling 3.0</b>\n"
+            "  720p / 1080p / 4K  ·  3–15 sec\n"
+            "  from 4◈ (720p 3s)  to 75◈ (4K 15s)\n\n"
+            "<b>Kling O3</b>  (ultra quality)\n"
+            "  720p / 1080p / 4K  ·  3–15 sec\n"
+            "  from 4◈ (720p 3s)  to 75◈ (4K 15s)\n\n"
+            "  ✓ Precise prompt adherence\n"
+            "  ✓ Photorealistic scenes\n"
+            "  ✓ Reference image support\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_vid_avatar_text": (
+            "◌  <b>Avatar & Dubbing</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>HeyGen Avatar</b>\n"
+            "  720p / 1080p  ·  1–15 min  ·  60◈/min\n\n"
+            "<b>ElevenLabs Dubbing</b>\n"
+            "  Professional AI dubbing  ·  60◈/min\n"
+            "  29 languages supported\n\n"
+            "<b>Lipsync</b>\n"
+            "  Lip sync to custom audio  ·  60◈/min\n\n"
+            "<b>OmniHuman / Aurora Avatar</b>\n"
+            "  Avatar from photo + voice\n"
+            "  60◈/min (OmniHuman)  ·  54◈/min (Aurora)\n\n"
+            "  Formats: MP4, MOV, AVI\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_images_text": (
+            "🖼  <b>Image Generation</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>1◈ per generation:</b>\n"
+            "  Nano Banana · Seedream 5.0\n"
+            "  GPT Image 2 (Medium) · Kling 3.0\n"
+            "  Kling O3 (1K / 2K)\n\n"
+            "  <b>2◈ per generation:</b>\n"
+            "  Nano Banana Pro · Flux 2.0 Pro\n"
+            "  Wan 2.7 Pro · Ideogram v3\n"
+            "  Hunyuan V3 · Kling O3 (4K)\n\n"
+            "  <b>6◈ per generation:</b>\n"
+            "  GPT Image 2 (High)\n\n"
+            "  Formats: 1:1 · 16:9 · 9:16 · 3:4 and more\n"
+            "  Quality: 1K · 2K · 4K (model-dependent)\n"
+            "  Reference images: up to 14 per generation\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_audio_text": (
+            "🔊  <b>Audio & Voice</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>ElevenLabs Voiceover</b>\n"
+            "  Professional AI text-to-speech\n\n"
+            "  ✓ 1000+ voices\n"
+            "  ✓ Emotion and speech style control\n"
+            "  ✓ Voice stability adjustment\n"
+            "  ✓ Audio effects processing\n"
+            "  ✓ Speech speed control\n"
+            "  ✓ 30+ languages\n\n"
+            "  Available with Unlimited Pro / VIP plan\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_wallet_text": (
+            "◈  <b>Wallet & Payment</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Your balance is stored in RetainX coins.\n"
+            "  Coins are deducted automatically\n"
+            "  on each generation.\n\n"
+            "  Select a section for details:"
+        ),
+        "help_wallet_rates_text": (
+            "◎  <b>Rates & Limits</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Coin Rate</b>\n"
+            "  1 coin = $0.05\n"
+            "  $1 = 20 coins\n\n"
+            "  <b>Top-Up Limits</b>\n"
+            "  Minimum:      $2.00 = 40 coins\n"
+            "  Via Stars:    min. 40 coins\n"
+            "  Via USDT:     min. $2\n\n"
+            "  <b>Payment Methods</b>\n"
+            "  ⭐ Telegram Stars\n"
+            "  ₮ USDT (TRC-20)\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_wallet_stars_text": (
+            "⭐  <b>Top Up via Telegram Stars</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>How to top up:</b>\n"
+            "  1 · Tap «◈ Wallet» in the main menu\n"
+            "  2 · Tap «＋ Add Coins»\n"
+            "  3 · Choose «⭐ Stars»\n"
+            "  4 · Enter the coin amount (min. 40)\n"
+            "  5 · Pay via Telegram — no app switch needed\n\n"
+            "  Stars → coins rate is calculated automatically.\n\n"
+            "  ✓ Instant credit\n"
+            "  ✓ No card or crypto wallet required\n"
+            "  ✓ Secure — built into Telegram\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_wallet_usdt_text": (
+            "₮  <b>Top Up via USDT</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Network: TRC-20 (Tron)\n\n"
+            "  <b>How to top up:</b>\n"
+            "  1 · Tap «◈ Wallet» → «＋ Add Coins»\n"
+            "  2 · Choose «₮ USDT»\n"
+            "  3 · Enter amount in USD (min. $2)\n"
+            "  4 · Send USDT to the displayed address\n"
+            "  5 · Notify the operator about your payment\n\n"
+            "  ✓ USDT TRC-20 accepted\n"
+            "  ✓ Credit within 15 minutes\n"
+            "  ✓ No bot-side commission\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_text": (
+            "⚡  <b>Unlimited Plans</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  An Unlimited plan removes all restrictions\n"
+            "  and unlocks additional models.\n\n"
+            "  Active for 1, 2, or 3 hours — generate\n"
+            "  as many times as you want during that time.\n\n"
+            "  <b>Plans:</b>\n"
+            "  ⚡  Standard  —  from 268◈/hr\n"
+            "  ⚡⚡  Pro       —  from 662◈/hr\n"
+            "  ♛   VIP       —  from 1619◈/hr\n\n"
+            "  Tap a plan for details ↓\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_std_text": (
+            "⚡  <b>Unlimited Standard</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Prices:</b>\n"
+            "  1 hr  —  268◈\n"
+            "  2 hr  —  482◈  (save 10%)\n"
+            "  3 hr  —  642◈  (save 20%)\n\n"
+            "  <b>Available Models:</b>\n"
+            "  ✓ Seedance 2.0 Fast  ·  Wan 2.7\n"
+            "  ✓ LTX 2.3 Pro  ·  Veo 3.1 Lite\n"
+            "  ✓ Grok 1.5\n"
+            "  ✓ Kling 3.0  ·  Kling O3\n\n"
+            "  <b>Max Resolution:</b>  720p\n\n"
+            "  ✕ Premium models (Veo Full, Sora)\n"
+            "  ✕ Avatar & Dubbing\n"
+            "  ✕ Audio generation\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_pro_text": (
+            "⚡⚡  <b>Unlimited Pro</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Prices:</b>\n"
+            "  1 hr  —  662◈\n"
+            "  2 hr  —  1192◈  (save 10%)\n"
+            "  3 hr  —  1589◈  (save 20%)\n\n"
+            "  <b>Available Models:</b>\n"
+            "  ✓ All Standard models\n"
+            "  ✓ Veo 3.1 Full  ·  Veo 3.1 Fast\n"
+            "  ✓ Sora 2 Pro\n"
+            "  ✓ Kling 3.0  ·  Kling O3\n"
+            "  ✓ ElevenLabs Voiceover (audio)\n\n"
+            "  <b>Max Resolution:</b>  1080p\n\n"
+            "  ✕ Avatar & Dubbing\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_vip_text": (
+            "♛  <b>Unlimited VIP</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Prices:</b>\n"
+            "  1 hr  —  1619◈\n"
+            "  2 hr  —  2914◈  (save 10%)\n"
+            "  3 hr  —  3886◈  (save 20%)\n\n"
+            "  <b>Available Models:</b>\n"
+            "  ✓ All Standard and Pro models\n"
+            "  ✓ Veo 3.1 Full  ·  Sora 2 Pro\n"
+            "  ✓ Kling 3.0  ·  Kling O3\n"
+            "  ✓ ElevenLabs Voiceover (audio)\n\n"
+            "  <b>Max Resolution:</b>  4K\n\n"
+            "  ✓ Full access to all features\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_ref_text": (
+            "👥  <b>Referral Program</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Share your link → friend registers and tops up\n"
+            "  → you earn % of every top-up they make.\n\n"
+            "  <b>Reward Tiers:</b>\n"
+            "  Starter (0–5 referrals)\n"
+            "    First top-up  20%  ·  Repeat  10%\n\n"
+            "  Partner (6–15 referrals)\n"
+            "    First top-up  22%  ·  Repeat  12%\n\n"
+            "  Pro (16+ referrals)\n"
+            "    First top-up  25%  ·  Repeat  15%\n\n"
+            "  <b>Blogger Promo Codes</b>\n"
+            "  Works like a referral link.\n"
+            "  New users enter /promo CODE to activate.\n\n"
+            "  Your link: ◈ Wallet → Referral Program\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_support_text": (
+            "💬  <b>Support</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Have a question or issue?\n"
+            "  Write to us directly:\n\n"
+            "  @RetainXStudio\n\n"
+            "  <b>Response time:</b>  usually within 1 hour\n\n"
+            "  <b>We can help with:</b>\n"
+            "  ✓ Video / image not received\n"
+            "  ✓ Incorrect coin deduction\n"
+            "  ✓ Top-up problems\n"
+            "  ✓ Technical errors\n"
+            "  ✓ Questions about models\n\n"
+            "  For promo codes and partnerships —\n"
+            "  also contact @RetainXStudio\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        # ── Help button labels ──
+        "help_btn_start":       "🚀  Getting Started",
+        "help_btn_video":       "🎬  Video Generation",
+        "help_btn_vid_std":     "▸  Standard Models",
+        "help_btn_vid_prem":    "★  Premium Models",
+        "help_btn_vid_kling":   "◉  Kling",
+        "help_btn_vid_avatar":  "◌  Avatar & Dubbing",
+        "help_btn_images":      "🖼  Image Generation",
+        "help_btn_audio":       "🔊  Audio & Voice",
+        "help_btn_wallet":      "◈  Wallet & Payment",
+        "help_btn_wallet_rates":"◎  Rates & Limits",
+        "help_btn_wallet_stars":"⭐  Telegram Stars",
+        "help_btn_wallet_usdt": "₮  USDT / Crypto",
+        "help_btn_unlim":       "⚡  Unlimited Plans",
+        "help_btn_unlim_std":   "⚡  Standard",
+        "help_btn_unlim_pro":   "⚡⚡  Pro",
+        "help_btn_unlim_vip":   "♛  VIP",
+        "help_btn_ref":         "👥  Referral Program",
+        "help_btn_support":     "💬  Support",
 
         "audio_title": "◌  <b>Audio & Voice</b>",
         "audio_body": "  Coming soon.\n\n  We are integrating voice synthesis\n  and music generation tools.\n\n  Stay tuned.",
@@ -736,6 +1044,316 @@ STR = {
         "btn_start_generating": "▸  Начать генерацию",
         "btn_view_pricing": "◎  Смотреть цены",
         "btn_back": "←  Назад",
+        "btn_help": "📖  Справка",
+
+        # ── Help pages ──
+        "help_main_text": (
+            "📖  <b>Справка — RetainX Studio</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Выберите раздел для подробной информации:"
+        ),
+        "help_start_text": (
+            "🚀  <b>Как начать работу</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Система монет</b>\n"
+            "  1 монета = $0.05   ·   $1 = 20 монет\n"
+            "  Минимальное пополнение: $2 (40 монет)\n\n"
+            "  <b>Первые шаги</b>\n"
+            "  1 · Выбери тип — Видео, Фото или Аудио\n"
+            "  2 · Выбери модель и нужные параметры\n"
+            "  3 · Напиши промпт на любом языке\n"
+            "  4 · Жди результат ~2 минуты\n\n"
+            "  <b>Стартовый бонус</b>\n"
+            "  20 монет бесплатно при первом запуске 🎁\n\n"
+            "  <b>Промо-коды</b>\n"
+            "  Введи /promo [КОД] для активации\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_video_text": (
+            "🎬  <b>Генерация видео</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Стандартные</b>  (доступны всем)\n"
+            "  Seedance 2.0 Fast · Wan 2.7 · LTX 2.3 Pro\n"
+            "  Veo 3.1 Lite · Grok 1.5\n\n"
+            "  <b>Kling</b>  (доступны всем)\n"
+            "  Kling 3.0 · Kling O3  ·  до 4K\n\n"
+            "  <b>Премиум</b>  (Безлимит Pro / VIP)\n"
+            "  Veo 3.1 Full · Veo 3.1 Fast · Sora 2 Pro\n\n"
+            "  <b>Аватар и дубляж</b>\n"
+            "  HeyGen · ElevenLabs · Lipsync · OmniHuman\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "  Нажмите на раздел для подробностей ↓"
+        ),
+        "help_vid_std_text": (
+            "▸  <b>Стандартные видео-модели</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>Seedance 2.0 Fast</b>\n"
+            "  480p / 720p  ·  4–15 сек\n"
+            "  от 5◈ (480p 4с)  до 45◈ (720p 15с)\n\n"
+            "<b>Wan 2.7</b>\n"
+            "  720p / 1080p  ·  2–15 сек\n"
+            "  от 4◈ (720p 2с)  до 45◈ (1080p 15с)\n\n"
+            "<b>LTX 2.3 Pro</b>\n"
+            "  720p / 1080p / 2K / 4K  ·  6–10 сек\n"
+            "  от 6◈ (720p)  до 75◈ (4K 10с)\n\n"
+            "<b>Veo 3.1 Lite</b>\n"
+            "  720p / 1080p  ·  4–8 сек\n"
+            "  от 3◈ (720p 4с)  до 8◈ (1080p 8с)\n\n"
+            "<b>Grok 1.5</b>\n"
+            "  До 15 сек  ·  4◈/сек  (60◈ за 15с)\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_vid_prem_text": (
+            "★  <b>Премиум видео-модели</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "  ⚠️ Требуется Безлимит Pro / VIP\n\n"
+            "<b>Veo 3.1 Full</b>  (лучшее качество Google)\n"
+            "  720p / 1080p / 4K  ·  4–8 сек\n"
+            "  от 15◈ (720p 4с)  до 58◈ (4K 8с)\n\n"
+            "<b>Veo 3.1 Fast</b>\n"
+            "  720p / 1080p / 4K  ·  4–8 сек\n"
+            "  от 8◈ (720p 4с)  до 40◈ (4K 8с)\n\n"
+            "<b>Sora 2 Pro</b>  (OpenAI)\n"
+            "  720p / 1080p  ·  4–12 сек\n"
+            "  от 26◈ (720p 4с)  до 114◈ (1080p 12с)\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_vid_kling_text": (
+            "◉  <b>Kling — видео-модели</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>Kling 3.0</b>\n"
+            "  720p / 1080p / 4K  ·  3–15 сек\n"
+            "  от 4◈ (720p 3с)  до 75◈ (4K 15с)\n\n"
+            "<b>Kling O3</b>  (ультра-качество)\n"
+            "  720p / 1080p / 4K  ·  3–15 сек\n"
+            "  от 4◈ (720p 3с)  до 75◈ (4K 15с)\n\n"
+            "  ✓ Точное следование промпту\n"
+            "  ✓ Фотореалистичные сцены\n"
+            "  ✓ Поддержка изображения-референса\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_vid_avatar_text": (
+            "◌  <b>Аватар и дубляж</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>HeyGen Avatar</b>\n"
+            "  720p / 1080p  ·  1–15 мин  ·  60◈/мин\n\n"
+            "<b>ElevenLabs Dubbing</b>\n"
+            "  Профессиональный дубляж  ·  60◈/мин\n"
+            "  29 языков\n\n"
+            "<b>Lipsync</b>\n"
+            "  Синхронизация губ с аудио  ·  60◈/мин\n\n"
+            "<b>OmniHuman / Aurora Avatar</b>\n"
+            "  Аватар по фото + голосу\n"
+            "  60◈/мин (OmniHuman)  ·  54◈/мин (Aurora)\n\n"
+            "  Форматы: MP4, MOV, AVI\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_images_text": (
+            "🖼  <b>Генерация изображений</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>1◈ за генерацию:</b>\n"
+            "  Nano Banana · Seedream 5.0\n"
+            "  GPT Image 2 (Medium) · Kling 3.0\n"
+            "  Kling O3 (1K / 2K)\n\n"
+            "  <b>2◈ за генерацию:</b>\n"
+            "  Nano Banana Pro · Flux 2.0 Pro\n"
+            "  Wan 2.7 Pro · Ideogram v3\n"
+            "  Hunyuan V3 · Kling O3 (4K)\n\n"
+            "  <b>6◈ за генерацию:</b>\n"
+            "  GPT Image 2 (High)\n\n"
+            "  Форматы: 1:1 · 16:9 · 9:16 · 3:4 и другие\n"
+            "  Качество: 1K · 2K · 4K (зависит от модели)\n"
+            "  Референс-изображения: до 14 штук\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_audio_text": (
+            "🔊  <b>Аудио и озвучка</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>ElevenLabs Voiceover</b>\n"
+            "  Профессиональная AI-озвучка текста\n\n"
+            "  ✓ 1000+ голосов\n"
+            "  ✓ Управление эмоциями и стилем речи\n"
+            "  ✓ Настройка стабильности голоса\n"
+            "  ✓ Эффекты обработки\n"
+            "  ✓ Скорость речи\n"
+            "  ✓ 30+ языков\n\n"
+            "  Доступно с пакетом Безлимит Pro / VIP\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_wallet_text": (
+            "◈  <b>Кошелёк и оплата</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Баланс хранится в монетах RetainX.\n"
+            "  Монеты списываются автоматически\n"
+            "  при каждой генерации.\n\n"
+            "  Выберите раздел для подробностей:"
+        ),
+        "help_wallet_rates_text": (
+            "◎  <b>Курсы и лимиты</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Курс монет</b>\n"
+            "  1 монета = $0.05\n"
+            "  $1 = 20 монет\n"
+            "  1 монета ≈ 3.70 ₽\n\n"
+            "  <b>Лимиты пополнения</b>\n"
+            "  Минимум:       $2.00 = 40 монет\n"
+            "  Через Stars:   мин. 40 монет\n"
+            "  Через USDT:    мин. $2\n\n"
+            "  <b>Способы оплаты</b>\n"
+            "  ⭐ Telegram Stars\n"
+            "  ₮ USDT (TRC-20)\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_wallet_stars_text": (
+            "⭐  <b>Пополнение через Telegram Stars</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Как пополнить:</b>\n"
+            "  1 · Нажмите «◈ Кошелёк» в главном меню\n"
+            "  2 · Нажмите «＋ Пополнить монеты»\n"
+            "  3 · Выберите «⭐ Stars»\n"
+            "  4 · Укажите сумму в монетах (мин. 40)\n"
+            "  5 · Оплатите через Telegram — без выхода из приложения\n\n"
+            "  Курс Stars → монеты рассчитывается автоматически.\n\n"
+            "  ✓ Мгновенное зачисление\n"
+            "  ✓ Не нужна карта или криптокошелёк\n"
+            "  ✓ Безопасно — встроено в Telegram\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_wallet_usdt_text": (
+            "₮  <b>Пополнение через USDT</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Сеть: TRC-20 (Tron)\n\n"
+            "  <b>Как пополнить:</b>\n"
+            "  1 · Нажмите «◈ Кошелёк» → «＋ Пополнить»\n"
+            "  2 · Выберите «₮ USDT»\n"
+            "  3 · Введите сумму в USD (мин. $2)\n"
+            "  4 · Переведите USDT на указанный адрес\n"
+            "  5 · Сообщите об оплате оператору\n\n"
+            "  ✓ Принимаем USDT TRC-20\n"
+            "  ✓ Зачисление в течение 15 минут\n"
+            "  ✓ Нет комиссии со стороны бота\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_text": (
+            "⚡  <b>Безлимитные пакеты</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Безлимитный пакет снимает все ограничения\n"
+            "  и открывает доступ к дополнительным моделям.\n\n"
+            "  Пакет активен 1, 2 или 3 часа — в течение\n"
+            "  этого времени генерируйте без ограничений.\n\n"
+            "  <b>Тарифы:</b>\n"
+            "  ⚡  Standard  —  от 268◈/ч\n"
+            "  ⚡⚡  Pro       —  от 662◈/ч\n"
+            "  ♛   VIP       —  от 1619◈/ч\n\n"
+            "  Нажмите на тариф для подробностей ↓\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_std_text": (
+            "⚡  <b>Безлимит Standard</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Цены:</b>\n"
+            "  1 ч  —  268◈\n"
+            "  2 ч  —  482◈  (экономия 10%)\n"
+            "  3 ч  —  642◈  (экономия 20%)\n\n"
+            "  <b>Доступные модели:</b>\n"
+            "  ✓ Seedance 2.0 Fast  ·  Wan 2.7\n"
+            "  ✓ LTX 2.3 Pro  ·  Veo 3.1 Lite\n"
+            "  ✓ Grok 1.5\n"
+            "  ✓ Kling 3.0  ·  Kling O3\n\n"
+            "  <b>Макс. разрешение:</b>  720p\n\n"
+            "  ✕ Премиум-модели (Veo Full, Sora)\n"
+            "  ✕ Аватар и дубляж\n"
+            "  ✕ Генерация аудио\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_pro_text": (
+            "⚡⚡  <b>Безлимит Pro</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Цены:</b>\n"
+            "  1 ч  —  662◈\n"
+            "  2 ч  —  1192◈  (экономия 10%)\n"
+            "  3 ч  —  1589◈  (экономия 20%)\n\n"
+            "  <b>Доступные модели:</b>\n"
+            "  ✓ Все модели Standard\n"
+            "  ✓ Veo 3.1 Full  ·  Veo 3.1 Fast\n"
+            "  ✓ Sora 2 Pro\n"
+            "  ✓ Kling 3.0  ·  Kling O3\n"
+            "  ✓ ElevenLabs Voiceover (аудио)\n\n"
+            "  <b>Макс. разрешение:</b>  1080p\n\n"
+            "  ✕ Аватар и дубляж\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_vip_text": (
+            "♛  <b>Безлимит VIP</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>Цены:</b>\n"
+            "  1 ч  —  1619◈\n"
+            "  2 ч  —  2914◈  (экономия 10%)\n"
+            "  3 ч  —  3886◈  (экономия 20%)\n\n"
+            "  <b>Доступные модели:</b>\n"
+            "  ✓ Все модели Standard и Pro\n"
+            "  ✓ Veo 3.1 Full  ·  Sora 2 Pro\n"
+            "  ✓ Kling 3.0  ·  Kling O3\n"
+            "  ✓ ElevenLabs Voiceover (аудио)\n\n"
+            "  <b>Макс. разрешение:</b>  4K\n\n"
+            "  ✓ Полный доступ ко всем функциям\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_ref_text": (
+            "👥  <b>Реферальная программа</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Поделитесь ссылкой → друг регистрируется\n"
+            "  и пополняет → вы получаете % от каждого\n"
+            "  пополнения реферала.\n\n"
+            "  <b>Уровни вознаграждений:</b>\n"
+            "  Стартер (0–5 рефералов)\n"
+            "    Первое пополн.  20%  ·  Повторные  10%\n\n"
+            "  Партнёр (6–15 рефералов)\n"
+            "    Первое пополн.  22%  ·  Повторные  12%\n\n"
+            "  Про (16+ рефералов)\n"
+            "    Первое пополн.  25%  ·  Повторные  15%\n\n"
+            "  <b>Блогерские промо-коды</b>\n"
+            "  Работают как реферальная ссылка.\n"
+            "  Новый пользователь вводит /promo КОД.\n\n"
+            "  Ваша ссылка: ◈ Кошелёк → Реферальная программа\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_support_text": (
+            "💬  <b>Поддержка</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  Возник вопрос или проблема?\n"
+            "  Напишите нам напрямую:\n\n"
+            "  @RetainXStudio\n\n"
+            "  <b>Время ответа:</b>  обычно до 1 часа\n\n"
+            "  <b>С чем помогаем:</b>\n"
+            "  ✓ Видео / фото не пришло\n"
+            "  ✓ Некорректное списание монет\n"
+            "  ✓ Проблемы с пополнением\n"
+            "  ✓ Технические ошибки\n"
+            "  ✓ Вопросы по моделям\n\n"
+            "  По промо-кодам и партнёрству —\n"
+            "  также пишите в @RetainXStudio\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        # ── Help button labels ──
+        "help_btn_start":       "🚀  Как начать",
+        "help_btn_video":       "🎬  Генерация видео",
+        "help_btn_vid_std":     "▸  Стандартные модели",
+        "help_btn_vid_prem":    "★  Премиум модели",
+        "help_btn_vid_kling":   "◉  Kling",
+        "help_btn_vid_avatar":  "◌  Аватар и дубляж",
+        "help_btn_images":      "🖼  Генерация изображений",
+        "help_btn_audio":       "🔊  Аудио и озвучка",
+        "help_btn_wallet":      "◈  Кошелёк и оплата",
+        "help_btn_wallet_rates":"◎  Курсы и лимиты",
+        "help_btn_wallet_stars":"⭐  Telegram Stars",
+        "help_btn_wallet_usdt": "₮  USDT / Крипто",
+        "help_btn_unlim":       "⚡  Безлимитные пакеты",
+        "help_btn_unlim_std":   "⚡  Standard",
+        "help_btn_unlim_pro":   "⚡⚡  Pro",
+        "help_btn_unlim_vip":   "♛  VIP",
+        "help_btn_ref":         "👥  Реферальная программа",
+        "help_btn_support":     "💬  Поддержка",
 
         "audio_title": "◌  <b>Аудио и голос</b>",
         "audio_body": "  Скоро будет доступно.\n\n  Мы интегрируем инструменты синтеза\n  речи и генерации музыки.\n\n  Следите за обновлениями.",
@@ -1441,6 +2059,314 @@ STR = {
         "btn_start_generating": "▸  ابدأ الإنشاء",
         "btn_view_pricing": "◎  عرض الأسعار",
         "btn_back": "←  رجوع",
+        "btn_help": "📖  المساعدة",
+
+        # ── Help pages ──
+        "help_main_text": (
+            "📖  <b>المساعدة — RetainX Studio</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  اختر قسماً للحصول على معلومات تفصيلية:"
+        ),
+        "help_start_text": (
+            "🚀  <b>كيف تبدأ</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>نظام العملات</b>\n"
+            "  1 عملة = $0.05   ·   $1 = 20 عملة\n"
+            "  الحد الأدنى للشحن: $2 (40 عملة)\n\n"
+            "  <b>الخطوات الأولى</b>\n"
+            "  1 · اختر النوع — فيديو، صورة أو صوت\n"
+            "  2 · اختر النموذج والإعدادات\n"
+            "  3 · أدخل البرومبت بأي لغة\n"
+            "  4 · احصل على النتيجة خلال ~2 دقيقة\n\n"
+            "  <b>مكافأة الترحيب</b>\n"
+            "  20 عملة مجانية عند أول تشغيل 🎁\n\n"
+            "  <b>أكواد الترويج</b>\n"
+            "  استخدم /promo [الكود] للتفعيل\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_video_text": (
+            "🎬  <b>توليد الفيديو</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>القياسية</b>  (متاحة للجميع)\n"
+            "  Seedance 2.0 Fast · Wan 2.7 · LTX 2.3 Pro\n"
+            "  Veo 3.1 Lite · Grok 1.5\n\n"
+            "  <b>Kling</b>  (متاحة للجميع)\n"
+            "  Kling 3.0 · Kling O3  ·  حتى 4K\n\n"
+            "  <b>المميزة</b>  (Pro / VIP غير محدود)\n"
+            "  Veo 3.1 Full · Veo 3.1 Fast · Sora 2 Pro\n\n"
+            "  <b>الأفاتار والدبلجة</b>\n"
+            "  HeyGen · ElevenLabs · Lipsync · OmniHuman\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "  اضغط على قسم للتفاصيل ↓"
+        ),
+        "help_vid_std_text": (
+            "▸  <b>نماذج الفيديو القياسية</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>Seedance 2.0 Fast</b>\n"
+            "  480p / 720p  ·  4–15 ثانية\n"
+            "  من 5◈ (480p 4ث)  إلى 45◈ (720p 15ث)\n\n"
+            "<b>Wan 2.7</b>\n"
+            "  720p / 1080p  ·  2–15 ثانية\n"
+            "  من 4◈ (720p 2ث)  إلى 45◈ (1080p 15ث)\n\n"
+            "<b>LTX 2.3 Pro</b>\n"
+            "  720p / 1080p / 2K / 4K  ·  6–10 ثانية\n"
+            "  من 6◈ (720p)  إلى 75◈ (4K 10ث)\n\n"
+            "<b>Veo 3.1 Lite</b>\n"
+            "  720p / 1080p  ·  4–8 ثانية\n"
+            "  من 3◈ (720p 4ث)  إلى 8◈ (1080p 8ث)\n\n"
+            "<b>Grok 1.5</b>\n"
+            "  حتى 15 ثانية  ·  4◈/ث  (60◈ لـ15ث)\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_vid_prem_text": (
+            "★  <b>نماذج الفيديو المميزة</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "  ⚠️ يتطلب خطة غير محدودة Pro / VIP\n\n"
+            "<b>Veo 3.1 Full</b>  (أفضل جودة Google)\n"
+            "  720p / 1080p / 4K  ·  4–8 ثانية\n"
+            "  من 15◈ (720p 4ث)  إلى 58◈ (4K 8ث)\n\n"
+            "<b>Veo 3.1 Fast</b>\n"
+            "  720p / 1080p / 4K  ·  4–8 ثانية\n"
+            "  من 8◈ (720p 4ث)  إلى 40◈ (4K 8ث)\n\n"
+            "<b>Sora 2 Pro</b>  (OpenAI)\n"
+            "  720p / 1080p  ·  4–12 ثانية\n"
+            "  من 26◈ (720p 4ث)  إلى 114◈ (1080p 12ث)\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_vid_kling_text": (
+            "◉  <b>نماذج Kling للفيديو</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>Kling 3.0</b>\n"
+            "  720p / 1080p / 4K  ·  3–15 ثانية\n"
+            "  من 4◈ (720p 3ث)  إلى 75◈ (4K 15ث)\n\n"
+            "<b>Kling O3</b>  (جودة فائقة)\n"
+            "  720p / 1080p / 4K  ·  3–15 ثانية\n"
+            "  من 4◈ (720p 3ث)  إلى 75◈ (4K 15ث)\n\n"
+            "  ✓ اتباع دقيق للبرومبت\n"
+            "  ✓ مشاهد فوتوغرافية واقعية\n"
+            "  ✓ دعم صور المرجع\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_vid_avatar_text": (
+            "◌  <b>الأفاتار والدبلجة</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<b>HeyGen Avatar</b>\n"
+            "  720p / 1080p  ·  1–15 دقيقة  ·  60◈/دقيقة\n\n"
+            "<b>ElevenLabs Dubbing</b>\n"
+            "  دبلجة احترافية  ·  60◈/دقيقة\n"
+            "  29 لغة مدعومة\n\n"
+            "<b>Lipsync</b>\n"
+            "  مزامنة الشفاه مع الصوت  ·  60◈/دقيقة\n\n"
+            "<b>OmniHuman / Aurora Avatar</b>\n"
+            "  أفاتار من صورة + صوت\n"
+            "  60◈/دقيقة (OmniHuman)  ·  54◈/دقيقة (Aurora)\n\n"
+            "  الصيغ: MP4, MOV, AVI\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_images_text": (
+            "🖼  <b>توليد الصور</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>1◈ لكل توليد:</b>\n"
+            "  Nano Banana · Seedream 5.0\n"
+            "  GPT Image 2 (Medium) · Kling 3.0\n"
+            "  Kling O3 (1K / 2K)\n\n"
+            "  <b>2◈ لكل توليد:</b>\n"
+            "  Nano Banana Pro · Flux 2.0 Pro\n"
+            "  Wan 2.7 Pro · Ideogram v3\n"
+            "  Hunyuan V3 · Kling O3 (4K)\n\n"
+            "  <b>6◈ لكل توليد:</b>\n"
+            "  GPT Image 2 (High)\n\n"
+            "  الصيغ: 1:1 · 16:9 · 9:16 · 3:4 وأكثر\n"
+            "  الجودة: 1K · 2K · 4K (حسب النموذج)\n"
+            "  صور المرجع: حتى 14 صورة\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_audio_text": (
+            "🔊  <b>الصوت والتعليق</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>ElevenLabs Voiceover</b>\n"
+            "  تحويل النص إلى كلام احترافي بالذكاء الاصطناعي\n\n"
+            "  ✓ أكثر من 1000 صوت\n"
+            "  ✓ التحكم في المشاعر وأسلوب الكلام\n"
+            "  ✓ ضبط استقرار الصوت\n"
+            "  ✓ تأثيرات صوتية\n"
+            "  ✓ التحكم في سرعة الكلام\n"
+            "  ✓ أكثر من 30 لغة\n\n"
+            "  متاح مع خطة غير محدودة Pro / VIP\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_wallet_text": (
+            "◈  <b>المحفظة والدفع</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  رصيدك محفوظ بعملات RetainX.\n"
+            "  تُخصم العملات تلقائياً\n"
+            "  عند كل عملية توليد.\n\n"
+            "  اختر قسماً للتفاصيل:"
+        ),
+        "help_wallet_rates_text": (
+            "◎  <b>الأسعار والحدود</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>سعر العملة</b>\n"
+            "  1 عملة = $0.05\n"
+            "  $1 = 20 عملة\n\n"
+            "  <b>حدود الشحن</b>\n"
+            "  الحد الأدنى:    $2.00 = 40 عملة\n"
+            "  عبر Stars:      40 عملة على الأقل\n"
+            "  عبر USDT:       $2 على الأقل\n\n"
+            "  <b>طرق الدفع</b>\n"
+            "  ⭐ Telegram Stars\n"
+            "  ₮ USDT (TRC-20)\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_wallet_stars_text": (
+            "⭐  <b>الشحن عبر Telegram Stars</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>كيفية الشحن:</b>\n"
+            "  1 · اضغط «◈ المحفظة» في القائمة الرئيسية\n"
+            "  2 · اضغط «＋ إضافة عملات»\n"
+            "  3 · اختر «⭐ Stars»\n"
+            "  4 · أدخل عدد العملات (40 كحد أدنى)\n"
+            "  5 · ادفع عبر Telegram — بدون مغادرة التطبيق\n\n"
+            "  يُحسب سعر Stars تلقائياً.\n\n"
+            "  ✓ إضافة فورية\n"
+            "  ✓ لا حاجة لبطاقة أو محفظة تشفير\n"
+            "  ✓ آمن — مدمج في Telegram\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_wallet_usdt_text": (
+            "₮  <b>الشحن عبر USDT</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  الشبكة: TRC-20 (Tron)\n\n"
+            "  <b>كيفية الشحن:</b>\n"
+            "  1 · اضغط «◈ المحفظة» → «＋ إضافة»\n"
+            "  2 · اختر «₮ USDT»\n"
+            "  3 · أدخل المبلغ بالدولار (حد أدنى $2)\n"
+            "  4 · أرسل USDT إلى العنوان المعروض\n"
+            "  5 · أخبر المشغّل بعد الدفع\n\n"
+            "  ✓ نقبل USDT TRC-20\n"
+            "  ✓ الإضافة خلال 15 دقيقة\n"
+            "  ✓ لا عمولة من البوت\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_text": (
+            "⚡  <b>الخطط غير المحدودة</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  تزيل الخطة غير المحدودة جميع القيود\n"
+            "  وتفتح نماذج إضافية.\n\n"
+            "  الخطة نشطة لمدة 1 أو 2 أو 3 ساعات —\n"
+            "  أنشئ بلا حدود خلال هذا الوقت.\n\n"
+            "  <b>الخطط:</b>\n"
+            "  ⚡  Standard  —  من 268◈/ساعة\n"
+            "  ⚡⚡  Pro       —  من 662◈/ساعة\n"
+            "  ♛   VIP       —  من 1619◈/ساعة\n\n"
+            "  اضغط على خطة للتفاصيل ↓\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_std_text": (
+            "⚡  <b>غير محدود Standard</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>الأسعار:</b>\n"
+            "  1 س  —  268◈\n"
+            "  2 س  —  482◈  (توفير 10%)\n"
+            "  3 س  —  642◈  (توفير 20%)\n\n"
+            "  <b>النماذج المتاحة:</b>\n"
+            "  ✓ Seedance 2.0 Fast  ·  Wan 2.7\n"
+            "  ✓ LTX 2.3 Pro  ·  Veo 3.1 Lite\n"
+            "  ✓ Grok 1.5\n"
+            "  ✓ Kling 3.0  ·  Kling O3\n\n"
+            "  <b>أقصى دقة:</b>  720p\n\n"
+            "  ✕ النماذج المميزة (Veo Full, Sora)\n"
+            "  ✕ الأفاتار والدبلجة\n"
+            "  ✕ توليد الصوت\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_pro_text": (
+            "⚡⚡  <b>غير محدود Pro</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>الأسعار:</b>\n"
+            "  1 س  —  662◈\n"
+            "  2 س  —  1192◈  (توفير 10%)\n"
+            "  3 س  —  1589◈  (توفير 20%)\n\n"
+            "  <b>النماذج المتاحة:</b>\n"
+            "  ✓ جميع نماذج Standard\n"
+            "  ✓ Veo 3.1 Full  ·  Veo 3.1 Fast\n"
+            "  ✓ Sora 2 Pro\n"
+            "  ✓ Kling 3.0  ·  Kling O3\n"
+            "  ✓ ElevenLabs Voiceover (صوت)\n\n"
+            "  <b>أقصى دقة:</b>  1080p\n\n"
+            "  ✕ الأفاتار والدبلجة\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_unlim_vip_text": (
+            "♛  <b>غير محدود VIP</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  <b>الأسعار:</b>\n"
+            "  1 س  —  1619◈\n"
+            "  2 س  —  2914◈  (توفير 10%)\n"
+            "  3 س  —  3886◈  (توفير 20%)\n\n"
+            "  <b>النماذج المتاحة:</b>\n"
+            "  ✓ جميع نماذج Standard و Pro\n"
+            "  ✓ Veo 3.1 Full  ·  Sora 2 Pro\n"
+            "  ✓ Kling 3.0  ·  Kling O3\n"
+            "  ✓ ElevenLabs Voiceover (صوت)\n\n"
+            "  <b>أقصى دقة:</b>  4K\n\n"
+            "  ✓ وصول كامل لجميع الميزات\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_ref_text": (
+            "👥  <b>برنامج الإحالة</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  شارك رابطك → يسجّل الصديق ويشحن\n"
+            "  → تحصل على % من كل عملية شحن.\n\n"
+            "  <b>مستويات المكافآت:</b>\n"
+            "  Starter (0–5 إحالات)\n"
+            "    أول شحن  20%  ·  متكرر  10%\n\n"
+            "  Partner (6–15 إحالة)\n"
+            "    أول شحن  22%  ·  متكرر  12%\n\n"
+            "  Pro (16+ إحالة)\n"
+            "    أول شحن  25%  ·  متكرر  15%\n\n"
+            "  <b>أكواد الترويج للمدوّنين</b>\n"
+            "  تعمل كرابط الإحالة.\n"
+            "  يدخل المستخدم الجديد /promo الكود.\n\n"
+            "  رابطك: ◈ المحفظة → برنامج الإحالة\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "help_support_text": (
+            "💬  <b>الدعم</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "  هل لديك سؤال أو مشكلة؟\n"
+            "  اكتب لنا مباشرةً:\n\n"
+            "  @RetainXStudio\n\n"
+            "  <b>وقت الرد:</b>  عادةً خلال ساعة\n\n"
+            "  <b>نساعدك في:</b>\n"
+            "  ✓ عدم استلام الفيديو / الصورة\n"
+            "  ✓ خصم عملات غير صحيح\n"
+            "  ✓ مشاكل الشحن\n"
+            "  ✓ أخطاء تقنية\n"
+            "  ✓ أسئلة حول النماذج\n\n"
+            "  للأكواد الترويجية والشراكات —\n"
+            "  تواصل أيضاً عبر @RetainXStudio\n"
+            "━━━━━━━━━━━━━━━━━━━━"
+        ),
+        # ── Help button labels ──
+        "help_btn_start":       "🚀  كيف تبدأ",
+        "help_btn_video":       "🎬  توليد الفيديو",
+        "help_btn_vid_std":     "▸  النماذج القياسية",
+        "help_btn_vid_prem":    "★  النماذج المميزة",
+        "help_btn_vid_kling":   "◉  Kling",
+        "help_btn_vid_avatar":  "◌  الأفاتار والدبلجة",
+        "help_btn_images":      "🖼  توليد الصور",
+        "help_btn_audio":       "🔊  الصوت والتعليق",
+        "help_btn_wallet":      "◈  المحفظة والدفع",
+        "help_btn_wallet_rates":"◎  الأسعار والحدود",
+        "help_btn_wallet_stars":"⭐  Telegram Stars",
+        "help_btn_wallet_usdt": "₮  USDT / تشفير",
+        "help_btn_unlim":       "⚡  الخطط غير المحدودة",
+        "help_btn_unlim_std":   "⚡  Standard",
+        "help_btn_unlim_pro":   "⚡⚡  Pro",
+        "help_btn_unlim_vip":   "♛  VIP",
+        "help_btn_ref":         "👥  برنامج الإحالة",
+        "help_btn_support":     "💬  الدعم",
 
         "audio_title": "◌  <b>الصوت</b>",
         "audio_body": "  قريباً.\n\n  نحن نعمل على دمج أدوات\n  تركيب الصوت وتوليد الموسيقى.\n\n  ترقّب التحديثات.",
