@@ -116,6 +116,10 @@ async def maintenance_cb_mw(handler, event: CallbackQuery, data: dict):
 async def start(msg: Message, state: FSMContext):
     await state.clear()
     uid = msg.from_user.id
+
+    # Check BEFORE any DB write so referral insertion can't shadow new-user status
+    new = is_new_user(uid)
+
     args = msg.text.split()
     if len(args) > 1 and args[1].startswith("ref_"):
         try:
@@ -125,7 +129,6 @@ async def start(msg: Message, state: FSMContext):
         except ValueError:
             pass
 
-    new = is_new_user(uid)
     if new:
         add_coins(uid, WELCOME_BONUS)
 
