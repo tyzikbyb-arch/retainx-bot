@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramRetryAfter
 from config import ADMIN_ID, BOT_TOKEN
-from database import get_order, update_order_status, add_coins, save_delivery, get_lang, set_blogger, get_is_blogger
+from database import get_order, update_order_status, add_coins, save_delivery, get_lang, set_blogger, get_is_blogger, cancel_order_atomic
 from keyboards import kb, menu_btn
 from aiogram.types import InlineKeyboardButton
 from i18n import t
@@ -17,10 +17,16 @@ router = Router()
 # Same branded cover used for voice previews in handlers/voiceover.py, shown
 # in place of Telegram's generic grey file icon when delivering an audio order.
 _THUMB_PATH = os.path.join(os.path.dirname(__file__), "..", "assets", "audio_thumb.jpg")
-with open(_THUMB_PATH, "rb") as _f:
-    _AUDIO_THUMB_BYTES = _f.read()
+_AUDIO_THUMB_BYTES = None
 
-def _audio_thumb() -> BufferedInputFile:
+def _audio_thumb() -> BufferedInputFile | None:
+    global _AUDIO_THUMB_BYTES
+    if _AUDIO_THUMB_BYTES is None:
+        try:
+            with open(_THUMB_PATH, "rb") as f:
+                _AUDIO_THUMB_BYTES = f.read()
+        except FileNotFoundError:
+            return None
     return BufferedInputFile(_AUDIO_THUMB_BYTES, filename="thumb.jpg")
 
 class AdminStates(StatesGroup):
@@ -68,48 +74,48 @@ async def admin_cancel_with_reason(msg: Message, state: FSMContext):
     if not oid:
         await msg.answer("⚠️ No order ID in state.")
         return
-    order = get_order(oid)
-    if not order:
-        await msg.answer(f"⚠️ Order #{oid} not found.")
-        return
-    if order["status"] != "processing":
-        await msg.answer(
-            f"⚠️ Order #{oid} is already <b>{order['status']}</b> — refund skipped.",
-            parse_mode="HTML"
-        )
-        return
     reason = msg.text.strip() if msg.text else ""
     if reason == "-":
         reason = ""
-    add_coins(order["user_id"], order["coins"])
-    update_order_status(oid, "cancelled")
     from handlers import spinner as sp
     await sp.stop(oid)
+    success, user_id, coins = cancel_order_atomic(oid)
+    if not success:
+        order = get_order(oid)
+        if not order:
+            await msg.answer(f"⚠️ Order #{oid} not found.")
+        else:
+            await msg.answer(
+                f"⚠️ Order #{oid} is already <b>{order['status']}</b> — refund skipped.",
+                parse_mode="HTML"
+            )
+        return
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
-    lang = get_lang(order["user_id"])
+    lang = get_lang(user_id)
     if reason:
         user_text = (
             f"◌  <b>Order #{oid} Cancelled</b>\n\n"
-            f"  <b>{order['coins']} coins</b> have been refunded to your wallet.\n\n"
+            f"  <b>{coins} coins</b> have been refunded to your wallet.\n\n"
             f"  Reason: {reason}"
         )
     else:
         user_text = (
             f"◌  <b>Order #{oid} Cancelled</b>\n\n"
-            f"  <b>{order['coins']} coins</b> have been refunded to your wallet.\n"
+            f"  <b>{coins} coins</b> have been refunded to your wallet.\n"
             f"  We apologise for the inconvenience."
         )
     try:
         await bot.send_message(
-            order["user_id"], user_text,
+            user_id, user_text,
             parse_mode="HTML",
             reply_markup=kb([menu_btn(lang)])
         )
     except Exception:
         pass
-    await bot.session.close()
-    admin_note = f"✕  Order #{oid} cancelled — {order['coins']} coins refunded."
+    finally:
+        await bot.session.close()
+    admin_note = f"✕  Order #{oid} cancelled — {coins} coins refunded."
     if reason:
         admin_note += f"\n  Reason sent: {reason}"
     await msg.answer(admin_note)

@@ -7,7 +7,7 @@ from aiogram.types import Message, CallbackQuery, LabeledPrice, InlineKeyboardMa
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import COIN_TO_USD, MIN_TOPUP_USD, USDT_WALLET, REFERRAL_PERCENT, REFERRAL_TIERS, REFERRAL_JOIN_BONUS, BOT_TOKEN, UNLIMITED_TIER_CONFIG, UNLIMITED_PLANS
-from database import get_coins, add_coins, spend_coins, get_referred_by, get_lang, has_unlimited, get_unlimited_until, get_unlimited_tier, set_unlimited, can_buy_unlimited, get_referral_count, get_referral_buyers_count, is_ref_first_topup_done, mark_ref_first_topup_done
+from database import get_coins, add_coins, spend_coins, get_referred_by, get_lang, has_unlimited, get_unlimited_until, get_unlimited_tier, set_unlimited, can_buy_unlimited, get_referral_count, get_referral_buyers_count, is_ref_first_topup_done, mark_ref_first_topup_done, try_mark_ref_first_topup_done
 from keyboards import kb, back_btn, menu_btn
 from i18n import t
 
@@ -481,15 +481,18 @@ async def pay_stars(cb: CallbackQuery, state: FSMContext):
     coins = math.floor(amount / COIN_TO_USD)
     stars_amount = int(amount * 100)
     bot = Bot(token=BOT_TOKEN)
-    await bot.send_invoice(
-        chat_id=cb.from_user.id,
-        title=t("wallet_stars_invoice_title", lang),
-        description=t("wallet_stars_invoice_desc", lang, coins=coins),
-        payload=f"topup_{coins}_{cb.from_user.id}",
-        currency="XTR",
-        prices=[LabeledPrice(label=t("wallet_stars_label", lang, coins=coins), amount=stars_amount)],
-        provider_token="",
-    )
+    try:
+        await bot.send_invoice(
+            chat_id=cb.from_user.id,
+            title=t("wallet_stars_invoice_title", lang),
+            description=t("wallet_stars_invoice_desc", lang, coins=coins),
+            payload=f"topup_{coins}_{cb.from_user.id}",
+            currency="XTR",
+            prices=[LabeledPrice(label=t("wallet_stars_label", lang, coins=coins), amount=stars_amount)],
+            provider_token="",
+        )
+    finally:
+        await bot.session.close()
     await cb.answer()
 
 @router.message(F.successful_payment)
@@ -525,6 +528,7 @@ async def successful_stars_payment(msg: Message):
 async def admin_confirm_topup(cb: CallbackQuery):
     from config import ADMIN_ID
     if cb.from_user.id != ADMIN_ID:
+        await cb.answer()
         return
     _, _, uid_str, coins_str = cb.data.split("_", 3)
     uid = int(uid_str)
@@ -533,35 +537,43 @@ async def admin_confirm_topup(cb: CallbackQuery):
     await _handle_referral_bonus(uid, coins)
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
-    user_lang = get_lang(uid)
-    await bot.send_message(
-        uid,
-        f"{t('wallet_topup_confirmed_title', user_lang)}\n\n"
-        f"{t('wallet_topup_confirmed_body', user_lang, coins=coins, balance=get_coins(uid))}",
-        parse_mode="HTML"
-    )
+    try:
+        user_lang = get_lang(uid)
+        await bot.send_message(
+            uid,
+            f"{t('wallet_topup_confirmed_title', user_lang)}\n\n"
+            f"{t('wallet_topup_confirmed_body', user_lang, coins=coins, balance=get_coins(uid))}",
+            parse_mode="HTML"
+        )
+    finally:
+        await bot.session.close()
     await cb.message.edit_text(f"✓  Confirmed — {coins} coins → user {uid}", parse_mode="HTML")
+    await cb.answer()
 
 @router.callback_query(F.data.startswith("reject_topup_"))
 async def admin_reject_topup(cb: CallbackQuery):
     from config import ADMIN_ID
     if cb.from_user.id != ADMIN_ID:
+        await cb.answer()
         return
     uid = int(cb.data.split("_")[-1])
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
-    user_lang = get_lang(uid)
-    await bot.send_message(uid, t("wallet_topup_rejected", user_lang))
+    try:
+        user_lang = get_lang(uid)
+        await bot.send_message(uid, t("wallet_topup_rejected", user_lang))
+    finally:
+        await bot.session.close()
     await cb.message.edit_text(f"✕  Rejected — user {uid}")
+    await cb.answer()
 
 async def _handle_referral_bonus(uid: int, coins_added: int):
     ref_uid = get_referred_by(uid)
     if not ref_uid:
         return
 
-    first_done = is_ref_first_topup_done(uid)
-    if not first_done:
-        mark_ref_first_topup_done(uid)
+    # Atomic: returns True only the first time per referred user (race-safe)
+    was_first = try_mark_ref_first_topup_done(uid)
 
     # Tier based on buyers count (mark first done BEFORE counting so this buyer is included)
     buyers = get_referral_buyers_count(ref_uid)
@@ -570,7 +582,7 @@ async def _handle_referral_bonus(uid: int, coins_added: int):
         if buyers >= t_item["min"]:
             tier = t_item
 
-    percentage = tier["first"] if not first_done else tier["repeat"]
+    percentage = tier["first"] if was_first else tier["repeat"]
 
     bonus = round(coins_added * percentage / 100)
     if bonus <= 0:
@@ -579,14 +591,16 @@ async def _handle_referral_bonus(uid: int, coins_added: int):
     add_coins(ref_uid, bonus)
     from aiogram import Bot
     bot = Bot(token=BOT_TOKEN)
-    ref_lang = get_lang(ref_uid)
-    await bot.send_message(
-        ref_uid,
-        f"{t('wallet_referral_bonus_title', ref_lang)}\n\n"
-        f"{t('wallet_referral_bonus_body', ref_lang, bonus=bonus, percentage=percentage)}",
-        parse_mode="HTML"
-    )
-    await bot.session.close()
+    try:
+        ref_lang = get_lang(ref_uid)
+        await bot.send_message(
+            ref_uid,
+            f"{t('wallet_referral_bonus_title', ref_lang)}\n\n"
+            f"{t('wallet_referral_bonus_body', ref_lang, bonus=bonus, percentage=percentage)}",
+            parse_mode="HTML"
+        )
+    finally:
+        await bot.session.close()
 
 # ── Referral info ───────────────────────────────────────────────────────────
 @router.callback_query(F.data == "referral_info")

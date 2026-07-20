@@ -15,7 +15,7 @@ REFERRAL_JOIN_BONUS = 10  # extra coins for new user who joined via referral lin
 MIN_TOPUP_USD = 2.0       # minimum top-up
 REFERRAL_PERCENT = 20     # 20% of referral top-up (legacy, tiers used instead)
 
-# Tiered referral percentages based on total referrals invited
+# Tiered referral percentages based on number of referrals who made a purchase (buyers)
 REFERRAL_TIERS = [
     {"min": 0,  "next": 6,  "first": 20, "repeat": 10, "name_en": "Starter", "name_ru": "Стартер"},
     {"min": 6,  "next": 16, "first": 22, "repeat": 12, "name_en": "Partner", "name_ru": "Партнёр"},

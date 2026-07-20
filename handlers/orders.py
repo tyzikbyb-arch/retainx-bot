@@ -47,7 +47,7 @@ async def show_orders(target, uid: int, edit: bool = False):
 
     total = len(orders)
     delivered = sum(1 for o in orders if o.get("status") == "delivered")
-    spent = sum(int(o["coins"]) for o in orders)
+    spent = sum(int(o["coins"]) for o in orders if o.get("status") != "cancelled")
 
     buttons = []
     for o in orders_sorted[:20]:
@@ -133,10 +133,10 @@ async def order_detail(cb: CallbackQuery):
     file_type = order.get("file_type")
 
     if file_id and status == "delivered":
+        from aiogram import Bot
+        from config import BOT_TOKEN
+        bot = Bot(token=BOT_TOKEN)
         try:
-            from aiogram import Bot
-            from config import BOT_TOKEN
-            bot = Bot(token=BOT_TOKEN)
             uid = cb.from_user.id
             result_caption = t("order_your_result", lang)
             if file_type == "photo":
@@ -151,6 +151,8 @@ async def order_detail(cb: CallbackQuery):
                                          disable_content_type_detection=True)
         except Exception:
             pass
+        finally:
+            await bot.session.close()
 
     await cb.answer()
     await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")

@@ -794,6 +794,7 @@ async def _vid_confirm_legacy(cb: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     coins = data.get("v_coins", 0)
     tool  = data.get("v_tool", "—")
+    tid   = data.get("v_tid", tool)
     prompt = data.get("v_prompt", "—")
     uid = cb.from_user.id
 
@@ -931,6 +932,7 @@ async def notify_admin(cb, oid, tool, params, coins, usd):
             await _send_file(f["file_id"], f["type"], f"◈  Video Ref  @vid{i}")
         for i, f in enumerate(auds, 1):
             await _send_file(f["file_id"], f["type"], f"◈  Audio  @aud{i}")
+    await bot.session.close()
 
 # ═══════════════════════════════════════════════════════════
 # SEEDANCE 2.0 — ATTACHMENT HANDLERS
@@ -1719,7 +1721,14 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         "upload_file_type": data.get("v_upload_file_type"),
     }
     usd = data.get("v_usd", 0)
-    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
+    try:
+        oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
+    except Exception:
+        if not unlimited:
+            from database import add_coins
+            add_coins(uid, coins)
+        await cb.answer(t("vid_order_error", lang), show_alert=True)
+        return
 
     # Push to Redis queue for auto-generation
     await _push_to_queue(oid, uid, tid, tool, params, coins, usd)

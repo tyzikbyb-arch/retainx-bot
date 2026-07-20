@@ -26,7 +26,7 @@ except Exception:
 from aiogram.fsm.context import FSMContext
 
 from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
-from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang, set_can_buy_unlimited, set_unlimited, get_unlimited_tier
+from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang, set_can_buy_unlimited, set_unlimited, get_unlimited_tier, cancel_order_atomic
 from keyboards import kb, menu_btn, client_kb
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
 from handlers import credits, images, video, voiceover, admin as admin_handler, orders as orders_handler, help as help_handler
@@ -353,6 +353,7 @@ async def panel_router(msg: Message, state: FSMContext):
 # ── Main menu callback ──────────────────────────────────────────
 @dp.callback_query(F.data == "main_menu")
 async def main_menu_cb(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     await state.clear()
     uid = cb.from_user.id
     coins = get_coins(uid)
@@ -365,6 +366,7 @@ async def main_menu_cb(cb: CallbackQuery, state: FSMContext):
 # ── Language switch ───────────────────────────────────────────
 @dp.callback_query(F.data == "lang_menu")
 async def lang_menu_cb(cb: CallbackQuery):
+    await cb.answer()
     uid = cb.from_user.id
     lang = get_lang(uid)
     await cb.message.edit_text(
@@ -394,6 +396,7 @@ async def lang_set_cb(cb: CallbackQuery):
 # ── Pricing ─────────────────────────────────────────────────
 @dp.callback_query(F.data == "pricing_menu")
 async def pricing_menu(cb: CallbackQuery):
+    await cb.answer()
     lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
         f"{t('pricing_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('pricing_body', lang)}",
@@ -407,6 +410,7 @@ async def pricing_menu(cb: CallbackQuery):
 
 @dp.callback_query(F.data == "price_images")
 async def price_images(cb: CallbackQuery):
+    await cb.answer()
     from config import IMAGE_TOOLS
     lang = get_lang(cb.from_user.id)
     lines = f"{t('price_images_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -427,6 +431,7 @@ async def price_images(cb: CallbackQuery):
 
 @dp.callback_query(F.data == "price_video")
 async def price_video(cb: CallbackQuery):
+    await cb.answer()
     lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
         f"{t('price_video_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -507,17 +512,19 @@ async def cancelorder_cmd(msg: Message):
         return
     try:
         oid = int(parts[1])
-        from database import get_order, update_order_status
-        order = get_order(oid)
-        if not order:
-            await msg.answer("Order not found.")
-            return
-        add_coins(order["user_id"], order["coins"])
-        update_order_status(oid, "cancelled")
         from handlers import spinner as sp
         await sp.stop(oid)
-        await bot.send_message(order["user_id"], f"◌  <b>Order #{oid} Cancelled</b>\n\n  <b>{order['coins']} coins</b> refunded.", parse_mode="HTML")
-        await msg.answer(f"✓  Order #{oid} cancelled. {order['coins']} coins refunded.")
+        success, user_id, coins = cancel_order_atomic(oid)
+        if not success:
+            from database import get_order
+            order = get_order(oid)
+            if not order:
+                await msg.answer("Order not found.")
+            else:
+                await msg.answer(f"⚠️ Order #{oid} is already {order['status']} — no refund.")
+            return
+        await bot.send_message(user_id, f"◌  <b>Order #{oid} Cancelled</b>\n\n  <b>{coins} coins</b> refunded.", parse_mode="HTML")
+        await msg.answer(f"✓  Order #{oid} cancelled. {coins} coins refunded.")
     except Exception as e:
         await msg.answer(f"Error: {e}")
 

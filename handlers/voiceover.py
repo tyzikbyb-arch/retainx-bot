@@ -14,12 +14,18 @@ from handlers import spinner as sp
 router = Router()
 
 # Cover shown in place of Telegram's generic grey file icon on every voice
-# preview document (mic + waveform, branded) — loaded once at import time.
+# preview document (mic + waveform, branded) — loaded lazily to avoid import-time crash.
 _THUMB_PATH = os.path.join(os.path.dirname(__file__), "..", "assets", "audio_thumb.jpg")
-with open(_THUMB_PATH, "rb") as _f:
-    _AUDIO_THUMB_BYTES = _f.read()
+_AUDIO_THUMB_BYTES = None
 
-def _audio_thumb() -> BufferedInputFile:
+def _audio_thumb() -> BufferedInputFile | None:
+    global _AUDIO_THUMB_BYTES
+    if _AUDIO_THUMB_BYTES is None:
+        try:
+            with open(_THUMB_PATH, "rb") as f:
+                _AUDIO_THUMB_BYTES = f.read()
+        except FileNotFoundError:
+            return None
     return BufferedInputFile(_AUDIO_THUMB_BYTES, filename="thumb.jpg")
 
 class VoiceoverStates(StatesGroup):
@@ -631,7 +637,7 @@ async def voiceover_listen(cb: CallbackQuery, state: FSMContext):
     language = data.get("vo_lang", "English")
     sent = await _send_preview(cb.message, voice_name, voice_id, model_id, model_name, language, lang)
     if not sent:
-        await cb.answer(t("vo_select_language", lang), show_alert=True)
+        await cb.answer(t("vo_preview_error", lang), show_alert=True)
         return
     await cb.answer()
 
@@ -1109,3 +1115,4 @@ async def _notify_admin(cb: CallbackQuery, oid: int, tool: str, params: dict, co
         f"📋 <b>Text #{oid}:</b>\n\n<code>{params.get('text','—')}</code>",
         parse_mode="HTML"
     )
+    await bot.session.close()
