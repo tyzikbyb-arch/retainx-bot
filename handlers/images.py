@@ -50,6 +50,11 @@ async def image_tool_selected(cb: CallbackQuery, state: FSMContext):
 
     # Build aspect ratio buttons
     ars = tool.get("aspect_ratios", [])
+    if not ars:
+        # No AR step (e.g. Topaz Image Upscaler) — go straight to prompt/refs
+        await state.update_data(img_ar="—", img_quality=None)
+        await ask_prompt(cb, state, name, tool)
+        return
     ar_buttons = [InlineKeyboardButton(text=ar, callback_data=f"img_ar_{ar}") for ar in ars]
     rows = list(chunked(ar_buttons, 4))
 
