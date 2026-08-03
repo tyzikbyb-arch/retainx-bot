@@ -23,6 +23,9 @@ import math
 
 router = Router()
 
+# Avatar tool IDs excluded from unlimited pass
+AVATAR_TOOL_IDS = {"hga4", "hgtr", "eldb", "lips", "omni", "aur1", "fab1"}
+
 class VideoStates(StatesGroup):
     entering_prompt = State()
     uploading_video = State()
@@ -46,7 +49,7 @@ class VideoStates(StatesGroup):
 TOOL_IDS = {
     "sd20":   "Seedance 2.0",
     "sd20f":  "Seedance 2.0 Fast",
-    "hh10":   "Happy Horse 1.0",
+    "hh10":   "Happy Horse 1.1",
     "wan27":  "Wan 2.7",
     "veo31":  "Veo 3.1",
     "veo31f": "Veo 3.1 Fast",
@@ -72,7 +75,7 @@ ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 TOOL_DESCS = {
     "Seedance 2.0":            "High-quality cinematic video generation up to 1080p with optional audio.",
     "Seedance 2.0 Fast":       "Faster variant of Seedance 2.0 — up to 720p, quicker turnaround.",
-    "Happy Horse 1.0":         "Smooth motion video generation with natural movement, up to 1080p.",
+    "Happy Horse 1.1":         "Smooth motion video generation with natural movement, up to 1080p.",
     "Wan 2.7":                 "Versatile multi-ratio video model with wide format support.",
     "Veo 3.1":                 "Google's flagship video model — cinematic quality up to 4K with audio.",
     "Veo 3.1 Fast":            "Veo 3.1 express mode — same quality, faster render times.",
@@ -97,7 +100,7 @@ TOOL_DESCS = {
 VIDEO_SUBCATS = {
     "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
-    "Kling":     ["kl30","kl03","klmc","klve"],
+    "Kling":     ["kl30","kl03"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
 def subcat_label(sub: str, lang: str = "en") -> str:
@@ -133,7 +136,7 @@ def get_resolutions(tid: str):
         "veo31f":["720p","1080p","4K"],
         "veo31l":["720p","1080p"],
         "sora2": ["720p","1080p"],
-        "ltx23": ["1080p","2K","4K"],
+        "ltx23": ["720p","1080p","2K","4K"],
         "kl30":  ["720p","1080p","4K"],
         "kl03":  ["720p","1080p","4K"],
     }.get(tid, ["720p","1080p"])
@@ -174,8 +177,19 @@ HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl
 @router.callback_query(F.data == "cat_video")
 async def video_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
-    lang = get_lang(cb.from_user.id)
-    buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in VIDEO_SUBCATS]
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    from database import has_unlimited, get_unlimited_tier
+    from config import UNLIMITED_TIER_CONFIG
+    unlim = has_unlimited(uid)
+    if unlim:
+        tier = get_unlimited_tier(uid) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        allowed = set(tier_cfg["subcats"])
+        visible_subcats = [s for s in VIDEO_SUBCATS if s in allowed]
+    else:
+        visible_subcats = list(VIDEO_SUBCATS.keys())
+    buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in visible_subcats]
     buttons.append([back_btn("main_menu", t("menu_main_menu", lang))])
     await cb.message.edit_text(
         f"{t('vid_menu_title', lang)}\n"
@@ -187,8 +201,20 @@ async def video_menu(cb: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("vsub_"))
 async def video_subcat(cb: CallbackQuery, state: FSMContext):
     sub = cb.data[5:]
-    lang = get_lang(cb.from_user.id)
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    from database import has_unlimited, get_unlimited_tier
+    from config import UNLIMITED_TIER_CONFIG
     tids = VIDEO_SUBCATS.get(sub, [])
+    if has_unlimited(uid):
+        tier = get_unlimited_tier(uid) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        if sub not in tier_cfg["subcats"]:
+            await cb.answer(t("vid_subcat_tier_alert", lang), show_alert=True)
+            return
+        overrides = tier_cfg.get("subcat_overrides", {})
+        if sub in overrides:
+            tids = overrides[sub]
     buttons = [[InlineKeyboardButton(text=TOOL_IDS[tid], callback_data=f"vt_{tid}")] for tid in tids]
     buttons.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
@@ -238,7 +264,8 @@ def _sd_attach_kb(data: dict, lang: str = "en") -> list:
     has_any = start or end or imgs or vids or auds
     prompt_label = t("vid_btn_write_prompt", lang) if has_any else t("vid_btn_skip_write_prompt", lang)
     buttons.append([InlineKeyboardButton(text=prompt_label, callback_data="sd_to_prompt")])
-    buttons.append([back_btn("vt_sd20", lang=lang), menu_btn(lang)])  # sd20/sd20f share same menu
+    tid = data.get("v_tid", "sd20")
+    buttons.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
     return buttons
 
 @router.callback_query(F.data.startswith("vt_"))
@@ -253,8 +280,6 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     # Fixed price tools
     fixed = {
-        "klmc": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"30 {t('vid_sec_word', lang)}"}, 1.00),
-        "klve": ({t("vid_resolution_word", lang): "1080p", t("vid_duration_word", lang): f"10 {t('vid_sec_word', lang)}"}, 0.25),
         "fab1": ({t("vid_type_word", lang): t("vid_avatar_video_word", lang)}, 0.90),
         # omni, aur1 handled separately
     }
@@ -270,12 +295,14 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
         else:
             lines = "\n".join(f"  {k:<14}{v}" for k,v in params.items())
             sub = (await state.get_data()).get("v_sub","cat_video")
+            from database import has_unlimited
+            cost_short = "" if has_unlimited(cb.from_user.id) else f"  {t('vid_cost_label_short', lang, coins=coins)}\n\n"
             await cb.message.edit_text(
                 f"◈  <b>{name}</b>\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n\n"
                 f"  {TOOL_DESCS.get(name,'')}\n\n"
                 f"{lines}\n"
-                f"  {t('vid_cost_label_short', lang, coins=coins)}\n\n"
+                f"{cost_short}"
                 f"{t('vid_enter_prompt', lang)}",
                 reply_markup=kb([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)]), parse_mode="HTML"
             )
@@ -321,6 +348,12 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     # Resolution step
     resolutions = get_resolutions(tid)
+    from database import has_unlimited, get_unlimited_tier
+    from config import UNLIMITED_TIER_CONFIG, filter_resolutions
+    if has_unlimited(cb.from_user.id):
+        tier = get_unlimited_tier(cb.from_user.id) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        resolutions = filter_resolutions(resolutions, tier_cfg["max_resolution"])
     sub = (await state.get_data()).get("v_sub","cat_video")
     buttons = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in resolutions]
     buttons.append([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)])
@@ -398,10 +431,12 @@ async def dur_selected(cb: CallbackQuery, state: FSMContext):
     await state.update_data(v_dur=dur, v_coins=coins, v_usd=usd)
 
     if tid in HAS_AUDIO:
+        from database import has_unlimited
+        cost_short = "" if has_unlimited(cb.from_user.id) else f"{t('vid_cost_label_short', lang, coins=coins)}\n\n"
         await cb.message.edit_text(
             f"◈  <b>{name}</b>  —  {res}  {dur}s\n"
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"{t('vid_cost_label_short', lang, coins=coins)}\n\n"
+            f"{cost_short}"
             f"{t('vid_include_audio', lang)}",
             reply_markup=kb(
                 [InlineKeyboardButton(text=t("vid_btn_with_audio", lang), callback_data="vaud_yes"),
@@ -429,8 +464,12 @@ async def audio_selected(cb: CallbackQuery, state: FSMContext):
     )
 
 async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
-    lang = get_lang(cb.from_user.id)
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    from database import has_unlimited
+    unlimited = has_unlimited(uid)
     audio_word = t("vid_audio_yes", lang) if audio else t("vid_audio_no", lang)
+    cost_line = "" if unlimited else f"{t('vid_cost_label', lang, coins=coins)}\n"
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -438,7 +477,7 @@ async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
         f"{t('vid_aspect_ratio_label', lang, ar=ar)}\n"
         f"{t('vid_duration_label', lang, dur=dur)}\n"
         f"{t('vid_audio_label', lang, audio=audio_word)}\n"
-        f"{t('vid_cost_label', lang, coins=coins)}\n\n"
+        f"{cost_line}\n"
         f"{t('vid_enter_prompt', lang)}",
         reply_markup=kb([back_btn(f"va_{str(ar).replace(':','x')}", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
@@ -471,8 +510,18 @@ async def veo_extend(cb: CallbackQuery, state: FSMContext):
     await state.set_state(VideoStates.attach_mode)
 
 # ── Grok ─────────────────────────────────────────────────────
+def _grok_resolution(uid: int) -> str:
+    from database import has_unlimited, get_unlimited_tier
+    if has_unlimited(uid):
+        tier = get_unlimited_tier(uid) or "standard"
+        if tier == "standard":
+            return "480p"
+    return "720p"
+
 async def show_grok(cb, state):
-    lang = get_lang(cb.from_user.id)
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    res = _grok_resolution(uid)
     buttons = [
         InlineKeyboardButton(
             text=f"{s}s — {usd_to_coins(usd)}◈",
@@ -481,20 +530,23 @@ async def show_grok(cb, state):
         for s, usd in GROK_IMAGINE_15_PRICES.items()
     ]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
+    rows.append([back_btn("vsub_Standard", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"{t('vid_grok_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('vid_grok_resolution_line', lang)}",
+        f"{t('vid_grok_res_select', lang, res=res)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vgrok_"))
 async def grok_dur(cb: CallbackQuery, state: FSMContext):
     sec = int(cb.data[6:])
+    uid = cb.from_user.id
     usd = GROK_IMAGINE_15_PRICES[sec]
     coins = usd_to_coins(usd)
+    res = _grok_resolution(uid)
     await state.update_data(v_tool="Grok Imagine 1.5", v_tid="grok", v_dur=sec, v_coins=coins, v_usd=usd,
+                            v_res=res,
                             att_mode="free", att_start=None, att_end=None,
                             att_imgs=[], att_vids=[], att_auds=[])
     await _show_attach_menu(cb, state)
@@ -639,13 +691,17 @@ async def video_uploaded(msg: Message, state: FSMContext):
     dub_lang = data.get("v_lang", "—")
     coins = data.get("v_coins", 0)
 
+    from database import has_unlimited
+    _unlimited = has_unlimited(msg.from_user.id)
+    cost_short = "" if _unlimited else f"{t('vid_cost_label_short', ui_lang, coins=coins)}\n\n"
+    _confirm_btn = t("vid_btn_confirm_order", ui_lang) if _unlimited else t("vid_btn_confirm", ui_lang, coins=coins)
     await msg.answer(
         f"{t('vid_video_received', ui_lang)}\n\n"
         f"◈  <b>{tool}</b>  —  {dub_lang}\n"
-        f"{t('vid_cost_label_short', ui_lang, coins=coins)}\n\n"
+        f"{cost_short}"
         f"{t('vid_add_notes_prompt', ui_lang)}",
         reply_markup=kb(
-            [InlineKeyboardButton(text=t("vid_btn_confirm", ui_lang, coins=coins), callback_data="vid_confirm")],
+            [InlineKeyboardButton(text=_confirm_btn, callback_data="vid_confirm")],
             [InlineKeyboardButton(text=t("vid_btn_add_notes", ui_lang), callback_data="vid_add_notes")],
             [menu_btn(ui_lang)],
         ),
@@ -703,7 +759,11 @@ async def prompt_received(msg: Message, state: FSMContext):
     audio_word = t("vid_audio_yes", ui_lang) if audio else t("vid_audio_no", ui_lang)
     if tid not in no_res_tools: lines += t("vid_audio_label", ui_lang, audio=audio_word) + "\n"
     if attach_summary: lines += t("vid_attachments_label", ui_lang) + attach_summary
-    lines += t("vid_cost_label", ui_lang, coins=coins) + "\n"
+    from database import has_unlimited
+    unlimited = has_unlimited(msg.from_user.id)
+    if not unlimited:
+        lines += t("vid_cost_label", ui_lang, coins=coins) + "\n"
+    confirm_btn = t("vid_btn_confirm_order", ui_lang) if unlimited else t("vid_btn_confirm", ui_lang, coins=coins)
 
     await msg.answer(
         f"{t('vid_order_summary_title', ui_lang)}\n"
@@ -712,7 +772,7 @@ async def prompt_received(msg: Message, state: FSMContext):
         f"{t('vid_prompt_label', ui_lang)}\n<i>{prompt}</i>\n\n"
         f"━━━━━━━━━━━━━━━━━━━━",
         reply_markup=kb(
-            [InlineKeyboardButton(text=t("vid_btn_confirm", ui_lang, coins=coins), callback_data="vid_confirm")],
+            [InlineKeyboardButton(text=confirm_btn, callback_data="vid_confirm")],
             [InlineKeyboardButton(text=t("vid_btn_edit_prompt", ui_lang), callback_data="vid_edit")],
             [menu_btn(ui_lang)],
         ), parse_mode="HTML"
@@ -734,6 +794,7 @@ async def _vid_confirm_legacy(cb: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     coins = data.get("v_coins", 0)
     tool  = data.get("v_tool", "—")
+    tid   = data.get("v_tid", tool)
     prompt = data.get("v_prompt", "—")
     uid = cb.from_user.id
 
@@ -742,9 +803,11 @@ async def _vid_confirm_legacy(cb: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    if not spend_coins(uid, coins):
-        await cb.answer("Insufficient coins. Please top up your wallet.", show_alert=True)
-        return
+    from database import has_unlimited
+    if not (has_unlimited(uid) and data.get("v_tid", "") not in AVATAR_TOOL_IDS):
+        if not spend_coins(uid, coins):
+            await cb.answer("Insufficient coins. Please top up your wallet.", show_alert=True)
+            return
     # Build attachments for Seedance 2.0
     attachments = {}
     if tool == "Seedance 2.0":
@@ -869,6 +932,7 @@ async def notify_admin(cb, oid, tool, params, coins, usd):
             await _send_file(f["file_id"], f["type"], f"◈  Video Ref  @vid{i}")
         for i, f in enumerate(auds, 1):
             await _send_file(f["file_id"], f["type"], f"◈  Audio  @aud{i}")
+    await bot.session.close()
 
 # ═══════════════════════════════════════════════════════════
 # SEEDANCE 2.0 — ATTACHMENT HANDLERS
@@ -1145,17 +1209,22 @@ async def sd_to_prompt(cb: CallbackQuery, state: FSMContext):
     if attach_lines:
         hint = t("vid_attached_files_label", lang, lines=attach_lines)
 
+    from database import has_unlimited, get_unlimited_tier
+    from config import UNLIMITED_TIER_CONFIG, filter_resolutions
+    sd_resolutions = ["480p", "720p", "1080p"]
+    if has_unlimited(cb.from_user.id):
+        tier = get_unlimited_tier(cb.from_user.id) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        sd_resolutions = filter_resolutions(sd_resolutions, tier_cfg["max_resolution"])
+    tid = data.get("v_tid", "sd20")
+    res_rows = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in sd_resolutions]
+    res_rows.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>Seedance 2.0</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{hint}\n"
         f"{t('vid_now_select_resolution', lang)}",
-        reply_markup=kb(
-            [InlineKeyboardButton(text="480p", callback_data="vr_480p")],
-            [InlineKeyboardButton(text="720p", callback_data="vr_720p")],
-            [InlineKeyboardButton(text="1080p", callback_data="vr_1080p")],
-            [back_btn("vt_sd20", lang=lang), menu_btn(lang)],
-        ),
+        reply_markup=kb(*res_rows),
         parse_mode="HTML"
     )
 
@@ -1505,6 +1574,12 @@ async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
     if tid in NEEDS_RESOLUTION:
         # Go to resolution selection first
         resolutions = get_resolutions(tid)
+        from database import has_unlimited, get_unlimited_tier
+        from config import UNLIMITED_TIER_CONFIG, filter_resolutions
+        if has_unlimited(cb.from_user.id):
+            tier = get_unlimited_tier(cb.from_user.id) or "standard"
+            tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+            resolutions = filter_resolutions(resolutions, tier_cfg["max_resolution"])
         name = tool
         buttons = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in resolutions]
         buttons.append([back_btn("att_back", lang=lang), menu_btn(lang)])
@@ -1609,10 +1684,15 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    from database import spend_coins, create_order
-    if not spend_coins(uid, coins):
-        await cb.answer(t("vid_insufficient_coins", lang), show_alert=True)
+    from database import spend_coins, create_order, has_unlimited
+    unlimited = has_unlimited(uid)
+    if unlimited and tid in AVATAR_TOOL_IDS:
+        await cb.answer(t("vid_avatar_blocked_unlimited", lang), show_alert=True)
         return
+    if not unlimited:
+        if not spend_coins(uid, coins):
+            await cb.answer(t("vid_insufficient_coins", lang), show_alert=True)
+            return
 
     # Build unified attachments
     attachments = {}
@@ -1641,22 +1721,35 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         "upload_file_type": data.get("v_upload_file_type"),
     }
     usd = data.get("v_usd", 0)
-    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
+    try:
+        oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, tool, params, coins, usd)
+    except Exception:
+        if not unlimited:
+            from database import add_coins
+            add_coins(uid, coins)
+        await cb.answer(t("vid_order_error", lang), show_alert=True)
+        return
 
     # Push to Redis queue for auto-generation
     await _push_to_queue(oid, uid, tid, tool, params, coins, usd)
 
-    await notify_admin(cb, oid, tool, params, coins, usd)
-
-    await cb.message.edit_text(
+    from handlers import spinner as sp
+    wait_min = sp.wait_minutes(tool, "video")
+    displayed_coins = 0 if unlimited else coins
+    base_text = (
         f"{t('vid_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_model_row', lang, name=tool)}\n"
-        f"{t('vid_coins_deducted', lang, coins=coins)}\n\n"
-        f"{t('vid_estimated_delivery', lang)}\n\n"
-        f"{t('vid_will_deliver', lang)}",
-        reply_markup=kb([menu_btn(lang)]), parse_mode="HTML"
+        f"{t('vid_coins_deducted', lang, coins=displayed_coins)}\n\n"
+        f"{t('vid_estimated_delivery', lang, minutes=wait_min)}\n\n"
+        f"{t('vid_will_deliver', lang)}"
     )
+    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
     await state.clear()
+    try:
+        await notify_admin(cb, oid, tool, params, coins, usd)
+    except Exception:
+        pass
 
 # ═══════════════════════════════════════════════════════════
 # HEYGEN AVATAR 4 — Full flow

@@ -1,0 +1,19 @@
+{
+  "6": [
+    {"name": "Angry", "is_default": false},
+    {"name": "Best Fit", "is_default": true},
+    {"name": "Disgusted", "is_default": false},
+    {"name": "Monotone", "is_default": false},
+    {"name": "Optimistic", "is_default": false},
+    {"name": "Sad", "is_default": false},
+    {"name": "Scared", "is_default": false},
+    {"name": "Surprised", "is_default": false}
+  ],
+  "200": [
+    {"name": "Angry", "is_default": false},
+    {"name": "Best Fit", "is_default": true},
+    {"name": "Optimistic", "is_default": false},
+    {"name": "Sad", "is_default": false},
+    {"name": "Surprised", "is_default": false}
+  ]
+}

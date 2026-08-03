@@ -1,4 +1,4 @@
-import asyncio, logging
+import asyncio, logging, os
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
@@ -25,38 +25,55 @@ except Exception:
 
 from aiogram.fsm.context import FSMContext
 
-from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS
-from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang
+from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
+from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang, set_can_buy_unlimited, set_unlimited, get_unlimited_tier, cancel_order_atomic
 from keyboards import kb, menu_btn, client_kb
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
-from handlers import credits, images, video, admin as admin_handler, orders as orders_handler
+from handlers import credits, images, video, voiceover, admin as admin_handler, orders as orders_handler, help as help_handler
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=storage, events_isolation=events_isolation)
 
+dp.include_router(help_handler.router)
 dp.include_router(credits.router)
 dp.include_router(images.router)
 dp.include_router(video.router)
+dp.include_router(voiceover.router)
 dp.include_router(admin_handler.router)
 dp.include_router(orders_handler.router)
 
+# ── Maintenance mode ──────────────────────────────────────────
+MAINTENANCE_FLAG = "/tmp/bot_maintenance.flag"
+
+def is_maintenance() -> bool:
+    return os.path.exists(MAINTENANCE_FLAG)
+
+def set_maintenance(on: bool):
+    if on:
+        open(MAINTENANCE_FLAG, "w").close()
+    elif os.path.exists(MAINTENANCE_FLAG):
+        os.remove(MAINTENANCE_FLAG)
+
 # ── Keyboards ─────────────────────────────────────────────────
-ADMIN_KB = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="≡  All Orders"),  KeyboardButton(text="◈  Users")],
-        [KeyboardButton(text="✉  Msg User"),    KeyboardButton(text="＋  Add Coins")],
-        [KeyboardButton(text="📤  Deliver"),     KeyboardButton(text="✕  Cancel Order")],
-        [KeyboardButton(text="◌  Commands")],
-    ],
-    resize_keyboard=True,
-    persistent=True,
-)
+def get_admin_kb() -> ReplyKeyboardMarkup:
+    maint_label = "🔧 Maintenance ON" if is_maintenance() else "🔧 Maintenance OFF"
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="≡  All Orders"),  KeyboardButton(text="◈  Users")],
+            [KeyboardButton(text="✉  Msg User"),    KeyboardButton(text="＋  Add Coins")],
+            [KeyboardButton(text="📤  Deliver"),     KeyboardButton(text="✕  Cancel Order")],
+            [KeyboardButton(text="📢 Broadcast"),    KeyboardButton(text=maint_label)],
+            [KeyboardButton(text="◌  Commands")],
+        ],
+        resize_keyboard=True,
+        persistent=True,
+    )
 
 def get_kb(uid: int, lang: str = "en"):
-    return ADMIN_KB if uid == ADMIN_ID else client_kb(lang)
+    return get_admin_kb() if uid == ADMIN_ID else client_kb(lang)
 
-# ── Shared main-menu builders ────────────────────────────────
+# ── Shared main-menu builders ─────────────────────────────────
 def build_main_menu_text(coins: int, lang: str) -> str:
     return (
         f"{t('main_menu_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -71,28 +88,54 @@ def build_main_menu_kb(coins: int, lang: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=t("btn_image_generation", lang), callback_data="cat_images")],
         [InlineKeyboardButton(text=t("btn_audio_voice", lang),      callback_data="cat_audio")],
         [InlineKeyboardButton(text=t("btn_wallet_coins", lang, coins=coins), callback_data="wallet")],
-        [InlineKeyboardButton(text=t("btn_pricing", lang),  callback_data="pricing_menu")],
+        [InlineKeyboardButton(text=t("btn_pricing", lang),  callback_data="pricing_menu"),
+         InlineKeyboardButton(text=t("btn_help", lang),     callback_data="help_main")],
         [InlineKeyboardButton(text=t("btn_language", lang), callback_data="lang_menu")],
         [InlineKeyboardButton(text=t("btn_support", lang),  url="https://t.me/RetainXStudio")],
     )
 
-# ── /start ────────────────────────────────────────────────────
+# ── Maintenance middleware ────────────────────────────────────
+@dp.message.outer_middleware()
+async def maintenance_msg_mw(handler, event: Message, data: dict):
+    if event.from_user.id != ADMIN_ID and is_maintenance():
+        lang = get_lang(event.from_user.id)
+        await event.answer(t("maintenance_msg", lang), parse_mode="HTML")
+        return
+    return await handler(event, data)
+
+@dp.callback_query.outer_middleware()
+async def maintenance_cb_mw(handler, event: CallbackQuery, data: dict):
+    if event.from_user.id != ADMIN_ID and is_maintenance():
+        lang = get_lang(event.from_user.id)
+        await event.answer(t("maintenance_alert", lang), show_alert=True)
+        return
+    return await handler(event, data)
+
+# ── /start ───────────────────────────────────────────────────
 @dp.message(CommandStart())
 async def start(msg: Message, state: FSMContext):
     await state.clear()
     uid = msg.from_user.id
-    args = msg.text.split()
-    if len(args) > 1 and args[1].startswith("ref_"):
-        try:
-            ref_id = int(args[1].replace("ref_", ""))
-            if ref_id != uid:
-                set_referred_by(uid, ref_id)
-        except ValueError:
-            pass
 
+    # Check BEFORE any DB write so referral insertion can't shadow new-user status
     new = is_new_user(uid)
+
+    ref_id = None
     if new:
-        add_coins(uid, WELCOME_BONUS)
+        args = msg.text.split()
+        if len(args) > 1 and args[1].startswith("ref_"):
+            try:
+                candidate = int(args[1].replace("ref_", ""))
+                if candidate != uid:
+                    ref_id = candidate
+                    set_referred_by(uid, candidate)
+            except ValueError:
+                pass
+
+    total_bonus = 0
+    if new:
+        total_bonus = WELCOME_BONUS + (REFERRAL_JOIN_BONUS if ref_id else 0)
+        add_coins(uid, total_bonus)
 
     coins = get_coins(uid)
     lang = get_lang(uid)
@@ -104,7 +147,7 @@ async def start(msg: Message, state: FSMContext):
             "━━━━━━━━━━━━━━━━━━━━\n\n"
             f"{t('welcome_body', lang)}\n\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            f"{t('welcome_bonus', lang, bonus=WELCOME_BONUS, coins=coins)}"
+            f"{t('welcome_bonus', lang, bonus=total_bonus, coins=coins)}"
         )
         keyboard = kb(
             [InlineKeyboardButton(text=t("btn_start_generating", lang), callback_data="cat_video")],
@@ -121,10 +164,11 @@ async def start(msg: Message, state: FSMContext):
         await msg.answer(text, reply_markup=get_kb(uid, lang), parse_mode="HTML")
         await msg.answer(t("choose_option", lang), reply_markup=keyboard, parse_mode="HTML")
 
-# ── Panel button router ───────────────────────────────────────
+# ── Panel button router ───────────────────────────────────────────
 ADMIN_PANEL_BUTTONS = {
     "≡  All Orders", "✉  Msg User", "＋  Add Coins",
     "📤  Deliver", "✕  Cancel Order", "◌  Admin Help", "◈  Users", "◌  Commands",
+    "🔧 Maintenance ON", "🔧 Maintenance OFF", "📢 Broadcast",
 }
 PANEL_BUTTONS = CLIENT_TEXTS | ADMIN_PANEL_BUTTONS
 
@@ -246,7 +290,9 @@ async def panel_router(msg: Message, state: FSMContext):
             "  ✉  Msg User — send message to user\n"
             "  ＋  Add Coins — add coins to user\n"
             "  📤  Deliver — deliver file to user\n"
-            "  ✕  Cancel Order — cancel & refund\n\n"
+            "  ✕  Cancel Order — cancel & refund\n"
+            "  📢 Broadcast — send message to all users\n"
+            "  🔧 Maintenance — toggle maintenance mode\n\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
             "<b>Commands:</b>\n"
             "  /msg <code>USER_ID TEXT</code>\n"
@@ -257,8 +303,16 @@ async def panel_router(msg: Message, state: FSMContext):
             "  → Attach file to deliver to user\n\n"
             "  /cancelorder <code>ORDER_ID</code>\n"
             "  → Cancel order and refund coins\n\n"
+            "  /broadcast <code>TEXT</code>\n"
+            "  → Send message to all bot users\n\n"
             "  /balance\n"
             "  → Check your coin balance\n\n"
+            "  /allow <code>USER_ID</code>\n"
+            "  → Open access to unlimited hour purchase\n\n"
+            "  /grant <code>USER_ID [minutes] [standard|pro|vip]</code>\n"
+            "  → Gift unlimited session (default 60 min, standard tier)\n\n"
+            "  /revoke <code>USER_ID</code>\n"
+            "  → Remove unlimited purchase access\n\n"
             "  /cancel\n"
             "  → Reset your FSM state\n\n"
             "  /addaccount <code>EMAIL PASSWORD [label]</code>\n"
@@ -269,13 +323,37 @@ async def panel_router(msg: Message, state: FSMContext):
             "  → Change an account's status\n\n"
             "  /delaccount <code>ID</code>\n"
             "  → Remove an account from the pool\n\n"
+            "  /setblogger <code>USER_ID</code>\n"
+            "  → Grant blogger status to user\n\n"
+            "  /removeblogger <code>USER_ID</code>\n"
+            "  → Remove blogger status from user\n\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
             parse_mode="HTML"
         )
 
-# ── Main menu callback ────────────────────────────────────────
+    elif text in ("🔧 Maintenance ON", "🔧 Maintenance OFF") and uid == ADMIN_ID:
+        new_state = not is_maintenance()
+        set_maintenance(new_state)
+        label = "ON 🔴" if new_state else "OFF 🟢"
+        await msg.answer(
+            f"🔧 <b>Maintenance mode {label}</b>\n\n"
+            + ("Бот недоступен для пользователей." if new_state else "Бот снова доступен для пользователей."),
+            reply_markup=get_admin_kb(),
+            parse_mode="HTML"
+        )
+
+    elif text == "📢 Broadcast" and uid == ADMIN_ID:
+        await msg.answer(
+            "📢  <b>Broadcast</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            "<code>/broadcast Текст сообщения</code>\n\n"
+            "Отправит сообщение всем пользователям бота.",
+            parse_mode="HTML"
+        )
+
+# ── Main menu callback ──────────────────────────────────────────
 @dp.callback_query(F.data == "main_menu")
 async def main_menu_cb(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     await state.clear()
     uid = cb.from_user.id
     coins = get_coins(uid)
@@ -288,6 +366,7 @@ async def main_menu_cb(cb: CallbackQuery, state: FSMContext):
 # ── Language switch ───────────────────────────────────────────
 @dp.callback_query(F.data == "lang_menu")
 async def lang_menu_cb(cb: CallbackQuery):
+    await cb.answer()
     uid = cb.from_user.id
     lang = get_lang(uid)
     await cb.message.edit_text(
@@ -295,15 +374,16 @@ async def lang_menu_cb(cb: CallbackQuery):
         reply_markup=kb(
             [InlineKeyboardButton(text=("✓  " if lang == "en" else "○  ") + "English",  callback_data="lang_set_en")],
             [InlineKeyboardButton(text=("✓  " if lang == "ru" else "○  ") + "Русский",  callback_data="lang_set_ru")],
+            [InlineKeyboardButton(text=("✓  " if lang == "ar" else "○  ") + "العربية", callback_data="lang_set_ar")],
             [InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")],
         ),
         parse_mode="HTML"
     )
 
-@dp.callback_query(F.data.in_({"lang_set_en", "lang_set_ru"}))
+@dp.callback_query(F.data.in_({"lang_set_en", "lang_set_ru", "lang_set_ar"}))
 async def lang_set_cb(cb: CallbackQuery):
     uid = cb.from_user.id
-    new_lang = "en" if cb.data == "lang_set_en" else "ru"
+    new_lang = {"lang_set_en": "en", "lang_set_ru": "ru", "lang_set_ar": "ar"}[cb.data]
     set_lang(uid, new_lang)
     coins = get_coins(uid)
     await cb.message.edit_text(
@@ -313,19 +393,10 @@ async def lang_set_cb(cb: CallbackQuery):
     await cb.message.answer(t("lang_changed", new_lang), reply_markup=get_kb(uid, new_lang))
     await cb.answer()
 
-# ── Audio placeholder ─────────────────────────────────────────
-@dp.callback_query(F.data == "cat_audio")
-async def audio_coming_soon(cb: CallbackQuery):
-    lang = get_lang(cb.from_user.id)
-    await cb.message.edit_text(
-        f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_body', lang)}",
-        reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
-        parse_mode="HTML"
-    )
-
-# ── Pricing ───────────────────────────────────────────────────
+# ── Pricing ─────────────────────────────────────────────────
 @dp.callback_query(F.data == "pricing_menu")
 async def pricing_menu(cb: CallbackQuery):
+    await cb.answer()
     lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
         f"{t('pricing_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('pricing_body', lang)}",
@@ -339,6 +410,7 @@ async def pricing_menu(cb: CallbackQuery):
 
 @dp.callback_query(F.data == "price_images")
 async def price_images(cb: CallbackQuery):
+    await cb.answer()
     from config import IMAGE_TOOLS
     lang = get_lang(cb.from_user.id)
     lines = f"{t('price_images_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -359,6 +431,7 @@ async def price_images(cb: CallbackQuery):
 
 @dp.callback_query(F.data == "price_video")
 async def price_video(cb: CallbackQuery):
+    await cb.answer()
     lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
         f"{t('price_video_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -439,15 +512,19 @@ async def cancelorder_cmd(msg: Message):
         return
     try:
         oid = int(parts[1])
-        from database import get_order, update_order_status
-        order = get_order(oid)
-        if not order:
-            await msg.answer("Order not found.")
+        from handlers import spinner as sp
+        await sp.stop(oid)
+        success, user_id, coins = cancel_order_atomic(oid)
+        if not success:
+            from database import get_order
+            order = get_order(oid)
+            if not order:
+                await msg.answer("Order not found.")
+            else:
+                await msg.answer(f"⚠️ Order #{oid} is already {order['status']} — no refund.")
             return
-        add_coins(order["user_id"], order["coins"])
-        update_order_status(oid, "cancelled")
-        await bot.send_message(order["user_id"], f"◌  <b>Order #{oid} Cancelled</b>\n\n  <b>{order['coins']} coins</b> refunded.", parse_mode="HTML")
-        await msg.answer(f"✓  Order #{oid} cancelled. {order['coins']} coins refunded.")
+        await bot.send_message(user_id, f"◌  <b>Order #{oid} Cancelled</b>\n\n  <b>{coins} coins</b> refunded.", parse_mode="HTML")
+        await msg.answer(f"✓  Order #{oid} cancelled. {coins} coins refunded.")
     except Exception as e:
         await msg.answer(f"Error: {e}")
 
@@ -456,7 +533,79 @@ async def cancel_cmd(msg: Message, state: FSMContext):
     await state.clear()
     await msg.answer("◌  State cleared. Use the menu below to continue.")
 
-# ── Artlist account pool admin commands ────────────────────────
+# ── Unlimited pass admin commands ─────────────────────────────────
+@dp.message(Command("allow"))
+async def allow_unlimited_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split()
+    if len(parts) != 2:
+        await msg.answer("Usage: <code>/allow USER_ID</code>\n\nОткрывает пользователю доступ к покупке пакета Безлимит.", parse_mode="HTML")
+        return
+    try:
+        uid = int(parts[1])
+        set_can_buy_unlimited(uid, True)
+        await msg.answer(f"⚡ Пользователь <code>{uid}</code> теперь может купить Безлимит 1 час.", parse_mode="HTML")
+        await bot.send_message(
+            uid,
+            "⚡ <b>Эксклюзивный доступ открыт!</b>\n\n"
+            "Вам открыт доступ к пакету <b>«Безлимит 1 час»</b>.\n"
+            "Загляните в раздел 💰 Кошелёк для активации.",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        await msg.answer(f"Ошибка: {e}")
+
+@dp.message(Command("grant"))
+async def grant_unlimited_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split()
+    if len(parts) < 2:
+        await msg.answer("Usage: <code>/grant USER_ID [minutes=60] [standard|pro|vip]</code>\n\nДарит пользователю безлимит на указанное время.", parse_mode="HTML")
+        return
+    try:
+        uid = int(parts[1])
+        minutes = 60
+        tier = "standard"
+        for part in parts[2:]:
+            if part in ("standard", "pro", "vip"):
+                tier = part
+            else:
+                minutes = int(part)
+        import datetime
+        until = set_unlimited(uid, minutes * 60, tier)
+        until_str = datetime.datetime.fromtimestamp(until).strftime("%H:%M")
+        from config import UNLIMITED_TIER_CONFIG
+        tier_name = UNLIMITED_TIER_CONFIG[tier]["name_ru"]
+        await msg.answer(f"⚡ Безлимит <b>{tier_name}</b> на <b>{minutes} мин</b> выдан пользователю <code>{uid}</code> (до {until_str}).", parse_mode="HTML")
+        await bot.send_message(
+            uid,
+            f"⚡  <b>Безлимит {tier_name} активирован!</b>\n\n"
+            f"  Вам подарили {minutes} минут безлимитной генерации.\n"
+            f"  Действует до <b>{until_str}</b>.\n"
+            "Генерируйте сколько угодно!",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        await msg.answer(f"Ошибка: {e}")
+
+@dp.message(Command("revoke"))
+async def revoke_unlimited_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split()
+    if len(parts) != 2:
+        await msg.answer("Usage: <code>/revoke USER_ID</code>\n\nОтзывает доступ к покупке Безлимита.", parse_mode="HTML")
+        return
+    try:
+        uid = int(parts[1])
+        set_can_buy_unlimited(uid, False)
+        await msg.answer(f"✕ Доступ к Безлимиту отозван у пользователя <code>{uid}</code>.", parse_mode="HTML")
+    except Exception as e:
+        await msg.answer(f"Ошибка: {e}")
+
+# ── Artlist account pool admin commands ───────────────────────────────
 @dp.message(Command("addaccount"))
 async def add_account_cmd(msg: Message):
     if msg.from_user.id != ADMIN_ID:
@@ -529,6 +678,30 @@ async def del_account_cmd(msg: Message):
     from database import remove_artlist_account
     remove_artlist_account(aid)
     await msg.answer(f"✓  Account #{aid} removed.")
+
+@dp.message(Command("broadcast"))
+async def broadcast_cmd(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split(None, 1)
+    if len(parts) < 2:
+        await msg.answer("Usage: <code>/broadcast Текст сообщения</code>", parse_mode="HTML")
+        return
+    text_to_send = parts[1]
+    from database import get_all_users
+    users = get_all_users()
+    sent, failed = 0, 0
+    for u in users:
+        try:
+            await bot.send_message(
+                u["uid"],
+                f"📢  <b>Сообщение от RetainX Studio</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{text_to_send}",
+                parse_mode="HTML"
+            )
+            sent += 1
+        except Exception:
+            failed += 1
+    await msg.answer(f"📢  Broadcast завершён.\n  ✓ Отправлено: <b>{sent}</b>\n  ✕ Ошибок: <b>{failed}</b>", parse_mode="HTML")
 
 @dp.message(Command("balance"))
 async def balance_cmd(msg: Message):

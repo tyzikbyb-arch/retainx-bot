@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import IMAGE_TOOLS, usd_to_coins
-from database import get_coins, spend_coins, create_order, get_lang
+from database import get_coins, add_coins, spend_coins, create_order, get_lang, has_unlimited
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
 from handlers.attachments import file_too_large
@@ -18,6 +18,7 @@ class ImageStates(StatesGroup):
 # ── Category menu ─────────────────────────────────────────────
 @router.callback_query(F.data == "cat_images")
 async def images_menu(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     await state.clear()
     lang = get_lang(cb.from_user.id)
     buttons = []
@@ -38,6 +39,7 @@ async def images_menu(cb: CallbackQuery, state: FSMContext):
 # ── Tool selected ─────────────────────────────────────────────
 @router.callback_query(F.data.startswith("img_") & ~F.data.startswith("img_ar_") & ~F.data.startswith("img_q_") & ~F.data.startswith("img_confirm") & ~F.data.startswith("img_add") & ~F.data.startswith("img_ref") & ~F.data.startswith("img_to_") & ~F.data.startswith("img_edit"))
 async def image_tool_selected(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     name = cb.data.replace("img_", "", 1)
     lang = get_lang(cb.from_user.id)
     tool = IMAGE_TOOLS.get(name)
@@ -76,6 +78,7 @@ async def image_tool_selected(cb: CallbackQuery, state: FSMContext):
 # ── Aspect ratio selected ─────────────────────────────────────
 @router.callback_query(F.data.startswith("img_ar_"))
 async def image_ar_selected(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     ar = cb.data.replace("img_ar_", "")
     lang = get_lang(cb.from_user.id)
     await state.update_data(img_ar=ar)
@@ -104,6 +107,7 @@ async def image_ar_selected(cb: CallbackQuery, state: FSMContext):
 # ── Quality selected ──────────────────────────────────────────
 @router.callback_query(F.data.startswith("img_q_"))
 async def image_quality_selected(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     quality = cb.data.replace("img_q_", "")
     await state.update_data(img_quality=quality)
     data = await state.get_data()
@@ -112,15 +116,22 @@ async def image_quality_selected(cb: CallbackQuery, state: FSMContext):
     await ask_prompt(cb, state, name, tool)
 
 async def ask_prompt(cb: CallbackQuery, state: FSMContext, name: str, tool: dict):
-    lang = get_lang(cb.from_user.id)
+    uid = cb.from_user.id
+    lang = get_lang(uid)
     data = await state.get_data()
     ar = data.get("img_ar", "—")
     quality = data.get("img_quality", "—")
     coins = _get_img_coins(tool, quality)
-    user_coins = get_coins(cb.from_user.id)
+    user_coins = get_coins(uid)
     max_refs = tool.get("max_refs", 0)
     coins_word = t("coins_word", lang)
+    unlimited = has_unlimited(uid)
     await state.update_data(img_coins=coins, img_refs=[])
+
+    cost_lines = (
+        f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
+        f"  {t('img_balance_label', lang)}   {user_coins} {coins_word}\n"
+    ) if not unlimited else ""
 
     if max_refs > 0:
         await cb.message.edit_text(
@@ -128,8 +139,7 @@ async def ask_prompt(cb: CallbackQuery, state: FSMContext, name: str, tool: dict
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
             f"  {t('img_aspect_ratio_label', lang)}   {ar}\n"
             f"  {t('img_quality_label', lang)}           {quality or '—'}\n"
-            f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
-            f"  {t('img_balance_label', lang)}   {user_coins} {coins_word}\n\n"
+            f"{cost_lines}\n"
             f"{t('img_attach_optional', lang)}",
             reply_markup=kb(
                 [InlineKeyboardButton(text=t("img_btn_add_ref", lang, max=max_refs), callback_data="img_add_refs")],
@@ -144,8 +154,7 @@ async def ask_prompt(cb: CallbackQuery, state: FSMContext, name: str, tool: dict
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
             f"  {t('img_aspect_ratio_label', lang)}   {ar}\n"
             f"  {t('img_quality_label', lang)}           {quality or '—'}\n"
-            f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
-            f"  {t('img_balance_label', lang)}   {user_coins} {coins_word}\n\n"
+            f"{cost_lines}\n"
             f"{t('img_enter_prompt', lang)}",
             reply_markup=kb([back_btn(f"img_{name}", lang=lang), menu_btn(lang)]),
             parse_mode="HTML"
@@ -171,11 +180,14 @@ async def image_prompt_received(msg: Message, state: FSMContext):
 
     await state.update_data(img_prompt=prompt)
 
+    unlimited = has_unlimited(msg.from_user.id)
     params_text = f"  {t('img_model_label', lang)}           <b>{name}</b>\n  {t('img_aspect_ratio_label', lang)}   {ar}\n"
     if quality:
         params_text += f"  {t('img_quality_label', lang)}           {quality}\n"
-    params_text += f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
+    if not unlimited:
+        params_text += f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
 
+    confirm_btn = t("img_btn_confirm_free", lang) if unlimited else t("img_btn_confirm", lang, coins=coins)
     await msg.answer(
         f"{t('img_order_summary_title', lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -183,7 +195,7 @@ async def image_prompt_received(msg: Message, state: FSMContext):
         f"  {t('img_prompt_label', lang)}\n<i>{prompt}</i>\n\n"
         f"━━━━━━━━━━━━━━━━━━━━",
         reply_markup=kb(
-            [InlineKeyboardButton(text=t("img_btn_confirm", lang, coins=coins), callback_data="img_confirm")],
+            [InlineKeyboardButton(text=confirm_btn, callback_data="img_confirm")],
             [InlineKeyboardButton(text=t("img_btn_edit_prompt", lang), callback_data=f"img_edit_prompt")],
             [menu_btn(lang)],
         ),
@@ -192,6 +204,7 @@ async def image_prompt_received(msg: Message, state: FSMContext):
 
 @router.callback_query(F.data == "img_edit_prompt")
 async def img_edit_prompt(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     lang = get_lang(cb.from_user.id)
     await cb.message.edit_text(
         t("img_edit_prompt_prompt", lang),
@@ -219,9 +232,12 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    if not spend_coins(uid, coins):
-        await cb.answer(t("img_insufficient_coins", lang), show_alert=True)
-        return
+    unlimited = has_unlimited(uid)
+    if not unlimited:
+        if not spend_coins(uid, coins):
+            await cb.answer(t("img_insufficient_coins", lang), show_alert=True)
+            return
+
     ar = data.get("img_ar")
     quality = data.get("img_quality")
     prompt = data.get("img_prompt")
@@ -229,24 +245,34 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
     price_usd = round(coins * 0.05, 2)
 
     params = {"aspect_ratio": ar, "quality": quality, "prompt": prompt, "refs": refs if refs else None}
-    oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, name, params, coins, price_usd)
+    try:
+        oid = create_order(uid, cb.from_user.username or cb.from_user.first_name, name, params, coins, price_usd)
+    except Exception:
+        if not unlimited:
+            add_coins(uid, coins)
+        await cb.answer(t("img_order_error", lang), show_alert=True)
+        return
 
     # Push to Redis queue for auto-generation
     await _push_to_queue(oid, uid, tid, name, params, coins, price_usd)
 
-    await _notify_admin(cb, oid, name, params, coins, price_usd)
-
-    await cb.message.edit_text(
+    from handlers import spinner as sp
+    displayed_coins = 0 if unlimited else coins
+    base_text = (
         f"{t('img_order_placed_title', lang, oid=oid)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('img_model_row', lang, name=name)}\n"
-        f"{t('img_coins_deducted', lang, coins=coins)}\n\n"
-        f"{t('img_estimated_time', lang)}\n\n"
-        f"{t('img_will_deliver', lang)}",
-        reply_markup=kb([menu_btn(lang)]),
-        parse_mode="HTML"
+        f"{t('img_coins_deducted', lang, coins=displayed_coins)}\n\n"
+        f"{t('img_estimated_time', lang, minutes=2)}\n\n"
+        f"{t('img_will_deliver', lang)}"
     )
+    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, 2)
     await state.clear()
+    try:
+        await _notify_admin(cb, oid, name, params, coins, price_usd)
+    except Exception:
+        pass
 
 async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float):
     import logging, os, json
@@ -278,42 +304,46 @@ async def _notify_admin(cb: CallbackQuery, oid: int, name: str, params: dict, co
     from aiogram import Bot
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     bot = Bot(token=BOT_TOKEN)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="✓  Delivered", callback_data=f"delivered_{oid}"),
-        InlineKeyboardButton(text="✕  Cancel", callback_data=f"cancel_order_{oid}"),
-    ]])
-    refs_line = f"\n  Refs        {len(params.get('refs') or [])} image(s)" if params.get("refs") else ""
-    await bot.send_message(
-        ADMIN_ID,
-        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
-        f"◈  <b>New Image Order #{oid}</b>\n"
-        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
-        f"  User     @{cb.from_user.username or '—'} (<code>{cb.from_user.id}</code>)\n"
-        f"  Model   <b>{name}</b>\n"
-        f"  AR         {params.get('aspect_ratio')}\n"
-        f"  Quality   {params.get('quality') or '—'}{refs_line}\n"
-        f"  Coins    <b>{coins}◈</b>  (${price_usd})",
-        reply_markup=keyboard,
-        parse_mode="HTML"
-    )
-    await bot.send_message(
-        ADMIN_ID,
-        f"📋 <b>Prompt #{oid}:</b>\n\n<code>{params.get('prompt','—')}</code>",
-        parse_mode="HTML"
-    )
-    # Send reference images
-    for i, ref in enumerate(params.get("refs") or [], 1):
-        try:
-            if ref["type"] == "photo":
-                await bot.send_photo(ADMIN_ID, ref["file_id"], caption=f"◈  Image Ref  @img{i}")
-            else:
-                await bot.send_document(ADMIN_ID, ref["file_id"], caption=f"◈  Image Ref  @img{i}")
-        except Exception:
-            pass
+    try:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="✓  Delivered", callback_data=f"delivered_{oid}"),
+            InlineKeyboardButton(text="✕  Cancel", callback_data=f"cancel_order_{oid}"),
+        ]])
+        refs_line = f"\n  Refs        {len(params.get('refs') or [])} image(s)" if params.get("refs") else ""
+        await bot.send_message(
+            ADMIN_ID,
+            f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
+            f"◈  <b>New Image Order #{oid}</b>\n"
+            f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
+            f"  User     @{cb.from_user.username or '—'} (<code>{cb.from_user.id}</code>)\n"
+            f"  Model   <b>{name}</b>\n"
+            f"  AR         {params.get('aspect_ratio')}\n"
+            f"  Quality   {params.get('quality') or '—'}{refs_line}\n"
+            f"  Coins    <b>{coins}◈</b>  (${price_usd})",
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        await bot.send_message(
+            ADMIN_ID,
+            f"📋 <b>Prompt #{oid}:</b>\n\n<code>{params.get('prompt','—')}</code>",
+            parse_mode="HTML"
+        )
+        # Send reference images
+        for i, ref in enumerate(params.get("refs") or [], 1):
+            try:
+                if ref["type"] == "photo":
+                    await bot.send_photo(ADMIN_ID, ref["file_id"], caption=f"◈  Image Ref  @img{i}")
+                else:
+                    await bot.send_document(ADMIN_ID, ref["file_id"], caption=f"◈  Image Ref  @img{i}")
+            except Exception:
+                pass
+    finally:
+        await bot.session.close()
 
 # ── Image Reference handlers ──────────────────────────────────
 @router.callback_query(F.data == "img_add_refs")
 async def img_add_refs(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     refs = data.get("img_refs", [])
@@ -367,6 +397,7 @@ async def img_collect_ref(msg: Message, state: FSMContext):
 
 @router.callback_query(F.data == "img_refs_done")
 async def img_refs_done(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     refs = data.get("img_refs", [])
@@ -393,6 +424,7 @@ async def img_refs_done(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "img_to_prompt")
 async def img_to_prompt(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     name = data.get("img_tool", "")

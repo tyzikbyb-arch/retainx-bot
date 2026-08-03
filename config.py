@@ -2,12 +2,25 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = 5613493357
 USDT_WALLET = "TGZu7K7kfqtNMTqCABfByLceuA49qRvLgo"
+YOOMONEY_WALLET = "4100119559974790"
+YOOMONEY_SECRET = os.environ.get("YOOMONEY_SECRET", "")
+CARD_NUMBER = "5599002140486392"
 
 COIN_TO_USD = 0.05        # 1 coin = $0.05
 USD_TO_COINS = 20         # $1 = 20 coins
+COIN_TO_RUB = 3.70        # 1 coin = 3.70 ₽
+MIN_TOPUP_RUB = 185.0     # minimum 50 coins
 WELCOME_BONUS = 20        # coins on first start
+REFERRAL_JOIN_BONUS = 10  # extra coins for new user who joined via referral link
 MIN_TOPUP_USD = 2.0       # minimum top-up
-REFERRAL_PERCENT = 20     # 20% of referral top-up
+REFERRAL_PERCENT = 20     # 20% of referral top-up (legacy, tiers used instead)
+
+# Tiered referral percentages based on number of referrals who made a purchase (buyers)
+REFERRAL_TIERS = [
+    {"min": 0,  "next": 6,  "first": 20, "repeat": 10, "name_en": "Starter", "name_ru": "Стартер"},
+    {"min": 6,  "next": 16, "first": 22, "repeat": 12, "name_en": "Partner", "name_ru": "Партнёр"},
+    {"min": 16, "next": None,"first": 25, "repeat": 15, "name_en": "Pro",     "name_ru": "Про"},
+]
 
 def usd_to_coins(usd: float) -> int:
     return round(usd / COIN_TO_USD)
@@ -105,6 +118,14 @@ IMAGE_TOOLS = {
         "pricing": {"per_gen": 0.09},
         "coins": 2,
     },
+    "Topaz Image Upscaler": {
+        "emoji": "🔎",
+        "max_refs": 1,
+        "desc": "AI-powered image upscaling to 8K resolution — just send any image",
+        "requires_ref": True,
+        "pricing": {"per_gen": 0.14},
+        "coins": 3,
+    },
 }
 
 # ─── VIDEO TOOLS ──────────────────────────────────────────────
@@ -151,6 +172,7 @@ SORA_2_PRO_PRICES = {
     "1080p":{4:1.90,8:3.80,12:5.70},
 }
 LTX_23_PRICES = {
+    "720p": {6:0.30,8:0.40,10:0.50},
     "1080p":{6:0.60,8:0.80,10:1.00},
     "2K":   {6:1.20,8:1.60,10:2.00},
     "4K":   {6:2.25,8:3.00,10:3.75},
@@ -175,7 +197,11 @@ HEYGEN_TRANSLATE_SPEED_PRICES = {
 HEYGEN_AVATAR_ASPECT_RATIOS = ["16:9", "9:16", "1:1"]
 HEYGEN_AVATAR_RESOLUTIONS = ["720p", "1080p"]
 HEYGEN_AVATAR_TALKING_STYLES = ["Stable", "Expressive"]
-ELEVENLABS_DUBBING_PRICES = {i:round(i*0.20,2) for i in range(1,16)}
+ELEVENLABS_DUBBING_PRICES = {
+    1: 3.00, 2: 6.00, 3: 9.00, 4: 12.00, 5: 15.00,
+    6: 18.00, 7: 21.00, 8: 23.00, 9: 26.00, 10: 29.00,
+    11: 32.00, 12: 35.00, 13: 38.00, 14: 41.00, 15: 44.00,
+}
 LIPSYNC_PRICES = {
     1: 3.00, 2: 6.00, 3: 9.00, 4: 12.00, 5: 15.00,
     6: 18.00, 7: 21.00, 8: 23.00, 9: 26.00, 10: 29.00,
@@ -206,4 +232,58 @@ AURORA_AVATAR_PRICES = {
     11: 28.8, 12: 31.5, 13: 34.2, 14: 36.9, 15: 39.6,
 }
 
+# ─── UNLIMITED PASS ───────────────────────────────────────────
+RESOLUTION_ORDER = ["480p", "720p", "1080p", "2K", "4K"]
+
+UNLIMITED_TIER_CONFIG = {
+    "standard": {
+        "name_ru": "Стандарт",
+        "name_en": "Standard",
+        "emoji": "⚡",
+        "subcats": ["Standard", "Kling"],
+        "subcat_overrides": {
+            "Standard": ["sd20f", "wan27", "grok", "ltx23", "veo31l"],
+        },
+        "max_resolution": "720p",
+        "voiceover": False,
+    },
+    "pro": {
+        "name_ru": "Про",
+        "name_en": "Pro",
+        "emoji": "⚡⚡",
+        "subcats": ["Standard", "Kling", "Premium"],
+        "max_resolution": "1080p",
+        "voiceover": True,
+    },
+    "vip": {
+        "name_ru": "VIP",
+        "name_en": "VIP",
+        "emoji": "♛",
+        "subcats": ["Standard", "Kling", "Premium"],
+        "max_resolution": "4K",
+        "voiceover": True,
+    },
+}
+
+# Coin prices per tier × duration (hours)
+# Standard: 990₽/hr · Pro: 2450₽/hr · VIP: 5990₽/hr (1 coin = 3.70₽)
+# 2hr = 10% cheaper per hour · 3hr = 20% cheaper per hour
+UNLIMITED_PLANS = {
+    "standard": {1: 268, 2: 482, 3: 642},
+    "pro":      {1: 662, 2: 1192, 3: 1589},
+    "vip":      {1: 1619, 2: 2914, 3: 3886},
+}
+
+def filter_resolutions(resolutions: list, max_res: str) -> list:
+    """Filter resolution list to only include options up to max_res."""
+    if max_res not in RESOLUTION_ORDER:
+        return resolutions
+    max_idx = RESOLUTION_ORDER.index(max_res)
+    result = []
+    for r in resolutions:
+        if r not in RESOLUTION_ORDER:
+            result.append(r)
+        elif RESOLUTION_ORDER.index(r) <= max_idx:
+            result.append(r)
+    return result
 

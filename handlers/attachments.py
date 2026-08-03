@@ -33,14 +33,17 @@ TOOL_ATTACHMENTS = {
         "img_refs": 9, "vid_refs": 3, "aud_refs": 3,
         "exclusive_startend": True,
     },
-    "hh10": {   # Happy Horse 1.0 — no End Frame button for this tool
+    "hh10": {   # Happy Horse 1.1 — no End Frame button for this tool
         "start_frame": True, "end_frame": False,
         "img_refs": 1,
         "exclusive_startend": True,
     },
-    "wan27": {  # Wan 2.7
+    "wan27": {  # Wan 2.7 — Artlist's UI doesn't expose Image Reference for
+                # this model (confirmed live, order #368: button rendered
+                # as disabled and never becomes selectable), so the bot
+                # offers Audio File instead of img_refs.
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
+        "aud_refs": 1,
         "exclusive_startend": True,
     },
     "grok": {   # Grok Imagine 1.5 — Start Frame only, mandatory. No End Frame
@@ -56,33 +59,29 @@ TOOL_ATTACHMENTS = {
 
     # ── Premium video ─────────────────────────────────────────────────────────
 
-    "veo31": {  # Veo 3.1
+    "veo31": {  # Veo 3.1 — Artlist's UI doesn't expose Image Reference for
+                # this model (confirmed live by hand, order #373: button
+                # rendered as disabled in the panel), so don't offer it.
         "start_frame": True, "end_frame": True,
-        "img_refs": 3,
         "exclusive_startend": True,
     },
-    "veo31f": { # Veo 3.1 Fast
+    "veo31f": { # Veo 3.1 Fast — no Image Reference tab in Artlist's UI
+                # (confirmed live by hand, same as veo31/#373).
         "start_frame": True, "end_frame": True,
-        "img_refs": 3,
         "exclusive_startend": True,
     },
-    "veo31l": { # Veo 3.1 Lite
+    "veo31l": { # Veo 3.1 Lite — no Image Reference tab in Artlist's UI
+                # (confirmed live by hand, same as veo31/#373).
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
         "exclusive_startend": True,
-    },
-    "veo31e": { # Veo 3.1 Extend — requires video
-        "vid_refs": 1, "vid_ref_required": True,
-        "prompt_label": "Upload a 2–30 second video and describe what happens next",
-        "hint": "Works best with videos created using Veo models",
     },
     "sora2": {  # Sora 2 Pro — no End Frame button for this tool
         "start_frame": True, "end_frame": False,
         "hint": "Sora 2 Pro is highly unstable. Switch to another model if it fails.",
     },
-    "ltx23": {  # LTX 2.3 Pro
+    "ltx23": {  # LTX 2.3 Pro — Artlist's UI shows Image Reference as disabled
+                # for this model (confirmed live, order #398), so don't offer it.
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
         "exclusive_startend": True,
     },
 
@@ -90,20 +89,19 @@ TOOL_ATTACHMENTS = {
 
     "kl30": {   # Kling 3.0
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
         "exclusive_startend": True,
     },
-    "kl03": {   # Kling 0.3
+    "kl03": {   # Kling 0.3 — Artlist's UI shows Image Reference as disabled
+                # for this model (confirmed live, order #401), so don't offer it.
         "start_frame": True, "end_frame": True,
-        "img_refs": 1,
         "exclusive_startend": True,
     },
-    "klmc": {   # Kling 3.0 Motion Control
-        "img_refs": 1, "vid_refs": 1,
-        "hint": "Upload an image reference and/or a motion reference video",
-    },
-    "klve": {   # Kling 3.0 Video Edit
-        "img_refs": 4, "vid_refs": 1,
+    "klve": {   # Kling O3 Video Edit — video reference is mandatory
+                # (confirmed live, order #521: Artlist shows red warning and
+                # never starts generation without it; times out after 20 min)
+        "vid_refs": 1,
+        "vid_ref_required": True,
+        "max_vid_duration": 10,
         "prompt_label": "Upload a 3–10 second video and describe the edits you want to make",
     },
 
@@ -139,11 +137,6 @@ TOOL_ATTACHMENTS = {
         "img_required": True,
         "aud_required": True,
         "hint": "Upload a character image and a voice recording to animate your avatar",
-    },
-    "fab1": {   # Fabric 1.0 Avatar — requires image
-        "img_refs": 1,
-        "img_required": True,
-        "hint": "Upload a character image to generate an avatar video",
     },
     "aur1": {   # Aurora Avatar — requires image + audio
         "img_refs": 1, "aud_refs": 1,
@@ -192,12 +185,8 @@ def file_too_large(msg) -> bool:
 _HINT_RU = {
     "Attach a Start Frame to continue — it's required for this model.":
         "Прикрепите Start Frame, чтобы продолжить — для этой модели это обязательно.",
-    "Works best with videos created using Veo models":
-        "Лучше всего работает с видео, созданными моделями Veo",
     "Sora 2 Pro is highly unstable. Switch to another model if it fails.":
         "Sora 2 Pro работает нестабильно. Если генерация не удалась, попробуйте другую модель.",
-    "Upload an image reference and/or a motion reference video":
-        "Загрузите референс-изображение и/или референс-видео движения",
     "Upload a character image and a voice recording to make your avatar talk":
         "Загрузите изображение персонажа и аудиозапись голоса, чтобы аватар заговорил",
     "Upload a video to translate it with AI lip-sync":
@@ -208,13 +197,9 @@ _HINT_RU = {
         "Загрузите видео персонажа и аудиозапись голоса для синхронизации губ",
     "Upload a character image and a voice recording to animate your avatar":
         "Загрузите изображение персонажа и аудиозапись голоса, чтобы анимировать аватар",
-    "Upload a character image to generate an avatar video":
-        "Загрузите изображение персонажа, чтобы создать видео-аватар",
 }
 
 _PROMPT_LABEL_RU = {
-    "Upload a 2–30 second video and describe what happens next":
-        "Загрузите видео длительностью 2–30 секунд и опишите, что будет дальше",
     "Upload a 3–10 second video and describe the edits you want to make":
         "Загрузите видео длительностью 3–10 секунд и опишите, какие правки нужны",
     "Describe your character's expressions and gestures (optional)":

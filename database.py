@@ -1,15 +1,24 @@
 import os
 import time
+import logging
+from contextlib import contextmanager
 import psycopg2
 from psycopg2.extras import RealDictCursor
+
+log = logging.getLogger(__name__)
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql://postgres:EIZkqhsYzRUQVftlgMDiBeZlBcALiNbA@postgres.railway.internal:5432/railway"
 )
 
+@contextmanager
 def get_conn():
-    return psycopg2.connect(DATABASE_URL)
+    conn = psycopg2.connect(DATABASE_URL)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 def init_db():
     with get_conn() as conn:
@@ -42,12 +51,36 @@ def init_db():
             try:
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS file_id TEXT DEFAULT NULL")
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS file_type TEXT DEFAULT NULL")
-            except Exception:
-                pass
+            except Exception as e:
+                log.warning(f"DB migration (orders file cols): {e}")
+            # Fix missing SERIAL sequence on orders.id (table may have been created without one)
+            try:
+                cur.execute("CREATE SEQUENCE IF NOT EXISTS orders_id_seq")
+                cur.execute("SELECT setval('orders_id_seq', GREATEST(COALESCE((SELECT MAX(id) FROM orders), 0), 1))")
+                cur.execute("ALTER TABLE orders ALTER COLUMN id SET DEFAULT nextval('orders_id_seq')")
+            except Exception as e:
+                log.warning(f"DB migration (orders_id_seq): {e}")
             try:
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'en'")
-            except Exception:
-                pass
+            except Exception as e:
+                log.warning(f"DB migration (users.lang): {e}")
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS unlimited_until INTEGER DEFAULT NULL")
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS can_buy_unlimited INTEGER DEFAULT 0")
+            except Exception as e:
+                log.warning(f"DB migration (users.unlimited): {e}")
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blogger INTEGER DEFAULT 0")
+            except Exception as e:
+                log.warning(f"DB migration (users.is_blogger): {e}")
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS unlimited_tier TEXT DEFAULT NULL")
+            except Exception as e:
+                log.warning(f"DB migration (users.unlimited_tier): {e}")
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ref_first_done BOOLEAN DEFAULT FALSE")
+            except Exception as e:
+                log.warning(f"DB migration (users.ref_first_done): {e}")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS artlist_accounts (
                     id SERIAL PRIMARY KEY,
@@ -106,13 +139,13 @@ def add_coins(uid: int, amount: int):
 def spend_coins(uid: int, amount: int) -> bool:
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT coins FROM users WHERE uid = %s", (uid,))
-            row = cur.fetchone()
-            if not row or row[0] < amount:
-                return False
-            cur.execute("UPDATE users SET coins = coins - %s WHERE uid = %s", (amount, uid))
+            cur.execute(
+                "UPDATE users SET coins = coins - %s WHERE uid = %s AND coins >= %s RETURNING uid",
+                (amount, uid, amount)
+            )
+            updated = cur.fetchone() is not None
         conn.commit()
-        return True
+        return updated
 
 def set_referred_by(uid: int, ref_uid: int):
     with get_conn() as conn:
@@ -132,6 +165,43 @@ def get_referred_by(uid: int):
             row = cur.fetchone()
             return row[0] if row else None
 
+def get_referral_count(uid: int) -> int:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM users WHERE referred_by = %s", (uid,))
+            return cur.fetchone()[0]
+
+def get_referral_buyers_count(uid: int) -> int:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM users WHERE referred_by = %s AND ref_first_done = TRUE", (uid,))
+            return cur.fetchone()[0]
+
+def is_ref_first_topup_done(uid: int) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT ref_first_done FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return bool(row[0]) if row else False
+
+def mark_ref_first_topup_done(uid: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET ref_first_done = TRUE WHERE uid = %s", (uid,))
+        conn.commit()
+
+def try_mark_ref_first_topup_done(uid: int) -> bool:
+    """Atomically mark first topup done. Returns True only the first time (race-safe)."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE users SET ref_first_done = TRUE WHERE uid = %s AND ref_first_done = FALSE RETURNING uid",
+                (uid,)
+            )
+            was_first = cur.fetchone() is not None
+        conn.commit()
+        return was_first
+
 def get_lang(uid: int) -> str:
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -147,6 +217,59 @@ def set_lang(uid: int, lang: str):
                 VALUES (%s, 0, %s, %s)
                 ON CONFLICT (uid) DO UPDATE SET lang = %s
             """, (uid, lang, int(time.time()), lang))
+        conn.commit()
+
+# ── Unlimited pass functions ──────────────────────────────────
+def has_unlimited(uid: int) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT unlimited_until FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            if not row or row[0] is None:
+                return False
+            return row[0] > int(time.time())
+
+def get_unlimited_until(uid: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT unlimited_until FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return row[0] if row else None
+
+def set_unlimited(uid: int, duration_seconds: int = 3600, tier: str = None) -> int:
+    until = int(time.time()) + duration_seconds
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (uid, coins, joined, unlimited_until, unlimited_tier)
+                VALUES (%s, 0, %s, %s, %s)
+                ON CONFLICT (uid) DO UPDATE SET unlimited_until = %s, unlimited_tier = %s
+            """, (uid, int(time.time()), until, tier, until, tier))
+        conn.commit()
+    return until
+
+def get_unlimited_tier(uid: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT unlimited_tier FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return row[0] if row else None
+
+def can_buy_unlimited(uid: int) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT can_buy_unlimited FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return bool(row and row[0])
+
+def set_can_buy_unlimited(uid: int, val: bool):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (uid, coins, joined, can_buy_unlimited)
+                VALUES (%s, 0, %s, %s)
+                ON CONFLICT (uid) DO UPDATE SET can_buy_unlimited = %s
+            """, (uid, int(time.time()), int(val), int(val)))
         conn.commit()
 
 # ── Order functions ───────────────────────────────────────────
@@ -181,6 +304,22 @@ def update_order_status(oid: int, status: str):
         with conn.cursor() as cur:
             cur.execute("UPDATE orders SET status = %s WHERE id = %s", (status, oid))
         conn.commit()
+
+def cancel_order_atomic(oid: int) -> tuple:
+    """Cancel order and refund coins in a single transaction. Returns (success, user_id, coins)."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE orders SET status = 'cancelled' WHERE id = %s AND status = 'processing' RETURNING user_id, coins",
+                (oid,)
+            )
+            row = cur.fetchone()
+            if not row:
+                return False, None, None
+            user_id, coins = row[0], row[1]
+            cur.execute("UPDATE users SET coins = coins + %s WHERE uid = %s", (coins, user_id))
+        conn.commit()
+        return True, user_id, coins
 
 def get_all_users() -> list:
     with get_conn() as conn:
@@ -307,6 +446,23 @@ def remove_artlist_account(account_id: int):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM artlist_accounts WHERE id = %s", (account_id,))
+        conn.commit()
+
+def get_is_blogger(uid: int) -> bool:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT is_blogger FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return bool(row and row[0])
+
+def set_blogger(uid: int, val: bool):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (uid, coins, joined, is_blogger)
+                VALUES (%s, 0, %s, %s)
+                ON CONFLICT (uid) DO UPDATE SET is_blogger = %s
+            """, (uid, int(time.time()), val, val))
         conn.commit()
 
 # Initialize on import

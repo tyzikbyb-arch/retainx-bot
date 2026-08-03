@@ -20,12 +20,10 @@ STATUS_KEY = {
     "cancelled":  "order_status_cancelled",
 }
 
-@router.message(F.text == "📋  Orders")
-async def orders_from_reply(msg: Message, state: FSMContext):
-    await show_orders(msg, msg.from_user.id)
 
 @router.callback_query(F.data == "my_orders")
 async def orders_cb(cb: CallbackQuery):
+    await cb.answer()
     await show_orders(cb, cb.from_user.id, edit=True)
 
 async def show_orders(target, uid: int, edit: bool = False):
@@ -49,7 +47,7 @@ async def show_orders(target, uid: int, edit: bool = False):
 
     total = len(orders)
     delivered = sum(1 for o in orders if o.get("status") == "delivered")
-    spent = sum(int(o["coins"]) for o in orders)
+    spent = sum(int(o["coins"]) for o in orders if o.get("status") != "cancelled")
 
     buttons = []
     for o in orders_sorted[:20]:
@@ -135,10 +133,10 @@ async def order_detail(cb: CallbackQuery):
     file_type = order.get("file_type")
 
     if file_id and status == "delivered":
+        from aiogram import Bot
+        from config import BOT_TOKEN
+        bot = Bot(token=BOT_TOKEN)
         try:
-            from aiogram import Bot
-            from config import BOT_TOKEN
-            bot = Bot(token=BOT_TOKEN)
             uid = cb.from_user.id
             result_caption = t("order_your_result", lang)
             if file_type == "photo":
@@ -153,7 +151,10 @@ async def order_detail(cb: CallbackQuery):
                                          disable_content_type_detection=True)
         except Exception:
             pass
+        finally:
+            await bot.session.close()
 
+    await cb.answer()
     await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 @router.callback_query(F.data.startswith("repeat_"))
@@ -210,9 +211,12 @@ async def repeat_order(cb: CallbackQuery, state: FSMContext):
     # Set appropriate state
     from handlers.video import VideoStates
     from handlers.images import ImageStates
-    # Determine if video or image
+    from handlers.voiceover import VoiceoverStates
     from config import IMAGE_TOOLS
     if tool in IMAGE_TOOLS:
         await state.set_state(ImageStates.entering_prompt)
+    elif tool.startswith("Voiceover"):
+        await state.set_state(VoiceoverStates.entering_text)
     else:
         await state.set_state(VideoStates.entering_prompt)
+    await cb.answer()
