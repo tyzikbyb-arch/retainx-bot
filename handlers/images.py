@@ -258,8 +258,9 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
         await cb.answer(t("img_order_error", lang), show_alert=True)
         return
 
+    await cb.answer()
     # Push to Redis queue for auto-generation
-    await _push_to_queue(oid, uid, tid, name, params, coins, price_usd)
+    await _push_to_queue(oid, uid, cb.from_user.username or "", tid, name, params, coins, price_usd)
 
     from handlers import spinner as sp
     displayed_coins = 0 if unlimited else coins
@@ -279,18 +280,20 @@ async def image_confirm(cb: CallbackQuery, state: FSMContext):
     except Exception:
         pass
 
-async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, coins: int, usd: float):
+async def _push_to_queue(oid: int, uid: int, username: str, tid: str, tool: str, params: dict, coins: int, usd: float):
     import logging, os, json
     log = logging.getLogger(__name__)
     try:
         import redis.asyncio as aioredis
         redis_url = os.environ.get("REDIS_URL", "")
         if not redis_url:
+            log.error(f"[QUEUE] REDIS_URL not set — image order #{oid} dropped!")
             return
         r = await aioredis.from_url(redis_url, decode_responses=True)
         order_data = {
             "order_id": oid,
             "user_id": uid,
+            "username": username,
             "tool_id": tid,
             "tool_name": tool,
             "params": params,
@@ -300,7 +303,7 @@ async def _push_to_queue(oid: int, uid: int, tid: str, tool: str, params: dict, 
         }
         await r.rpush("retainx:orders", json.dumps(order_data))
         await r.aclose()
-        log.info(f"[QUEUE] Image order #{oid} pushed to queue")
+        log.info(f"[QUEUE] Image order #{oid} pushed (tool={tid})")
     except Exception as e:
         log.error(f"[QUEUE] Failed to push image order #{oid}: {e}")
 
