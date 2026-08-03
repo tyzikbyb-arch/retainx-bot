@@ -118,6 +118,14 @@ IMAGE_TOOLS = {
         "pricing": {"per_gen": 0.09},
         "coins": 2,
     },
+    "Topaz Image Upscaler": {
+        "emoji": "🔎",
+        "max_refs": 1,
+        "desc": "AI-powered image upscaling to 8K resolution — just send any image",
+        "requires_ref": True,
+        "pricing": {"per_gen": 0.14},
+        "coins": 3,
+    },
 }
 
 # ─── VIDEO TOOLS ──────────────────────────────────────────────
