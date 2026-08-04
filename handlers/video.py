@@ -78,7 +78,7 @@ TOOL_IDS = {
     "grok":     "Grok Imagine 1.5",
     "grokt":    "Grok Text-to-Video",
     "groki":    "Grok Image-to-Video",
-    "grokimag": "Grok Imagine",
+    "grokimag": "Grok Imagine 1.5",
 }
 ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 
