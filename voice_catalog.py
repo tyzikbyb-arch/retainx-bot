@@ -32,8 +32,10 @@ AGE_ORDER = ["CHILD", "TEEN", "YOUNG_ADULT", "ADULT", "MIDDLE_AGED", "SENIOR"]
 MODELS = {
     206: {"name": "Eleven v3", "tags": ["Experimental", "Creative Control"], "coins": 4, "unlimited": True},
     311: {"name": "Eleven Multilingual v2", "tags": ["Stable", "Professional"], "coins": 4, "unlimited": True},
+    6:   {"name": "MiniMax 02 HD", "tags": ["Consistent", "Cinematic"], "coins": 2, "unlimited": False},
+    200: {"name": "Cartesia Sonic 2", "tags": ["Expressive", "Lifelike"], "coins": 2, "unlimited": False},
 }
-MODEL_ORDER = [206, 311]
+MODEL_ORDER = [206, 311, 6, 200]
 
 _DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "artlist_voices.json")
 with open(_DATA_PATH, encoding="utf-8") as _f:
@@ -56,7 +58,7 @@ STABILITY_DEFAULT = 40
 
 # Speed control, 0.5x-1.5x in 0.1 steps, default 1x. Eleven v3 has no Speed
 # control on Artlist's UI (it only exposes Stability), so it's excluded here.
-SPEED_MODELS = {311}
+SPEED_MODELS = {311, 6, 200}
 SPEED_LEVELS = [round(0.5 + 0.1 * i, 1) for i in range(11)]
 SPEED_DEFAULT = 1.0
 

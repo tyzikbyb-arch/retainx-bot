@@ -106,6 +106,14 @@ TOOL_ATTACHMENTS = {
         "start_frame": True, "end_frame": False,
         "vid_refs": 1,
     },
+    "klve": {   # Kling O3 Video Edit — video reference is mandatory
+                # (confirmed live, order #521: Artlist shows red warning and
+                # never starts generation without it; times out after 20 min)
+        "vid_refs": 1,
+        "vid_ref_required": True,
+        "max_vid_duration": 10,
+        "prompt_label": "Upload a 3–10 second video and describe the edits you want to make",
+    },
 
     # ── Avatar ────────────────────────────────────────────────────────────────
 
