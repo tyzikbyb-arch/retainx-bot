@@ -10,8 +10,8 @@ COIN_TO_USD = 0.05        # 1 coin = $0.05
 USD_TO_COINS = 20         # $1 = 20 coins
 COIN_TO_RUB = 3.70        # 1 coin = 3.70 ₽
 MIN_TOPUP_RUB = 185.0     # minimum 50 coins
-WELCOME_BONUS = 20        # coins on first start
-REFERRAL_JOIN_BONUS = 10  # extra coins for new user who joined via referral link
+WELCOME_BONUS = 5         # coins on first start
+REFERRAL_JOIN_BONUS = 0   # extra coins for new user who joined via referral link
 MIN_TOPUP_USD = 2.0       # minimum top-up
 REFERRAL_PERCENT = 20     # 20% of referral top-up (legacy, tiers used instead)
 
