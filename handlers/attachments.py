@@ -46,20 +46,17 @@ TOOL_ATTACHMENTS = {
         "aud_refs": 1,
         "exclusive_startend": True,
     },
-    "groki": {  # Grok Image-to-Video — requires start frame
+    "groki": {  # Grok Image-to-Video — requires start frame; animates the exact
+                # character from the image (strict preservation)
         "start_frame": True, "end_frame": False,
         "start_frame_required": True,
-        "hint": "Attach a Start Frame to continue — it's required for this model.",
+        "hint": "Attach a photo — this model animates your exact character.",
     },
-    "grok": {   # Grok Imagine 1.5 — Start Frame only, mandatory. No End Frame
-                # button at all for this tool. img_refs intentionally omitted:
-                # it would let a user satisfy the attach screen via a plain
-                # Image Reference while never providing the required Start
-                # Frame, since exclusive_startend hides each alternative once
-                # the other is chosen — a dead end the menu can't recover from.
+    "grok": {   # Grok Imagine 1.5 — start frame is optional style reference only;
+                # the model treats image_url as inspiration, not strict character
+                # preservation. Users wanting an exact character should use groki.
         "start_frame": True, "end_frame": False,
-        "start_frame_required": True,
-        "hint": "Attach a Start Frame to continue — it's required for this model.",
+        "hint": "Optional: attach a photo as a style reference.\nFor an exact character, use Grok Image-to-Video instead.",
     },
 
     # ── Premium video ─────────────────────────────────────────────────────────
@@ -197,6 +194,10 @@ _HINT_RU = {
         "Прикрепите Start Frame, чтобы продолжить — для этой модели это обязательно.",
     "Sora 2 Pro is highly unstable. Switch to another model if it fails.":
         "Sora 2 Pro работает нестабильно. Если генерация не удалась, попробуйте другую модель.",
+    "Attach a photo — this model animates your exact character.":
+        "Прикрепите фото — эта модель анимирует именно вашего персонажа.",
+    "Optional: attach a photo as a style reference.\nFor an exact character, use Grok Image-to-Video instead.":
+        "Необязательно: прикрепите фото как стилевой референс.\nДля точного персонажа используйте Grok Image-to-Video.",
     "Upload a character image and a voice recording to make your avatar talk":
         "Загрузите изображение персонажа и аудиозапись голоса, чтобы аватар заговорил",
     "Upload a video to translate it with AI lip-sync":
@@ -225,6 +226,10 @@ _HINT_AR = {
         "أرفق إطار البداية للمتابعة — وهو مطلوب لهذا النموذج.",
     "Sora 2 Pro is highly unstable. Switch to another model if it fails.":
         "Sora 2 Pro غير مستقرة للغاية. انتقل إلى نموذج آخر إذا فشلت.",
+    "Attach a photo — this model animates your exact character.":
+        "أرفق صورة — هذا النموذج يحرّك شخصيتك بدقة.",
+    "Optional: attach a photo as a style reference.\nFor an exact character, use Grok Image-to-Video instead.":
+        "اختياري: أرفق صورة كمرجع أسلوبي.\nللحصول على شخصية دقيقة، استخدم Grok Image-to-Video.",
     "Upload a character image and a voice recording to make your avatar talk":
         "ارفع صورة الشخصية وتسجيلاً صوتياً لجعل الأفاتار يتحدث",
     "Upload a video to translate it with AI lip-sync":
