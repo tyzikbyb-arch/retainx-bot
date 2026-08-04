@@ -66,24 +66,6 @@ IMAGE_TOOLS = {
         "pricing": {"Medium": 0.05, "High": 0.29},
         "coins_by_quality": {"Medium": 1, "High": 6},
     },
-    "Kling 3.0": {
-        "emoji": "◉",
-        "max_refs": 9,
-        "desc": "Kling's powerful image generation engine",
-        "aspect_ratios": ["1:1","2:3","3:2","3:4","4:3","4:5","5:4","9:16","16:9","21:9"],
-        "quality": ["1K","2K"],
-        "pricing": {"per_gen": 0.05},
-        "coins": 1,
-    },
-    "Kling O3": {
-        "emoji": "◉",
-        "max_refs": 10,
-        "desc": "Kling's ultra-quality image model with 4K support",
-        "aspect_ratios": ["1:1","2:3","3:2","3:4","4:3","4:5","5:4","9:16","16:9","21:9"],
-        "quality": ["1K","2K","4K"],
-        "pricing": {"2K": 0.05, "4K": 0.09},
-        "coins_by_quality": {"1K": 1, "2K": 1, "4K": 2},
-    },
     "Wan 2.7 Pro": {
         "emoji": "◈",
         "max_refs": 9,
@@ -110,14 +92,6 @@ IMAGE_TOOLS = {
         "coins": 2,
     },
 
-    "Hunyuan V3": {
-        "emoji": "◉",
-        "desc": "Tencent's advanced image generation system",
-        "aspect_ratios": ["1:1","3:4","4:3","9:16","16:9"],
-        "quality": ["1K"],
-        "pricing": {"per_gen": 0.09},
-        "coins": 2,
-    },
     "Topaz Image Upscaler": {
         "emoji": "🔎",
         "max_refs": 1,
