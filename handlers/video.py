@@ -1242,7 +1242,7 @@ async def sd_to_prompt(cb: CallbackQuery, state: FSMContext):
 def _build_attach_menu_text(tid: str, data: dict, lang: str = "en") -> str:
     cfg = get_attach_config(tid)
     name = data.get("v_tool", "")
-    hint = get_hint(tid, lang, "Attach reference files (optional)\n  or skip directly to your prompt.")
+    hint = get_hint(tid, lang, "Attach reference files (optional)\n  or skip directly to your prompt.\n\n  Max file size: 20 MB.")
     return (
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -1689,6 +1689,13 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
     if not tool or tool == "—" or coins == 0:
         await cb.answer(t("vid_session_expired", lang), show_alert=True)
         await state.clear()
+        try:
+            await cb.message.edit_text(
+                t("vid_session_expired", lang),
+                reply_markup=kb([menu_btn(lang)]),
+            )
+        except Exception:
+            pass
         return
 
     from database import spend_coins, create_order, has_unlimited
@@ -1735,6 +1742,13 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
             from database import add_coins
             add_coins(uid, coins)
         await cb.answer(t("vid_order_error", lang), show_alert=True)
+        try:
+            await cb.message.edit_text(
+                t("vid_order_error", lang),
+                reply_markup=kb([menu_btn(lang)]),
+            )
+        except Exception:
+            pass
         return
 
     # Push to Redis queue for auto-generation

@@ -346,6 +346,7 @@ STR = {
 
         "vid_subcat_tier_alert": "This category is not included in your current plan.",
 
+        "vo_low_balance_notice": "Low balance: {coins} coins — top up before ordering.",
         "vo_select_model": "  Select a voice AI model:",
         "vo_select_category": "  Select a voice category:",
         "vo_select_gender": "  Select a voice gender:",
@@ -1364,6 +1365,7 @@ STR = {
 
         "vid_subcat_tier_alert": "Эта категория не входит в ваш текущий тариф.",
 
+        "vo_low_balance_notice": "Низкий баланс: {coins} монет — пополните перед заказом.",
         "vo_select_model": "  Выберите модель ИИ-голоса:",
         "vo_select_category": "  Выберите категорию голоса:",
         "vo_select_gender": "  Выберите пол голоса:",
@@ -2380,6 +2382,7 @@ STR = {
 
         "vid_subcat_tier_alert": "هذه الفئة غير مشمولة في خطتك الحالية.",
 
+        "vo_low_balance_notice": "رصيد منخفض: {coins} عملة — أضف رصيداً قبل الطلب.",
         "vo_select_model": "  اختر نموذج الذكاء الاصطناعي للصوت:",
         "vo_select_category": "  اختر فئة الصوت:",
         "vo_select_gender": "  اختر جنس الصوت:",

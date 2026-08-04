@@ -399,6 +399,8 @@ async def voiceover_model_menu(cb: CallbackQuery, state: FSMContext):
             )
             await cb.answer()
             return
+    balance = get_coins(uid)
+    low_bal = f"\n⚠️  {t('vo_low_balance_notice', lang, coins=balance)}" if not unlim and balance < 5 else ""
     buttons = [
         InlineKeyboardButton(text=f"{m['name']}   {_model_price_badge(m)}", callback_data=f"vo_model_{m['id']}")
         for m in vc.list_models()
@@ -406,7 +408,7 @@ async def voiceover_model_menu(cb: CallbackQuery, state: FSMContext):
     rows = list(chunked(buttons, 1))
     rows.append([menu_btn(lang)])
     await cb.message.edit_text(
-        f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_model', lang)}",
+        f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('vo_select_model', lang)}{low_bal}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
 

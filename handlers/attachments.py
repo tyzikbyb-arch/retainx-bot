@@ -203,14 +203,34 @@ _PROMPT_LABEL_RU = {
         "Опишите мимику и жесты персонажа (необязательно)",
 }
 
-_DEFAULT_HINT_RU = "Прикрепите референс-файлы (необязательно)\n  или сразу переходите к промпту."
+_DEFAULT_HINT_RU = "Прикрепите референс-файлы (необязательно)\n  или сразу переходите к промпту.\n\n  Максимальный размер файла: 20 МБ."
+_DEFAULT_HINT_AR = "أرفق ملفات مرجعية (اختياري)\n  أو انتقل مباشرة إلى البروم بت.\n\n  الحد الأقصى لحجم الملف: 20 ميغابايت."
 _DEFAULT_PROMPT_LABEL_RU = "Введите промпт:"
+
+_HINT_AR = {
+    "Attach a Start Frame to continue — it's required for this model.":
+        "أرفق إطار البداية للمتابعة — وهو مطلوب لهذا النموذج.",
+    "Sora 2 Pro is highly unstable. Switch to another model if it fails.":
+        "Sora 2 Pro غير مستقرة للغاية. انتقل إلى نموذج آخر إذا فشلت.",
+    "Upload a character image and a voice recording to make your avatar talk":
+        "ارفع صورة الشخصية وتسجيلاً صوتياً لجعل الأفاتار يتحدث",
+    "Upload a video to translate it with AI lip-sync":
+        "ارفع فيديو لترجمته مع مزامنة الشفاه بالذكاء الاصطناعي",
+    "Upload a video to dub it into another language":
+        "ارفع فيديو لدبلجته إلى لغة أخرى",
+    "Upload a video of a character and a voice recording to sync lips":
+        "ارفع فيديو الشخصية وتسجيلاً صوتياً لمزامنة الشفاه",
+    "Upload a character image and a voice recording to animate your avatar":
+        "ارفع صورة الشخصية وتسجيلاً صوتياً لتحريك الأفاتار",
+}
 
 
 def get_hint(tid: str, lang: str, default_en: str) -> str:
     en = get_attach_config(tid).get("hint", default_en)
     if lang == "ru":
         return _HINT_RU.get(en, _DEFAULT_HINT_RU if en == default_en else en)
+    if lang == "ar":
+        return _HINT_AR.get(en, _DEFAULT_HINT_AR if en == default_en else en)
     return en
 
 

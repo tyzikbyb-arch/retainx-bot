@@ -88,6 +88,7 @@ def build_main_menu_kb(coins: int, lang: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=t("btn_image_generation", lang), callback_data="cat_images")],
         [InlineKeyboardButton(text=t("btn_audio_voice", lang),      callback_data="cat_audio")],
         [InlineKeyboardButton(text=t("btn_wallet_coins", lang, coins=coins), callback_data="wallet")],
+        [InlineKeyboardButton(text=t("menu_orders", lang),          callback_data="my_orders")],
         [InlineKeyboardButton(text=t("btn_pricing", lang),  callback_data="pricing_menu"),
          InlineKeyboardButton(text=t("btn_help", lang),     callback_data="help_main")],
         [InlineKeyboardButton(text=t("btn_language", lang), callback_data="lang_menu")],
@@ -707,6 +708,11 @@ async def broadcast_cmd(msg: Message):
 async def balance_cmd(msg: Message):
     coins = get_coins(msg.from_user.id)
     await msg.answer(f"◈  Your balance: <b>{coins} coins</b>", parse_mode="HTML")
+
+@dp.message(Command("history"))
+async def history_cmd(msg: Message):
+    from handlers.orders import show_orders
+    await show_orders(msg, msg.from_user.id)
 
 @dp.message(F.text.regexp(r"^/send_\d+$"))
 async def send_result_cmd(msg: Message, state: FSMContext):
