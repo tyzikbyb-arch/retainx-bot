@@ -343,6 +343,7 @@ STR = {
         "audio_title": "◌  <b>Audio & Voice</b>",
         "audio_body": "  Coming soon.\n\n  We are integrating voice synthesis\n  and music generation tools.\n\n  Stay tuned.",
         "audio_pro_vip_body": "  Audio & Voice is available on\n  <b>Pro</b> and <b>VIP</b> unlimited plans.\n\n  Upgrade your plan to access\n  voice synthesis and audio generation.",
+        "audio_unlimited_only": "  Voice generation is available as part of the\n  <b>Unlimited subscription</b>.\n\n  Subscribe to an Unlimited plan to unlock\n  AI voiceovers with full voice catalog access.",
 
         "vid_subcat_tier_alert": "This category is not included in your current plan.",
 
@@ -1380,6 +1381,7 @@ STR = {
         "audio_title": "◌  <b>Аудио и голос</b>",
         "audio_body": "  Скоро будет доступно.\n\n  Мы интегрируем инструменты синтеза\n  речи и генерации музыки.\n\n  Следите за обновлениями.",
         "audio_pro_vip_body": "  Аудио и голос доступны на тарифах\n  безлимит <b>Про</b> и <b>VIP</b>.\n\n  Перейдите на более высокий тариф,\n  чтобы получить доступ к синтезу речи\n  и генерации аудио.",
+        "audio_unlimited_only": "  Генерация войсовера доступна в рамках\n  <b>безлимитной подписки</b>.\n\n  Оформите безлимитный план для доступа\n  к AI-войсоверу с полным каталогом голосов.",
 
         "vid_subcat_tier_alert": "Эта категория не входит в ваш текущий тариф.",
 
@@ -2415,6 +2417,7 @@ STR = {
         "audio_title": "◌  <b>الصوت</b>",
         "audio_body": "  قريباً.\n\n  نحن نعمل على دمج أدوات\n  تركيب الصوت وتوليد الموسيقى.\n\n  ترقّب التحديثات.",
         "audio_pro_vip_body": "  الصوت متاح في خطط البرو والـ VIP\n  غير المحدودة.\n\n  قم بالترقية للوصول إلى\n  تركيب الصوت وتوليد الصوت.",
+        "audio_unlimited_only": "  توليد الصوت متاح ضمن\n  <b>اشتراك Unlimited</b>.\n\n  اشترك في خطة Unlimited للوصول إلى\n  التعليق الصوتي بالذكاء الاصطناعي\n  مع الكتالوج الكامل للأصوات.",
 
         "vid_subcat_tier_alert": "هذه الفئة غير مشمولة في خطتك الحالية.",
 

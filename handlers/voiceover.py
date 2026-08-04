@@ -388,17 +388,25 @@ async def voiceover_model_menu(cb: CallbackQuery, state: FSMContext):
     uid = cb.from_user.id
     lang = get_lang(uid)
     unlim = has_unlimited(uid)
-    if unlim:
-        tier = get_unlimited_tier(uid) or "standard"
-        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
-        if not tier_cfg["voiceover"]:
-            await cb.message.edit_text(
-                f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_pro_vip_body', lang)}",
-                reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
-                parse_mode="HTML",
-            )
-            await cb.answer()
-            return
+    if not unlim:
+        # Coin users: voiceover is unlimited-subscription only
+        await cb.message.edit_text(
+            f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_unlimited_only', lang)}",
+            reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
+            parse_mode="HTML",
+        )
+        await cb.answer()
+        return
+    tier = get_unlimited_tier(uid) or "standard"
+    tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+    if not tier_cfg["voiceover"]:
+        await cb.message.edit_text(
+            f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_pro_vip_body', lang)}",
+            reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
+            parse_mode="HTML",
+        )
+        await cb.answer()
+        return
     balance = get_coins(uid)
     low_bal = f"\n⚠️  {t('vo_low_balance_notice', lang, coins=balance)}" if not unlim and balance < 5 else ""
     buttons = [
