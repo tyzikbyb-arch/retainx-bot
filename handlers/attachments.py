@@ -102,9 +102,10 @@ TOOL_ATTACHMENTS = {
         "start_frame": True, "end_frame": True,
         "exclusive_startend": True,
     },
-    "klmc": {   # Kling 3.0 Motion Control — image reference or start frame used
-                # as input_urls[0]; optional video reference as reference footage
+    "klmc": {   # Kling 3.0 Motion Control — input_urls (character image) is
+                # required by kie.ai; video_urls is optional motion reference
         "start_frame": True, "end_frame": False,
+        "start_frame_required": True,
         "vid_refs": 1,
     },
     "klve": {   # Kling O3 Video Edit — video reference is mandatory
