@@ -55,14 +55,12 @@ TOOL_ATTACHMENTS = {
         "start_frame_desc_key":  "vid_char_photo_desc",
         "hint": "Attach a photo of your character — the model will animate it.",
     },
-    "grok": {   # Grok Imagine 1.5 — start frame is optional style reference only;
-                # the model treats image_url as inspiration, not strict character
-                # preservation. Users wanting an exact character should use groki.
+    "grok": {
         "start_frame": True, "end_frame": False,
         "start_frame_label_key": "vid_btn_char_photo",
         "start_frame_title_key": "vid_char_photo_title",
         "start_frame_desc_key":  "vid_char_photo_desc",
-        "hint": "Optional: attach a photo as a style reference.\nFor an exact character, use Grok Image-to-Video instead.",
+        "hint": "Optional: attach a photo as a style reference.",
     },
 
     # ── Premium video ─────────────────────────────────────────────────────────
@@ -202,8 +200,8 @@ _HINT_RU = {
         "Sora 2 Pro работает нестабильно. Если генерация не удалась, попробуйте другую модель.",
     "Attach a photo of your character — the model will animate it.":
         "Прикрепите фото персонажа — модель создаст его анимацию.",
-    "Optional: attach a photo as a style reference.\nFor an exact character, use Grok Image-to-Video instead.":
-        "Необязательно: прикрепите фото как стилевой референс.\nДля точного персонажа используйте Grok Image-to-Video.",
+    "Optional: attach a photo as a style reference.":
+        "Необязательно: прикрепите фото как стилевой референс.",
     "Upload a character image and a voice recording to make your avatar talk":
         "Загрузите изображение персонажа и аудиозапись голоса, чтобы аватар заговорил",
     "Upload a video to translate it with AI lip-sync":
@@ -234,8 +232,8 @@ _HINT_AR = {
         "Sora 2 Pro غير مستقرة للغاية. انتقل إلى نموذج آخر إذا فشلت.",
     "Attach a photo of your character — the model will animate it.":
         "أرفق صورة شخصيتك — سيقوم النموذج بتحريكها.",
-    "Optional: attach a photo as a style reference.\nFor an exact character, use Grok Image-to-Video instead.":
-        "اختياري: أرفق صورة كمرجع أسلوبي.\nللحصول على شخصية دقيقة، استخدم Grok Image-to-Video.",
+    "Optional: attach a photo as a style reference.":
+        "اختياري: أرفق صورة كمرجع أسلوبي.",
     "Upload a character image and a voice recording to make your avatar talk":
         "ارفع صورة الشخصية وتسجيلاً صوتياً لجعل الأفاتار يتحدث",
     "Upload a video to translate it with AI lip-sync":

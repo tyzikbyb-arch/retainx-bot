@@ -560,19 +560,7 @@ def _grok_resolution(uid: int) -> str:
     return "720p"
 
 async def show_grokimag(cb, state):
-    """Model picker for all Grok video tools — shown when user clicks ▸ Grok Video."""
-    lang = get_lang(cb.from_user.id)
-    buttons = [
-        [InlineKeyboardButton(text=t("vid_grokimag_15",  lang), callback_data="vt_grok")],
-        [InlineKeyboardButton(text=t("vid_grokimag_t2v", lang), callback_data="vt_grokt")],
-        [InlineKeyboardButton(text=t("vid_grokimag_i2v", lang), callback_data="vt_groki")],
-    ]
-    await cb.message.edit_text(
-        f"{t('vid_grokimag_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('vid_grokimag_select', lang)}",
-        reply_markup=kb(*buttons, [back_btn("cat_video", lang=lang), menu_btn(lang)]),
-        parse_mode="HTML",
-    )
+    await show_grok(cb, state)
 
 
 async def show_grok(cb, state):
@@ -587,7 +575,7 @@ async def show_grok(cb, state):
         for s, usd in GROK_IMAGINE_15_PRICES.items()
     ]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("vsub_Grok", lang=lang), menu_btn(lang)])
+    rows.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"{t('vid_grok_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
