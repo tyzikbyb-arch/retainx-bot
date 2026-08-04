@@ -59,6 +59,9 @@ TOOL_ATTACHMENTS = {
                 # the model treats image_url as inspiration, not strict character
                 # preservation. Users wanting an exact character should use groki.
         "start_frame": True, "end_frame": False,
+        "start_frame_label_key": "vid_btn_char_photo",
+        "start_frame_title_key": "vid_char_photo_title",
+        "start_frame_desc_key":  "vid_char_photo_desc",
         "hint": "Optional: attach a photo as a style reference.\nFor an exact character, use Grok Image-to-Video instead.",
     },
 
