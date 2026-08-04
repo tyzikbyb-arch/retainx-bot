@@ -1138,75 +1138,76 @@ GEM25_COINS = 8   # per generation ($0.40)
 
 _TTS_PAGE_SIZE = 8
 
-# (voice_id, display_name, short_desc)
+# (voice_id, display_name, short_desc, gender, accent)
+# gender: "M" | "F"   accent: "US" | "UK" | "AU" | "INT"
 EL11_VOICES: list[tuple] = [
-    ("EkK5I93UQWFDigLMpZcX", "James",           "Husky & Bold"),
-    ("Z3R5wn05IrDiVCyEkUrK", "Arabella",        "Mysterious"),
-    ("NNl6r8mD7vthiJatiJt1", "Bradford",        "Expressive"),
-    ("YOq2y2Up4RgXP2HyXjE5", "Xavier",          "Announcer"),
-    ("B8gJV1IhpuegLxdpXFOE", "Kuon",            "Cheerful"),
-    ("2zRM7PkgwBPiau2jvVXc", "Monika Sogam",    "Deep & Natural"),
-    ("1SM7GgM6IMuvQlz2BwM3", "Mark",            "Casual & Light"),
-    ("5l5f8iK3YPeGga21rQIX", "Adeline",         "Feminine"),
-    ("scOwDtmlUjD3prqpp97I", "Sam",              "Support Agent"),
-    ("NOpBlnGInO9m6vDvFkFC", "Spuds Oxley",     "Wise"),
-    ("BZgkqPqms7Kj9ulSkVzn", "Eve",             "Energetic"),
-    ("wo6udizrrtpIxWGp2qJk", "Northern Terry",  ""),
-    ("gU0LNdkMOQCOrPrwtbee", "Football Announcer", "British"),
-    ("DGzg6RaUqxGRTHSBjfgF", "Brock",           "Commanding"),
-    ("x70vRnQBMBu4FAYhjJbO", "Nathan",           "Radio Host"),
-    ("Sm1seazb4gs7RSlUVw7c", "Anika",            "Friendly"),
-    ("P1bg08DkjqiVEzOn76yG", "Viraj",            "Rich & Soft"),
-    ("qDuRKMlYmrm8trt5QyBn", "Taksh",            "Calm"),
-    ("qXpMhyvQqiRxWQs4qSSB", "Horatius",         "Energetic"),
-    ("TX3LPaxmHKxFdv7VOQHJ", "Liam",             "Social Media"),
-    ("N2lVS1w4EtoT3dr4eOWO", "Callum",           "Husky"),
-    ("FGY2WhTYpPnrIDTdsKH5", "Laura",            "Quirky"),
-    ("kPzsL2i3teMYv0FxEYQ6", "Brittney",         "Social Media"),
-    ("UgBBYS2sOqTuMpoF3BR0", "Mark (Natural)",   "Natural"),
-    ("hpp4J3VqNfWAUOO0d1Us", "Bella",            "Professional"),
-    ("nPczCjzI2devNBz1zQrb", "Brian",            "Deep & Warm"),
-    ("uYXf8XasLslADfZ2MB4u", "Hope",             "Bubbly"),
-    ("gs0tAILXbY5DNrJrsM6F", "Jeff",             "Classy"),
-    ("DTKMou8ccj1ZaWGBiotd", "Jamahal",          "Vibrant"),
-    ("vBKc2FfBKJfcZNyEt1n6", "Finn",             "Youthful"),
-    ("DYkrAHD8iwork3YSUBbs", "Tom",              "Books"),
-    ("56AoDkrOh6qfVPDXZ7Pt", "Cassidy",          "Direct"),
-    ("eR40ATw9ArzDf9h3v7t7", "Addison",          "Australian"),
-    ("g6xIsTj2HwM6VR4iXFCw", "Jessica",          "Chatty"),
-    ("lcMyyd2HUfFzxdCaC4Ta", "Lucy",             "Fresh"),
-    ("6aDn1KB0hjpdcocrUkmq", "Tiffany",          "Welcoming"),
-    ("Sq93GQT4X1lKDXsQcixO", "Felix",            "Warm"),
-    ("flHkNRp1BlvT73UL6gyz", "Jessica (Villain)","Eloquent"),
-    ("9yzdeviXkFddZ4Oz8Mok", "Lutz",             "Cheerful"),
-    ("pPdl9cQBQq4p6mRkZy2Z", "Emma",             "Upbeat"),
-    ("zYcjlYFOd3taleS0gkk3", "Edward",           "Confident"),
-    ("nzeAacJi50IvxcyDnMXa", "Marshal",          "Professor"),
-    ("ruirxsoakN0GWmGNIo04", "John Morgan",      "Cowboy"),
-    ("TC0Zp7WVFzhA8zpTlRqV", "Aria",             "Villain"),
-    ("ljo9gAlSqKOvF6D8sOsX", "Viking Bjorn",     "Epic"),
-    ("PPzYpIqttlTYA83688JI", "Pirate Marshal",   ""),
-    ("8JVbfL6oEdmuxKn5DK2C", "Johnny Kid",       "Calm"),
-    ("iCrDUkL56s3C8sCRl7wb", "Hope (Romantic)",  "Poetic"),
-    ("wJqPPQ618aTW29mptyoc", "Ana Rita",          "Expressive"),
-    ("EiNlNiXeDU1pqqOPrYMO", "John Doe",         "Deep"),
-    ("4YYIPFl9wE5c4L2eu2Gb", "Burt Reynolds™",   "Deep & Smooth"),
-    ("6F5Zhi321D3Oq7v1oNT4", "Hank",             "Narrator"),
-    ("YXpFCvM1S3JbWEJhoskW", "Wyatt",            "Cowboy"),
-    ("LG95yZDEHg6fCZdQjLqj", "Phil",             "Announcer"),
-    ("CeNX9CMwmxDxUF5Q2Inm", "Johnny Dynamite",  "Radio DJ"),
-    ("aD6riP1btT197c6dACmy", "Rachel M",          "British Radio"),
-    ("mtrellq69YZsNwzUSyXh", "Rex Thunder",       "Deep & Tough"),
-    ("dHd5gvgSOzSfduK4CvEg", "Ed",               "Late Night"),
-    ("eVItLK1UvXctxuaRV2Oq", "Jean",             "Playful"),
-    ("esy0r39YPLQjOczyOib8", "Britney",           "Villain"),
-    ("Tsns2HvNFKfGiNjllgqo", "Sven",             "Emotional"),
-    ("1U02n4nD6AdIZ9CjF053", "Viraj (Smooth)",   "Gentle"),
-    ("AeRdCCKzvd23BpJoofzx", "Nathaniel",        "British"),
-    ("LruHrtVF6PSyGItzMNHS", "Benjamin",         "Deep & Warm"),
-    ("1wGbFxmAM3Fgw63G1zZJ", "Allison",          "Meditative"),
-    ("hqfrgApggtO1785R4Fsn", "Theodore",         "Grounded"),
-    ("MJ0RnG71ty4LH3dvNfSd", "Leon",             "Soothing"),
+    ("EkK5I93UQWFDigLMpZcX", "James",              "Husky & Bold",   "M", "US"),
+    ("Z3R5wn05IrDiVCyEkUrK", "Arabella",           "Mysterious",     "F", "INT"),
+    ("NNl6r8mD7vthiJatiJt1", "Bradford",           "Expressive",     "M", "US"),
+    ("YOq2y2Up4RgXP2HyXjE5", "Xavier",             "Announcer",      "M", "US"),
+    ("B8gJV1IhpuegLxdpXFOE", "Kuon",               "Cheerful",       "M", "INT"),
+    ("2zRM7PkgwBPiau2jvVXc", "Monika Sogam",       "Deep & Natural", "F", "INT"),
+    ("1SM7GgM6IMuvQlz2BwM3", "Mark",               "Casual & Light", "M", "US"),
+    ("5l5f8iK3YPeGga21rQIX", "Adeline",            "Feminine",       "F", "US"),
+    ("scOwDtmlUjD3prqpp97I", "Sam",                 "Support Agent",  "M", "US"),
+    ("NOpBlnGInO9m6vDvFkFC", "Spuds Oxley",        "Wise",           "M", "US"),
+    ("BZgkqPqms7Kj9ulSkVzn", "Eve",                "Energetic",      "F", "US"),
+    ("wo6udizrrtpIxWGp2qJk", "Northern Terry",     "",               "M", "UK"),
+    ("gU0LNdkMOQCOrPrwtbee", "Football Announcer", "British",        "M", "UK"),
+    ("DGzg6RaUqxGRTHSBjfgF", "Brock",              "Commanding",     "M", "US"),
+    ("x70vRnQBMBu4FAYhjJbO", "Nathan",             "Radio Host",     "M", "US"),
+    ("Sm1seazb4gs7RSlUVw7c", "Anika",              "Friendly",       "F", "US"),
+    ("P1bg08DkjqiVEzOn76yG", "Viraj",              "Rich & Soft",    "M", "INT"),
+    ("qDuRKMlYmrm8trt5QyBn", "Taksh",              "Calm",           "M", "INT"),
+    ("qXpMhyvQqiRxWQs4qSSB", "Horatius",           "Energetic",      "M", "INT"),
+    ("TX3LPaxmHKxFdv7VOQHJ", "Liam",               "Social Media",   "M", "US"),
+    ("N2lVS1w4EtoT3dr4eOWO", "Callum",             "Husky",          "M", "UK"),
+    ("FGY2WhTYpPnrIDTdsKH5", "Laura",              "Quirky",         "F", "US"),
+    ("kPzsL2i3teMYv0FxEYQ6", "Brittney",           "Social Media",   "F", "US"),
+    ("UgBBYS2sOqTuMpoF3BR0", "Mark (Natural)",     "Natural",        "M", "US"),
+    ("hpp4J3VqNfWAUOO0d1Us", "Bella",              "Professional",   "F", "US"),
+    ("nPczCjzI2devNBz1zQrb", "Brian",              "Deep & Warm",    "M", "US"),
+    ("uYXf8XasLslADfZ2MB4u", "Hope",               "Bubbly",         "F", "US"),
+    ("gs0tAILXbY5DNrJrsM6F", "Jeff",               "Classy",         "M", "US"),
+    ("DTKMou8ccj1ZaWGBiotd", "Jamahal",            "Vibrant",        "M", "US"),
+    ("vBKc2FfBKJfcZNyEt1n6", "Finn",               "Youthful",       "M", "US"),
+    ("DYkrAHD8iwork3YSUBbs", "Tom",                "Books",          "M", "UK"),
+    ("56AoDkrOh6qfVPDXZ7Pt", "Cassidy",            "Direct",         "F", "US"),
+    ("eR40ATw9ArzDf9h3v7t7", "Addison",            "Australian",     "F", "AU"),
+    ("g6xIsTj2HwM6VR4iXFCw", "Jessica",            "Chatty",         "F", "US"),
+    ("lcMyyd2HUfFzxdCaC4Ta", "Lucy",               "Fresh",          "F", "US"),
+    ("6aDn1KB0hjpdcocrUkmq", "Tiffany",            "Welcoming",      "F", "US"),
+    ("Sq93GQT4X1lKDXsQcixO", "Felix",              "Warm",           "M", "US"),
+    ("flHkNRp1BlvT73UL6gyz", "Jessica (Villain)",  "Eloquent",       "F", "INT"),
+    ("9yzdeviXkFddZ4Oz8Mok", "Lutz",               "Cheerful",       "M", "INT"),
+    ("pPdl9cQBQq4p6mRkZy2Z", "Emma",               "Upbeat",         "F", "US"),
+    ("zYcjlYFOd3taleS0gkk3", "Edward",             "Confident",      "M", "UK"),
+    ("nzeAacJi50IvxcyDnMXa", "Marshal",            "Professor",      "M", "US"),
+    ("ruirxsoakN0GWmGNIo04", "John Morgan",        "Cowboy",         "M", "US"),
+    ("TC0Zp7WVFzhA8zpTlRqV", "Aria",               "Villain",        "F", "US"),
+    ("ljo9gAlSqKOvF6D8sOsX", "Viking Bjorn",       "Epic",           "M", "INT"),
+    ("PPzYpIqttlTYA83688JI", "Pirate Marshal",     "",               "M", "INT"),
+    ("8JVbfL6oEdmuxKn5DK2C", "Johnny Kid",         "Calm",           "M", "US"),
+    ("iCrDUkL56s3C8sCRl7wb", "Hope (Romantic)",    "Poetic",         "F", "US"),
+    ("wJqPPQ618aTW29mptyoc", "Ana Rita",            "Expressive",     "F", "INT"),
+    ("EiNlNiXeDU1pqqOPrYMO", "John Doe",           "Deep",           "M", "US"),
+    ("4YYIPFl9wE5c4L2eu2Gb", "Burt Reynolds™",     "Deep & Smooth",  "M", "US"),
+    ("6F5Zhi321D3Oq7v1oNT4", "Hank",               "Narrator",       "M", "US"),
+    ("YXpFCvM1S3JbWEJhoskW", "Wyatt",              "Cowboy",         "M", "US"),
+    ("LG95yZDEHg6fCZdQjLqj", "Phil",               "Announcer",      "M", "US"),
+    ("CeNX9CMwmxDxUF5Q2Inm", "Johnny Dynamite",    "Radio DJ",       "M", "US"),
+    ("aD6riP1btT197c6dACmy", "Rachel M",            "British Radio",  "F", "UK"),
+    ("mtrellq69YZsNwzUSyXh", "Rex Thunder",         "Deep & Tough",   "M", "US"),
+    ("dHd5gvgSOzSfduK4CvEg", "Ed",                 "Late Night",     "M", "US"),
+    ("eVItLK1UvXctxuaRV2Oq", "Jean",               "Playful",        "F", "INT"),
+    ("esy0r39YPLQjOczyOib8", "Britney",             "Villain",        "F", "US"),
+    ("Tsns2HvNFKfGiNjllgqo", "Sven",               "Emotional",      "M", "INT"),
+    ("1U02n4nD6AdIZ9CjF053", "Viraj (Smooth)",     "Gentle",         "M", "INT"),
+    ("AeRdCCKzvd23BpJoofzx", "Nathaniel",          "British",        "M", "UK"),
+    ("LruHrtVF6PSyGItzMNHS", "Benjamin",           "Deep & Warm",    "M", "UK"),
+    ("1wGbFxmAM3Fgw63G1zZJ", "Allison",            "Meditative",     "F", "US"),
+    ("hqfrgApggtO1785R4Fsn", "Theodore",           "Grounded",       "M", "US"),
+    ("MJ0RnG71ty4LH3dvNfSd", "Leon",               "Soothing",       "M", "INT"),
 ]
 
 # (voice_name, short_desc) — official Google descriptions
@@ -1229,7 +1230,12 @@ GEM25_VOICES: list[tuple[str, str]] = [
 ]
 _GEM25_VOICE_NAMES: frozenset = frozenset(n for n, _ in GEM25_VOICES)
 
-_EL11_PREVIEW_BASE = "https://static.aiquickdraw.com/elevenlabs/voice"
+_EL11_PREVIEW_BASE  = "https://static.aiquickdraw.com/elevenlabs/voice"
+_GEM25_PREVIEW_BASE = os.environ.get("GEM25_PREVIEW_CDN", "").rstrip("/")
+
+
+def _el11_filter_voices(fg: str, fa: str) -> list:
+    return [v for v in EL11_VOICES if (not fg or v[3] == fg) and (not fa or v[4] == fa)]
 
 
 def _tts_coin_menu(lang: str):
@@ -1253,20 +1259,36 @@ def _tts_coin_menu(lang: str):
 
 # ── ElevenLabs voice picker ──────────────────────────────────────────────────
 
-async def _show_el11_page(message, lang: str, page: int):
-    total = (len(EL11_VOICES) + _TTS_PAGE_SIZE - 1) // _TTS_PAGE_SIZE
+async def _show_el11_page(message, lang: str, page: int, fg: str = "", fa: str = ""):
+    filtered = _el11_filter_voices(fg, fa)
+    total = max(1, (len(filtered) + _TTS_PAGE_SIZE - 1) // _TTS_PAGE_SIZE)
+    page = min(page, total - 1)
     start = page * _TTS_PAGE_SIZE
-    voices = EL11_VOICES[start:start + _TTS_PAGE_SIZE]
+    voices = filtered[start:start + _TTS_PAGE_SIZE]
+
+    def _gbtn(label, val):
+        mark = "✓ " if fg == val else ""
+        return InlineKeyboardButton(text=f"{mark}{label}", callback_data=f"tts_el11_fg_{val}")
+
+    def _abtn(label, val):
+        mark = "✓ " if fa == val else ""
+        return InlineKeyboardButton(text=f"{mark}{label}", callback_data=f"tts_el11_fa_{val}")
+
     rows = [
-        [
+        [_gbtn("All", ""), _gbtn("♂ Male", "M"), _gbtn("♀ Female", "F")],
+        [_abtn("All", ""), _abtn("🇺🇸 US", "US"), _abtn("🇬🇧 UK", "UK"),
+         _abtn("🇦🇺 AU", "AU"), _abtn("🌐 Intl", "INT")],
+    ]
+
+    for vid, name, desc, *_ in voices:
+        rows.append([
             InlineKeyboardButton(
                 text=f"{name}  ·  {desc}" if desc else name,
                 callback_data=f"tts_el11_sel_{vid}",
             ),
             InlineKeyboardButton(text="🎵", callback_data=f"tts_el11_prv_{vid}"),
-        ]
-        for vid, name, desc in voices
-    ]
+        ])
+
     nav = []
     if page > 0:
         nav.append(InlineKeyboardButton(text="◀", callback_data=f"tts_el11_p_{page - 1}"))
@@ -1275,11 +1297,14 @@ async def _show_el11_page(message, lang: str, page: int):
     if nav:
         rows.append(nav)
     rows.append([back_btn("cat_audio", lang=lang), menu_btn(lang)])
+
+    count = len(filtered)
     page_ind = t("tts_page_indicator", lang, page=page + 1, total=total)
+    no_match = "\n\n  No voices match these filters." if not voices else ""
     await message.edit_text(
         f"◈  <b>ElevenLabs Multilingual v2</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('tts_select_voice', lang)}  {page_ind}\n\n"
-        f"  Tap a name to select  ·  🎵 to preview",
+        f"{t('tts_select_voice', lang)}  {page_ind}  ({count})\n\n"
+        f"  Tap a name to select  ·  🎵 to preview{no_match}",
         reply_markup=kb(*rows),
         parse_mode="HTML",
     )
@@ -1288,7 +1313,10 @@ async def _show_el11_page(message, lang: str, page: int):
 @router.callback_query(F.data == "tts_model_el11")
 async def tts_el11_start(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
-    await state.update_data(tts_provider="el11", tts_coins=EL11_COINS, tts_page=0)
+    await state.update_data(
+        tts_provider="el11", tts_coins=EL11_COINS, tts_page=0,
+        tts_filter_gender="", tts_filter_accent="",
+    )
     await _show_el11_page(cb.message, lang, 0)
     await cb.answer()
 
@@ -1297,8 +1325,11 @@ async def tts_el11_start(cb: CallbackQuery, state: FSMContext):
 async def tts_el11_page(cb: CallbackQuery, state: FSMContext):
     page = int(cb.data.replace("tts_el11_p_", "", 1))
     lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    fg = data.get("tts_filter_gender", "")
+    fa = data.get("tts_filter_accent", "")
     await state.update_data(tts_page=page)
-    await _show_el11_page(cb.message, lang, page)
+    await _show_el11_page(cb.message, lang, page, fg, fa)
     await cb.answer()
 
 
@@ -1310,7 +1341,7 @@ async def tts_el11_voice_selected(cb: CallbackQuery, state: FSMContext):
     if not voice:
         await cb.answer("Voice not found")
         return
-    _, voice_name, voice_desc = voice
+    _, voice_name, voice_desc, *_ = voice
     await state.update_data(
         tts_voice_id=voice_id, tts_voice_name=voice_name, tts_voice_desc=voice_desc,
     )
@@ -1325,7 +1356,7 @@ async def tts_el11_preview_inline(cb: CallbackQuery, state: FSMContext):
     if not voice:
         await cb.answer("Voice not found")
         return
-    _, voice_name, _ = voice
+    _, voice_name, *_ = voice
     await cb.answer(f"🎵 {voice_name}…")
     url = f"{_EL11_PREVIEW_BASE}/{voice_id}.mp3"
     audio_bytes = await _fetch_preview_bytes(url)
@@ -1338,19 +1369,43 @@ async def tts_el11_preview_inline(cb: CallbackQuery, state: FSMContext):
     )
 
 
+@router.callback_query(F.data.startswith("tts_el11_fg_"))
+async def tts_el11_filter_gender(cb: CallbackQuery, state: FSMContext):
+    fg = cb.data.replace("tts_el11_fg_", "", 1)
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    fa = data.get("tts_filter_accent", "")
+    await state.update_data(tts_filter_gender=fg, tts_page=0)
+    await _show_el11_page(cb.message, lang, 0, fg, fa)
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("tts_el11_fa_"))
+async def tts_el11_filter_accent(cb: CallbackQuery, state: FSMContext):
+    fa = cb.data.replace("tts_el11_fa_", "", 1)
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    fg = data.get("tts_filter_gender", "")
+    await state.update_data(tts_filter_accent=fa, tts_page=0)
+    await _show_el11_page(cb.message, lang, 0, fg, fa)
+    await cb.answer()
+
+
 # ── Gemini voice picker ──────────────────────────────────────────────────────
 
 async def _show_gem25_page(message, lang: str, page: int):
-    total = (len(GEM25_VOICES) + _TTS_PAGE_SIZE - 1) // _TTS_PAGE_SIZE
+    total = max(1, (len(GEM25_VOICES) + _TTS_PAGE_SIZE - 1) // _TTS_PAGE_SIZE)
     start = page * _TTS_PAGE_SIZE
     voices = GEM25_VOICES[start:start + _TTS_PAGE_SIZE]
-    rows = [
-        [InlineKeyboardButton(
+    rows = []
+    for name, desc in voices:
+        row = [InlineKeyboardButton(
             text=f"{name}  ·  {desc}",
             callback_data=f"tts_gem25_v_{name}",
         )]
-        for name, desc in voices
-    ]
+        if _GEM25_PREVIEW_BASE:
+            row.append(InlineKeyboardButton(text="🎵", callback_data=f"tts_gem25_prv_{name}"))
+        rows.append(row)
     nav = []
     if page > 0:
         nav.append(InlineKeyboardButton(text="◀", callback_data=f"tts_gem25_p_{page - 1}"))
@@ -1360,9 +1415,10 @@ async def _show_gem25_page(message, lang: str, page: int):
         rows.append(nav)
     rows.append([back_btn("cat_audio", lang=lang), menu_btn(lang)])
     page_ind = t("tts_page_indicator", lang, page=page + 1, total=total)
+    hint = "\n\n  Tap a name to select  ·  🎵 to preview" if _GEM25_PREVIEW_BASE else ""
     await message.edit_text(
         f"◈  <b>Gemini 2.5 Pro TTS</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('tts_select_voice', lang)}  {page_ind}",
+        f"{t('tts_select_voice', lang)}  {page_ind}{hint}",
         reply_markup=kb(*rows),
         parse_mode="HTML",
     )
@@ -1395,6 +1451,25 @@ async def tts_gem25_voice_selected(cb: CallbackQuery, state: FSMContext):
     await state.update_data(tts_voice_name=voice_name)
     await _show_tts_text_entry(cb.message, lang, state)
     await cb.answer()
+
+
+@router.callback_query(F.data.startswith("tts_gem25_prv_"))
+async def tts_gem25_preview_inline(cb: CallbackQuery, state: FSMContext):
+    voice_name = cb.data.replace("tts_gem25_prv_", "", 1)
+    if voice_name not in _GEM25_VOICE_NAMES or not _GEM25_PREVIEW_BASE:
+        await cb.answer("Preview not available")
+        return
+    desc = next((d for n, d in GEM25_VOICES if n == voice_name), "")
+    await cb.answer(f"🎵 {voice_name}…")
+    url = f"{_GEM25_PREVIEW_BASE}/{voice_name}.mp3"
+    audio_bytes = await _fetch_preview_bytes(url)
+    if not audio_bytes:
+        await cb.message.answer(f"⚠️  Preview unavailable for {voice_name}")
+        return
+    await cb.message.answer_voice(
+        voice=BufferedInputFile(audio_bytes, filename=f"{voice_name}.ogg"),
+        caption=f"◈  {voice_name}  ·  {desc}",
+    )
 
 
 # ── Shared text entry ────────────────────────────────────────────────────────
