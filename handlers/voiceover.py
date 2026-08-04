@@ -1209,14 +1209,25 @@ EL11_VOICES: list[tuple] = [
     ("MJ0RnG71ty4LH3dvNfSd", "Leon",             "Soothing"),
 ]
 
-GEM25_VOICES: list[str] = [
-    "Achernar", "Achird", "Algenib", "Algieba", "Alnilam",
-    "Aoede", "Autonoe", "Callirrhoe", "Charon", "Despina",
-    "Enceladus", "Erinome", "Fenrir", "Gacrux", "Iapetus",
-    "Kore", "Laomedeia", "Leda", "Orus", "Puck",
-    "Pulcherrima", "Rasalgethi", "Sadachbia", "Sadaltager", "Schedar",
-    "Sulafat", "Umbriel", "Vindemiatrix", "Zephyr", "Zubenelgenubi",
+# (voice_name, short_desc) — official Google descriptions
+GEM25_VOICES: list[tuple[str, str]] = [
+    ("Achernar",      "Soft"),          ("Achird",         "Friendly"),
+    ("Algenib",       "Gravelly"),      ("Algieba",        "Smooth"),
+    ("Alnilam",       "Firm"),          ("Aoede",          "Breezy"),
+    ("Autonoe",       "Bright"),        ("Callirrhoe",     "Easy-going"),
+    ("Charon",        "Informational"), ("Despina",        "Smooth"),
+    ("Enceladus",     "Breathy"),       ("Erinome",        "Clear"),
+    ("Fenrir",        "Excitable"),     ("Gacrux",         "Mature"),
+    ("Iapetus",       "Clear"),         ("Kore",           "Firm"),
+    ("Laomedeia",     "Upbeat"),        ("Leda",           "Youthful"),
+    ("Orus",          "Firm"),          ("Puck",           "Upbeat"),
+    ("Pulcherrima",   "Forward"),       ("Rasalgethi",     "Informational"),
+    ("Sadachbia",     "Lively"),        ("Sadaltager",     "Knowledgeable"),
+    ("Schedar",       "Even"),          ("Sulafat",        "Warm"),
+    ("Umbriel",       "Easy-going"),    ("Vindemiatrix",   "Gentle"),
+    ("Zephyr",        "Bright"),        ("Zubenelgenubi",  "Casual"),
 ]
+_GEM25_VOICE_NAMES: frozenset = frozenset(n for n, _ in GEM25_VOICES)
 
 _EL11_PREVIEW_BASE = "https://static.aiquickdraw.com/elevenlabs/voice"
 
@@ -1246,14 +1257,16 @@ async def _show_el11_page(message, lang: str, page: int):
     total = (len(EL11_VOICES) + _TTS_PAGE_SIZE - 1) // _TTS_PAGE_SIZE
     start = page * _TTS_PAGE_SIZE
     voices = EL11_VOICES[start:start + _TTS_PAGE_SIZE]
-    buttons = [
-        InlineKeyboardButton(
-            text=f"{name} — {desc}" if desc else name,
-            callback_data=f"tts_el11_v_{vid}",
-        )
+    rows = [
+        [
+            InlineKeyboardButton(
+                text=f"{name}  ·  {desc}" if desc else name,
+                callback_data=f"tts_el11_sel_{vid}",
+            ),
+            InlineKeyboardButton(text="🎵", callback_data=f"tts_el11_prv_{vid}"),
+        ]
         for vid, name, desc in voices
     ]
-    rows = list(chunked(buttons, 2))
     nav = []
     if page > 0:
         nav.append(InlineKeyboardButton(text="◀", callback_data=f"tts_el11_p_{page - 1}"))
@@ -1265,7 +1278,8 @@ async def _show_el11_page(message, lang: str, page: int):
     page_ind = t("tts_page_indicator", lang, page=page + 1, total=total)
     await message.edit_text(
         f"◈  <b>ElevenLabs Multilingual v2</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('tts_select_voice', lang)}  {page_ind}",
+        f"{t('tts_select_voice', lang)}  {page_ind}\n\n"
+        f"  Tap a name to select  ·  🎵 to preview",
         reply_markup=kb(*rows),
         parse_mode="HTML",
     )
@@ -1288,9 +1302,9 @@ async def tts_el11_page(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 
-@router.callback_query(F.data.startswith("tts_el11_v_"))
+@router.callback_query(F.data.startswith("tts_el11_sel_"))
 async def tts_el11_voice_selected(cb: CallbackQuery, state: FSMContext):
-    voice_id = cb.data.replace("tts_el11_v_", "", 1)
+    voice_id = cb.data.replace("tts_el11_sel_", "", 1)
     lang = get_lang(cb.from_user.id)
     voice = next((v for v in EL11_VOICES if v[0] == voice_id), None)
     if not voice:
@@ -1300,42 +1314,28 @@ async def tts_el11_voice_selected(cb: CallbackQuery, state: FSMContext):
     await state.update_data(
         tts_voice_id=voice_id, tts_voice_name=voice_name, tts_voice_desc=voice_desc,
     )
-    data = await state.get_data()
-    page = data.get("tts_page", 0)
-    await cb.message.edit_text(
-        f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"  {voice_desc}\n\n"
-        f"{t('tts_voice_card_prompt', lang)}",
-        reply_markup=kb(
-            [InlineKeyboardButton(text=t("tts_btn_preview", lang), callback_data="tts_el11_preview")],
-            [InlineKeyboardButton(text=t("tts_btn_choose", lang),  callback_data="tts_enter_text")],
-            [back_btn(f"tts_el11_p_{page}", lang=lang), menu_btn(lang)],
-        ),
-        parse_mode="HTML",
-    )
+    await _show_tts_text_entry(cb.message, lang, state)
     await cb.answer()
 
 
-@router.callback_query(F.data == "tts_el11_preview")
-async def tts_el11_preview(cb: CallbackQuery, state: FSMContext):
-    lang = get_lang(cb.from_user.id)
-    data = await state.get_data()
-    voice_id   = data.get("tts_voice_id")
-    voice_name = data.get("tts_voice_name", "—")
-    if not voice_id:
-        await cb.answer(t("tts_session_expired", lang), show_alert=True)
+@router.callback_query(F.data.startswith("tts_el11_prv_"))
+async def tts_el11_preview_inline(cb: CallbackQuery, state: FSMContext):
+    voice_id = cb.data.replace("tts_el11_prv_", "", 1)
+    voice = next((v for v in EL11_VOICES if v[0] == voice_id), None)
+    if not voice:
+        await cb.answer("Voice not found")
         return
+    _, voice_name, _ = voice
+    await cb.answer(f"🎵 {voice_name}…")
     url = f"{_EL11_PREVIEW_BASE}/{voice_id}.mp3"
     audio_bytes = await _fetch_preview_bytes(url)
     if not audio_bytes:
-        await cb.answer(t("vo_preview_error", lang), show_alert=True)
+        await cb.message.answer(f"⚠️  Preview unavailable for {voice_name}")
         return
-    await cb.message.answer_document(
-        document=BufferedInputFile(audio_bytes, filename=f"{voice_name}.mp3"),
-        thumbnail=_audio_thumb(),
+    await cb.message.answer_voice(
+        voice=BufferedInputFile(audio_bytes, filename=f"{voice_name}.ogg"),
         caption=f"◈  {voice_name}",
     )
-    await cb.answer()
 
 
 # ── Gemini voice picker ──────────────────────────────────────────────────────
@@ -1344,11 +1344,13 @@ async def _show_gem25_page(message, lang: str, page: int):
     total = (len(GEM25_VOICES) + _TTS_PAGE_SIZE - 1) // _TTS_PAGE_SIZE
     start = page * _TTS_PAGE_SIZE
     voices = GEM25_VOICES[start:start + _TTS_PAGE_SIZE]
-    buttons = [
-        InlineKeyboardButton(text=v, callback_data=f"tts_gem25_v_{v}")
-        for v in voices
+    rows = [
+        [InlineKeyboardButton(
+            text=f"{name}  ·  {desc}",
+            callback_data=f"tts_gem25_v_{name}",
+        )]
+        for name, desc in voices
     ]
-    rows = list(chunked(buttons, 2))
     nav = []
     if page > 0:
         nav.append(InlineKeyboardButton(text="◀", callback_data=f"tts_gem25_p_{page - 1}"))
@@ -1387,7 +1389,7 @@ async def tts_gem25_page(cb: CallbackQuery, state: FSMContext):
 async def tts_gem25_voice_selected(cb: CallbackQuery, state: FSMContext):
     voice_name = cb.data.replace("tts_gem25_v_", "", 1)
     lang = get_lang(cb.from_user.id)
-    if voice_name not in GEM25_VOICES:
+    if voice_name not in _GEM25_VOICE_NAMES:
         await cb.answer("Voice not found")
         return
     await state.update_data(tts_voice_name=voice_name)
@@ -1403,10 +1405,12 @@ async def _show_tts_text_entry(message, lang: str, state: FSMContext):
     voice_name  = data.get("tts_voice_name", "—")
     max_chars   = 5000 if provider == "el11" else 10000
     model_label = "ElevenLabs Multilingual v2" if provider == "el11" else "Gemini 2.5 Pro TTS"
+    page        = data.get("tts_page", 0)
+    back_cb     = f"tts_{provider}_p_{page}"
     await message.edit_text(
         f"◈  <b>{voice_name}</b>  —  {model_label}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('tts_enter_text_prompt', lang, max=max_chars)}",
-        reply_markup=kb([back_btn("cat_audio", lang=lang), menu_btn(lang)]),
+        reply_markup=kb([back_btn(back_cb, lang=lang), menu_btn(lang)]),
         parse_mode="HTML",
     )
     await state.set_state(TTSStates.entering_text)
