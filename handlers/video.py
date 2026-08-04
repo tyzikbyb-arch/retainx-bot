@@ -69,9 +69,10 @@ TOOL_IDS = {
     "omni":   "OmniHuman 1.5 Avatar",
     "fab1":   "Fabric 1.0 Avatar",
     "aur1":   "Aurora Avatar",
-    "grok":   "Grok Imagine 1.5",
-    "grokt":  "Grok Text-to-Video",
-    "groki":  "Grok Image-to-Video",
+    "grok":     "Grok Imagine 1.5",
+    "grokt":    "Grok Text-to-Video",
+    "groki":    "Grok Image-to-Video",
+    "grokimag": "Grok Imagine",
 }
 ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 
@@ -100,11 +101,12 @@ TOOL_DESCS = {
     "Grok Imagine 1.5":        "Grok's creative video model — imaginative and stylised output.",
     "Grok Text-to-Video":      "Grok's next-gen text-to-video with Fun, Normal, and Spicy modes.",
     "Grok Image-to-Video":     "Animate any image with Grok's image-to-video model.",
+    "Grok Imagine":            "xAI's Grok video generation — Classic 1.5, Text-to-Video, or Image-to-Video.",
 }
 
 VIDEO_SUBCATS = {
     "Standard":  ["sd20","sd20f","hh10","wan27"],
-    "Grok":      ["grok","grokt","groki"],
+    "Grok":      ["grokimag"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
@@ -228,6 +230,9 @@ async def video_subcat(cb: CallbackQuery, state: FSMContext):
         overrides = tier_cfg.get("subcat_overrides", {})
         if sub in overrides:
             tids = overrides[sub]
+    if sub == "Grok":
+        await show_grokimag(cb, state)
+        return
     buttons = [[InlineKeyboardButton(text=TOOL_IDS[tid], callback_data=f"vt_{tid}")] for tid in tids]
     buttons.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
@@ -324,6 +329,10 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     if tid == "veo31e":
         await show_veo_extend(cb, state)
+        return
+
+    if tid == "grokimag":
+        await show_grokimag(cb, state)
         return
 
     if tid == "grok":
@@ -539,6 +548,22 @@ def _grok_resolution(uid: int) -> str:
             return "480p"
     return "720p"
 
+async def show_grokimag(cb, state):
+    """Model picker for all Grok video tools — shown when user clicks ▸ Grok Video."""
+    lang = get_lang(cb.from_user.id)
+    buttons = [
+        [InlineKeyboardButton(text=t("vid_grokimag_15",  lang), callback_data="vt_grok")],
+        [InlineKeyboardButton(text=t("vid_grokimag_t2v", lang), callback_data="vt_grokt")],
+        [InlineKeyboardButton(text=t("vid_grokimag_i2v", lang), callback_data="vt_groki")],
+    ]
+    await cb.message.edit_text(
+        f"{t('vid_grokimag_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_grokimag_select', lang)}",
+        reply_markup=kb(*buttons, [back_btn("cat_video", lang=lang), menu_btn(lang)]),
+        parse_mode="HTML",
+    )
+
+
 async def show_grok(cb, state):
     uid = cb.from_user.id
     lang = get_lang(uid)
@@ -551,7 +576,7 @@ async def show_grok(cb, state):
         for s, usd in GROK_IMAGINE_15_PRICES.items()
     ]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("vsub_Standard", lang=lang), menu_btn(lang)])
+    rows.append([back_btn("vsub_Grok", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"{t('vid_grok_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"

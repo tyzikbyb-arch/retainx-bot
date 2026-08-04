@@ -222,7 +222,7 @@ UNLIMITED_TIER_CONFIG = {
         "subcats": ["Standard", "Kling", "Grok"],
         "subcat_overrides": {
             "Standard": ["sd20f", "wan27", "ltx23", "veo31l"],
-            "Grok": ["grok", "grokt", "groki"],
+            "Grok": ["grokimag"],
         },
         "max_resolution": "720p",
         "voiceover": False,

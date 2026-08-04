@@ -556,6 +556,12 @@ STR = {
         "vid_grok_extend_prompt": "◈  <b>Grok Extend  +{secs}s</b>\n━━━━━━━━━━━━━━━━━━━━\n\n  Enter a prompt to guide the extension (optional):",
         "vid_grok_task_expired": "This video's task has expired and can no longer be extended or upscaled. Please generate a new video.",
 
+        "vid_grokimag_title":  "◈  <b>Grok Imagine</b>",
+        "vid_grokimag_select": "  Select a generation type:",
+        "vid_grokimag_15":    "Grok Imagine 1.5  —  Classic",
+        "vid_grokimag_t2v":   "Text-to-Video",
+        "vid_grokimag_i2v":   "Image-to-Video",
+
         "vid_extend_title": "◈  <b>Veo 3.1 — Extend Video</b>",
         "vid_extend_desc": "  Extend your video with additional seconds.\n\n  Select the extension tier:",
         "vid_extend_fast":    "⚡  Fast",
@@ -1584,6 +1590,12 @@ STR = {
         "vid_grok_extend_prompt": "◈  <b>Grok Extend  +{secs}с</b>\n━━━━━━━━━━━━━━━━━━━━\n\n  Введите промпт для продления (необязательно):",
         "vid_grok_task_expired": "Срок задачи этого видео истёк, его больше нельзя продлить или улучшить. Создайте новое видео.",
 
+        "vid_grokimag_title":  "◈  <b>Grok Imagine</b>",
+        "vid_grokimag_select": "  Выберите тип генерации:",
+        "vid_grokimag_15":    "Grok Imagine 1.5  —  Классик",
+        "vid_grokimag_t2v":   "Текст в видео",
+        "vid_grokimag_i2v":   "Изображение в видео",
+
         "vid_extend_title": "◈  <b>Veo 3.1 — Продление видео</b>",
         "vid_extend_desc": "  Продлите ваше видео на дополнительные секунды.\n\n  Выберите тариф:",
         "vid_extend_fast":    "⚡  Быстро",
@@ -2609,6 +2621,12 @@ STR = {
         "vid_grok_mode_spicy": "مثير",
         "vid_grok_extend_prompt": "◈  <b>Grok Extend  +{secs}ث</b>\n━━━━━━━━━━━━━━━━━━━━\n\n  أدخل وصفاً لتوجيه التمديد (اختياري):",
         "vid_grok_task_expired": "انتهت صلاحية مهمة هذا الفيديو ولا يمكن تمديده أو تحسينه. يرجى إنشاء فيديو جديد.",
+
+        "vid_grokimag_title":  "◈  <b>Grok Imagine</b>",
+        "vid_grokimag_select": "  اختر نوع التوليد:",
+        "vid_grokimag_15":    "Grok Imagine 1.5  —  الكلاسيكي",
+        "vid_grokimag_t2v":   "نص إلى فيديو",
+        "vid_grokimag_i2v":   "صورة إلى فيديو",
 
         "vid_extend_title": "◈  <b>Veo 3.1 — تمديد الفيديو</b>",
         "vid_extend_desc": "  مدّد الفيديو بثوانٍ إضافية.\n\n  اختر المستوى:",
