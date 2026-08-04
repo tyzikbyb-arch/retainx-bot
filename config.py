@@ -153,6 +153,10 @@ LTX_23_PRICES = {
     "4K":   {6:2.25,8:3.00,10:3.75},
 }
 GROK_IMAGINE_15_PRICES = {sec: round(sec*0.20,2) for sec in range(1,16)}
+GROK_TV_PRICES = {sec: round(sec*0.20,2) for sec in [6,8,10,12,15,20,25,30]}
+GROK_IV_PRICES = GROK_TV_PRICES
+GROK_UPSCALE_PRICES = {"720p": 0.50, "1080p": 1.00}
+GROK_EXTEND_PRICES = {6: 1.50, 10: 2.50}
 HEYGEN_AVATAR_PRICES = {
     1: 3.00, 2: 6.00, 3: 9.00, 4: 12.00, 5: 15.00,
     6: 18.00, 7: 21.00, 8: 23.00, 9: 26.00, 10: 29.00,
@@ -215,9 +219,10 @@ UNLIMITED_TIER_CONFIG = {
         "name_ru": "Стандарт",
         "name_en": "Standard",
         "emoji": "⚡",
-        "subcats": ["Standard", "Kling"],
+        "subcats": ["Standard", "Kling", "Grok"],
         "subcat_overrides": {
-            "Standard": ["sd20f", "wan27", "grok", "ltx23", "veo31l"],
+            "Standard": ["sd20f", "wan27", "ltx23", "veo31l"],
+            "Grok": ["grok", "grokt", "groki"],
         },
         "max_resolution": "720p",
         "voiceover": False,
@@ -226,7 +231,7 @@ UNLIMITED_TIER_CONFIG = {
         "name_ru": "Про",
         "name_en": "Pro",
         "emoji": "⚡⚡",
-        "subcats": ["Standard", "Kling", "Premium"],
+        "subcats": ["Standard", "Kling", "Premium", "Grok"],
         "max_resolution": "1080p",
         "voiceover": True,
     },
@@ -234,7 +239,7 @@ UNLIMITED_TIER_CONFIG = {
         "name_ru": "VIP",
         "name_en": "VIP",
         "emoji": "♛",
-        "subcats": ["Standard", "Kling", "Premium"],
+        "subcats": ["Standard", "Kling", "Premium", "Grok"],
         "max_resolution": "4K",
         "voiceover": True,
     },

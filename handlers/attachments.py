@@ -46,6 +46,11 @@ TOOL_ATTACHMENTS = {
         "aud_refs": 1,
         "exclusive_startend": True,
     },
+    "groki": {  # Grok Image-to-Video — requires start frame
+        "start_frame": True, "end_frame": False,
+        "start_frame_required": True,
+        "hint": "Attach a Start Frame to continue — it's required for this model.",
+    },
     "grok": {   # Grok Imagine 1.5 — Start Frame only, mandatory. No End Frame
                 # button at all for this tool. img_refs intentionally omitted:
                 # it would let a user satisfy the attach screen via a plain

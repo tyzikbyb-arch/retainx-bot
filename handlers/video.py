@@ -12,7 +12,9 @@ from config import (
     VEO_31_PRICES, VEO_31_FAST_PRICES, VEO_31_LITE_PRICES,
     KLING_30_VIDEO_PRICES, KLING_03_VIDEO_PRICES, KLING_30_MOTION_CONTROL_PRICES,
     WAN_27_PRICES, SORA_2_PRO_PRICES, LTX_23_PRICES,
-    GROK_IMAGINE_15_PRICES, HEYGEN_AVATAR_PRICES, HEYGEN_TRANSLATE_PRICES,
+    GROK_IMAGINE_15_PRICES, GROK_TV_PRICES, GROK_IV_PRICES,
+    GROK_UPSCALE_PRICES, GROK_EXTEND_PRICES,
+    HEYGEN_AVATAR_PRICES, HEYGEN_TRANSLATE_PRICES,
     HEYGEN_TRANSLATE_PRECISION_PRICES, HEYGEN_TRANSLATE_SPEED_PRICES,
     HEYGEN_AVATAR_ASPECT_RATIOS, HEYGEN_AVATAR_RESOLUTIONS, HEYGEN_AVATAR_TALKING_STYLES,
     OMNIHUMAN_PRICES, AURORA_AVATAR_PRICES,
@@ -68,6 +70,8 @@ TOOL_IDS = {
     "fab1":   "Fabric 1.0 Avatar",
     "aur1":   "Aurora Avatar",
     "grok":   "Grok Imagine 1.5",
+    "grokt":  "Grok Text-to-Video",
+    "groki":  "Grok Image-to-Video",
 }
 ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 
@@ -94,10 +98,13 @@ TOOL_DESCS = {
     "Fabric 1.0 Avatar":       "Premium avatar video generation with expressive motion.",
     "Aurora Avatar":           "Realistic avatar video from photo — natural expressions.",
     "Grok Imagine 1.5":        "Grok's creative video model — imaginative and stylised output.",
+    "Grok Text-to-Video":      "Grok's next-gen text-to-video with Fun, Normal, and Spicy modes.",
+    "Grok Image-to-Video":     "Animate any image with Grok's image-to-video model.",
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
+    "Standard":  ["sd20","sd20f","hh10","wan27"],
+    "Grok":      ["grok","grokt","groki"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
@@ -105,6 +112,7 @@ VIDEO_SUBCATS = {
 def subcat_label(sub: str, lang: str = "en") -> str:
     return {
         "Standard": t("vid_sub_standard", lang),
+        "Grok":     t("vid_sub_grok", lang),
         "Premium":  t("vid_sub_premium", lang),
         "Kling":    t("vid_sub_kling", lang),
         "Avatar":   t("vid_sub_avatar", lang),
@@ -320,6 +328,14 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     if tid == "grok":
         await show_grok(cb, state)
+        return
+
+    if tid == "grokt":
+        await show_grokt(cb, state)
+        return
+
+    if tid == "groki":
+        await show_groki(cb, state)
         return
 
     if tid == "hga4":
@@ -556,6 +572,252 @@ async def grok_dur(cb: CallbackQuery, state: FSMContext):
                             att_imgs=[], att_vids=[], att_auds=[])
     await _show_attach_menu(cb, state)
     await state.set_state(VideoStates.attach_mode)
+
+# ── Grok Text-to-Video ────────────────────────────────────────
+_GROKT_MODES = ["fun", "normal", "spicy"]
+_GROKT_AR = ["16:9", "9:16", "1:1", "4:3", "3:4"]
+
+async def show_grokt(cb, state):
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(v_tool="Grok Text-to-Video", v_tid="grokt")
+    buttons = [
+        InlineKeyboardButton(text=t(f"vid_grok_mode_{m}", lang), callback_data=f"vgm_{m}")
+        for m in _GROKT_MODES
+    ]
+    await cb.message.edit_text(
+        f"{t('vid_grokt_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  {TOOL_DESCS['Grok Text-to-Video']}\n\n"
+        f"{t('vid_grok_mode_select', lang)}",
+        reply_markup=kb(buttons, [back_btn("vsub_Grok", lang=lang), menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("vgm_"))
+async def grokt_mode(cb: CallbackQuery, state: FSMContext):
+    mode = cb.data[4:]
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(v_grok_mode=mode)
+    buttons = [
+        InlineKeyboardButton(text=f"{s}s — {usd_to_coins(usd)}◈", callback_data=f"vgtd_{s}")
+        for s, usd in GROK_TV_PRICES.items()
+    ]
+    rows = list(chunked(buttons, 3))
+    rows.append([back_btn("vt_grokt", lang=lang), menu_btn(lang)])
+    await cb.message.edit_text(
+        f"{t('vid_grokt_title', lang)}  —  {mode}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_select_duration', lang)}",
+        reply_markup=kb(*rows), parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("vgtd_"))
+async def grokt_dur(cb: CallbackQuery, state: FSMContext):
+    sec = int(cb.data[5:])
+    lang = get_lang(cb.from_user.id)
+    usd = GROK_TV_PRICES[sec]
+    coins = usd_to_coins(usd)
+    await state.update_data(v_dur=sec, v_coins=coins, v_usd=usd)
+    data = await state.get_data()
+    mode = data.get("v_grok_mode", "normal")
+    buttons = [
+        InlineKeyboardButton(text=ar, callback_data=f"vgta_{ar.replace(':','x')}")
+        for ar in _GROKT_AR
+    ]
+    rows = list(chunked(buttons, 3))
+    rows.append([back_btn(f"vgm_{mode}", lang=lang), menu_btn(lang)])
+    await cb.message.edit_text(
+        f"{t('vid_grokt_title', lang)}  —  {mode}  {sec}s\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_select_aspect_ratio', lang)}",
+        reply_markup=kb(*rows), parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("vgta_"))
+async def grokt_ar(cb: CallbackQuery, state: FSMContext):
+    ar = cb.data[5:].replace("x", ":")
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    res = _grok_resolution(uid)
+    await state.update_data(v_ar=ar, v_res=res)
+    data = await state.get_data()
+    mode = data.get("v_grok_mode", "normal")
+    sec = data.get("v_dur", "—")
+    coins = data.get("v_coins", 0)
+    from database import has_unlimited
+    unlimited = has_unlimited(uid)
+    cost_line = "" if unlimited else f"{t('vid_cost_label', lang, coins=coins)}\n"
+    await cb.message.edit_text(
+        f"{t('vid_grokt_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  Mode: {mode}\n"
+        f"{t('vid_aspect_ratio_label', lang, ar=ar)}\n"
+        f"{t('vid_duration_label', lang, dur=sec)}\n"
+        f"{cost_line}\n"
+        f"{t('vid_enter_prompt', lang)}",
+        reply_markup=kb([back_btn(f"vgtd_{sec}", lang=lang), menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+    await state.set_state(VideoStates.entering_prompt)
+
+# ── Grok Image-to-Video ───────────────────────────────────────
+_GROKI_MODES = ["fun", "normal"]
+
+async def show_groki(cb, state):
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(v_tool="Grok Image-to-Video", v_tid="groki")
+    buttons = [
+        InlineKeyboardButton(text=t(f"vid_grok_mode_{m}", lang), callback_data=f"vgim_{m}")
+        for m in _GROKI_MODES
+    ]
+    await cb.message.edit_text(
+        f"{t('vid_groki_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  {TOOL_DESCS['Grok Image-to-Video']}\n\n"
+        f"{t('vid_grok_mode_select', lang)}",
+        reply_markup=kb(buttons, [back_btn("vsub_Grok", lang=lang), menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("vgim_"))
+async def groki_mode(cb: CallbackQuery, state: FSMContext):
+    mode = cb.data[5:]
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(v_grok_mode=mode)
+    buttons = [
+        InlineKeyboardButton(text=f"{s}s — {usd_to_coins(usd)}◈", callback_data=f"vgid_{s}")
+        for s, usd in GROK_IV_PRICES.items()
+    ]
+    rows = list(chunked(buttons, 3))
+    rows.append([back_btn("vt_groki", lang=lang), menu_btn(lang)])
+    await cb.message.edit_text(
+        f"{t('vid_groki_title', lang)}  —  {mode}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_select_duration', lang)}",
+        reply_markup=kb(*rows), parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("vgid_"))
+async def groki_dur(cb: CallbackQuery, state: FSMContext):
+    sec = int(cb.data[5:])
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    usd = GROK_IV_PRICES[sec]
+    coins = usd_to_coins(usd)
+    res = _grok_resolution(uid)
+    data = await state.get_data()
+    mode = data.get("v_grok_mode", "fun")
+    await state.update_data(
+        v_dur=sec, v_coins=coins, v_usd=usd, v_res=res,
+        att_mode="free", att_start=None, att_end=None,
+        att_imgs=[], att_vids=[], att_auds=[],
+    )
+    await _show_attach_menu(cb, state)
+    await state.set_state(VideoStates.attach_mode)
+
+# ── Grok Extend / Upscale (delivery message callbacks) ───────
+
+async def _grok_get_task_id(order_id: int) -> str | None:
+    """Read the stored Grok task_id from Redis (set by worker at delivery time)."""
+    import os as _os
+    try:
+        import redis.asyncio as _redis
+        redis_url = _os.environ.get("REDIS_URL", "")
+        if not redis_url:
+            return None
+        r = _redis.from_url(redis_url, decode_responses=True)
+        val = await r.get(f"retainx:grok_task:{order_id}")
+        await r.aclose()
+        return val
+    except Exception:
+        return None
+
+@router.callback_query(F.data.startswith("grokup_"))
+async def grokup_cb(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    tail = cb.data[7:]  # "{oid}_{res}"
+    sep = tail.rfind("_")
+    if sep < 0:
+        await cb.answer("Invalid request.")
+        return
+    try:
+        oid = int(tail[:sep])
+        res = tail[sep + 1:]
+    except ValueError:
+        await cb.answer("Invalid request.")
+        return
+
+    usd = GROK_UPSCALE_PRICES.get(res, 0)
+    if not usd:
+        await cb.answer("Unsupported resolution.")
+        return
+    coins = usd_to_coins(usd)
+
+    task_id = await _grok_get_task_id(oid)
+    if not task_id:
+        await cb.answer(t("vid_grok_task_expired", lang), show_alert=True)
+        return
+
+    uid = cb.from_user.id
+    from database import spend_coins, create_order
+    if not spend_coins(uid, coins):
+        await cb.answer(t("vid_insufficient_coins", lang), show_alert=True)
+        return
+
+    params = {"resolution": res, "grok_task_id": task_id, "prompt": ""}
+    try:
+        new_oid = create_order(
+            uid, cb.from_user.username or cb.from_user.first_name,
+            "Grok Upscale", params, coins, usd
+        )
+    except Exception:
+        from database import add_coins
+        add_coins(uid, coins)
+        await cb.answer(t("vid_order_error", lang), show_alert=True)
+        return
+
+    await _push_to_queue(new_oid, uid, "groku", "Grok Upscale", params, coins, usd)
+    await cb.answer(f"✓  Upscale order #{new_oid} placed!", show_alert=True)
+
+@router.callback_query(F.data.startswith("grokext_"))
+async def grokext_cb(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    tail = cb.data[8:]  # "{oid}_{secs}"
+    sep = tail.rfind("_")
+    if sep < 0:
+        await cb.answer("Invalid request.")
+        return
+    try:
+        oid = int(tail[:sep])
+        secs = int(tail[sep + 1:])
+    except ValueError:
+        await cb.answer("Invalid request.")
+        return
+
+    usd = GROK_EXTEND_PRICES.get(secs, 0)
+    if not usd:
+        await cb.answer("Unsupported extension duration.")
+        return
+    coins = usd_to_coins(usd)
+
+    task_id = await _grok_get_task_id(oid)
+    if not task_id:
+        await cb.answer(t("vid_grok_task_expired", lang), show_alert=True)
+        return
+
+    await state.update_data(
+        v_tool="Grok Extend",
+        v_tid="groke",
+        v_grok_task_id=task_id,
+        v_extend_times=secs,
+        v_coins=coins,
+        v_usd=usd,
+        v_res="—",
+        v_ar="—",
+        v_dur="—",
+        v_grok_mode=None,
+    )
+    await cb.message.answer(
+        t("vid_grok_extend_prompt", lang, secs=secs),
+        reply_markup=kb([menu_btn(lang)]),
+        parse_mode="HTML"
+    )
+    await cb.answer()
+    await state.set_state(VideoStates.entering_prompt)
 
 # ── Duration tools ────────────────────────────────────────────
 async def show_duration_tool(cb, state, tid):
@@ -1733,6 +1995,9 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         "attachments":   attachments if attachments else None,
         "upload_file_id":   data.get("v_upload_file_id"),
         "upload_file_type": data.get("v_upload_file_type"),
+        "grok_mode":     data.get("v_grok_mode"),
+        "grok_task_id":  data.get("v_grok_task_id"),
+        "extend_times":  data.get("v_extend_times"),
     }
     usd = data.get("v_usd", 0)
     try:
