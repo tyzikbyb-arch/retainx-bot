@@ -28,6 +28,12 @@ router = Router()
 # Avatar tool IDs excluded from unlimited pass
 AVATAR_TOOL_IDS = {"hga4", "hgtr", "eldb", "lips", "omni", "aur1", "fab1"}
 
+# Tool IDs that require manual (Artlist/Playwright) processing — hidden from coin users
+_MANUAL_VIDEO_TOOL_IDS = frozenset({
+    "sora2", "ltx23", "kl03", "veo31e",
+    "hga4", "hgtr", "eldb", "lips", "omni", "aur1", "fab1",
+})
+
 class VideoStates(StatesGroup):
     entering_prompt = State()
     uploading_video = State()
@@ -201,7 +207,10 @@ async def video_menu(cb: CallbackQuery, state: FSMContext):
         allowed = set(tier_cfg["subcats"])
         visible_subcats = [s for s in VIDEO_SUBCATS if s in allowed]
     else:
-        visible_subcats = list(VIDEO_SUBCATS.keys())
+        visible_subcats = [
+            s for s in VIDEO_SUBCATS
+            if any(tid not in _MANUAL_VIDEO_TOOL_IDS for tid in VIDEO_SUBCATS[s])
+        ]
     buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in visible_subcats]
     buttons.append([back_btn("main_menu", t("menu_main_menu", lang))])
     balance = get_coins(uid)
@@ -230,6 +239,8 @@ async def video_subcat(cb: CallbackQuery, state: FSMContext):
         overrides = tier_cfg.get("subcat_overrides", {})
         if sub in overrides:
             tids = overrides[sub]
+    else:
+        tids = [tid for tid in tids if tid not in _MANUAL_VIDEO_TOOL_IDS]
     if sub == "Grok":
         await show_grokimag(cb, state)
         return
