@@ -46,11 +46,11 @@ TOOL_ATTACHMENTS = {
         "aud_refs": 1,
         "exclusive_startend": True,
     },
-    "groki": {  # Grok Image-to-Video — requires start frame; animates the exact
-                # character from the image (strict preservation)
+    "groki": {  # Grok Image-to-Video — requires start frame; animates based on
+                # the character in the image (best-effort similarity)
         "start_frame": True, "end_frame": False,
         "start_frame_required": True,
-        "hint": "Attach a photo — this model animates your exact character.",
+        "hint": "Attach a photo — the model animates a character based on it.",
     },
     "grok": {   # Grok Imagine 1.5 — start frame is optional style reference only;
                 # the model treats image_url as inspiration, not strict character
@@ -194,8 +194,8 @@ _HINT_RU = {
         "Прикрепите Start Frame, чтобы продолжить — для этой модели это обязательно.",
     "Sora 2 Pro is highly unstable. Switch to another model if it fails.":
         "Sora 2 Pro работает нестабильно. Если генерация не удалась, попробуйте другую модель.",
-    "Attach a photo — this model animates your exact character.":
-        "Прикрепите фото — эта модель анимирует именно вашего персонажа.",
+    "Attach a photo — the model animates a character based on it.":
+        "Прикрепите фото — модель анимирует персонажа на его основе.",
     "Optional: attach a photo as a style reference.\nFor an exact character, use Grok Image-to-Video instead.":
         "Необязательно: прикрепите фото как стилевой референс.\nДля точного персонажа используйте Grok Image-to-Video.",
     "Upload a character image and a voice recording to make your avatar talk":
@@ -226,8 +226,8 @@ _HINT_AR = {
         "أرفق إطار البداية للمتابعة — وهو مطلوب لهذا النموذج.",
     "Sora 2 Pro is highly unstable. Switch to another model if it fails.":
         "Sora 2 Pro غير مستقرة للغاية. انتقل إلى نموذج آخر إذا فشلت.",
-    "Attach a photo — this model animates your exact character.":
-        "أرفق صورة — هذا النموذج يحرّك شخصيتك بدقة.",
+    "Attach a photo — the model animates a character based on it.":
+        "أرفق صورة — سيحرّك النموذج شخصية مستندة إليها.",
     "Optional: attach a photo as a style reference.\nFor an exact character, use Grok Image-to-Video instead.":
         "اختياري: أرفق صورة كمرجع أسلوبي.\nللحصول على شخصية دقيقة، استخدم Grok Image-to-Video.",
     "Upload a character image and a voice recording to make your avatar talk":
