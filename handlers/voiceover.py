@@ -389,12 +389,9 @@ async def voiceover_model_menu(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(uid)
     unlim = has_unlimited(uid)
     if not unlim:
-        # Coin users: voiceover is unlimited-subscription only
-        await cb.message.edit_text(
-            f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('audio_unlimited_only', lang)}",
-            reply_markup=kb([InlineKeyboardButton(text=t("btn_back", lang), callback_data="main_menu")]),
-            parse_mode="HTML",
-        )
+        # Coin users: show kie.ai TTS model picker
+        text, markup = _tts_coin_menu(lang)
+        await cb.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
         await cb.answer()
         return
     tier = get_unlimited_tier(uid) or "standard"
@@ -1124,5 +1121,492 @@ async def _notify_admin(cb: CallbackQuery, oid: int, tool: str, params: dict, co
         ADMIN_ID,
         f"📋 <b>Text #{oid}:</b>\n\n<code>{params.get('text','—')}</code>",
         parse_mode="HTML"
+    )
+    await bot.session.close()
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# kie.ai TTS — coin-based voice generation (ElevenLabs + Gemini)
+# ════════════════════════════════════════════════════════════════════════════
+
+class TTSStates(StatesGroup):
+    entering_text = State()
+
+
+EL11_COINS  = 5   # per generation ($0.25)
+GEM25_COINS = 8   # per generation ($0.40)
+
+_TTS_PAGE_SIZE = 8
+
+# (voice_id, display_name, short_desc)
+EL11_VOICES: list[tuple] = [
+    ("EkK5I93UQWFDigLMpZcX", "James",           "Husky & Bold"),
+    ("Z3R5wn05IrDiVCyEkUrK", "Arabella",        "Mysterious"),
+    ("NNl6r8mD7vthiJatiJt1", "Bradford",        "Expressive"),
+    ("YOq2y2Up4RgXP2HyXjE5", "Xavier",          "Announcer"),
+    ("B8gJV1IhpuegLxdpXFOE", "Kuon",            "Cheerful"),
+    ("2zRM7PkgwBPiau2jvVXc", "Monika Sogam",    "Deep & Natural"),
+    ("1SM7GgM6IMuvQlz2BwM3", "Mark",            "Casual & Light"),
+    ("5l5f8iK3YPeGga21rQIX", "Adeline",         "Feminine"),
+    ("scOwDtmlUjD3prqpp97I", "Sam",              "Support Agent"),
+    ("NOpBlnGInO9m6vDvFkFC", "Spuds Oxley",     "Wise"),
+    ("BZgkqPqms7Kj9ulSkVzn", "Eve",             "Energetic"),
+    ("wo6udizrrtpIxWGp2qJk", "Northern Terry",  ""),
+    ("gU0LNdkMOQCOrPrwtbee", "Football Announcer", "British"),
+    ("DGzg6RaUqxGRTHSBjfgF", "Brock",           "Commanding"),
+    ("x70vRnQBMBu4FAYhjJbO", "Nathan",           "Radio Host"),
+    ("Sm1seazb4gs7RSlUVw7c", "Anika",            "Friendly"),
+    ("P1bg08DkjqiVEzOn76yG", "Viraj",            "Rich & Soft"),
+    ("qDuRKMlYmrm8trt5QyBn", "Taksh",            "Calm"),
+    ("qXpMhyvQqiRxWQs4qSSB", "Horatius",         "Energetic"),
+    ("TX3LPaxmHKxFdv7VOQHJ", "Liam",             "Social Media"),
+    ("N2lVS1w4EtoT3dr4eOWO", "Callum",           "Husky"),
+    ("FGY2WhTYpPnrIDTdsKH5", "Laura",            "Quirky"),
+    ("kPzsL2i3teMYv0FxEYQ6", "Brittney",         "Social Media"),
+    ("UgBBYS2sOqTuMpoF3BR0", "Mark (Natural)",   "Natural"),
+    ("hpp4J3VqNfWAUOO0d1Us", "Bella",            "Professional"),
+    ("nPczCjzI2devNBz1zQrb", "Brian",            "Deep & Warm"),
+    ("uYXf8XasLslADfZ2MB4u", "Hope",             "Bubbly"),
+    ("gs0tAILXbY5DNrJrsM6F", "Jeff",             "Classy"),
+    ("DTKMou8ccj1ZaWGBiotd", "Jamahal",          "Vibrant"),
+    ("vBKc2FfBKJfcZNyEt1n6", "Finn",             "Youthful"),
+    ("DYkrAHD8iwork3YSUBbs", "Tom",              "Books"),
+    ("56AoDkrOh6qfVPDXZ7Pt", "Cassidy",          "Direct"),
+    ("eR40ATw9ArzDf9h3v7t7", "Addison",          "Australian"),
+    ("g6xIsTj2HwM6VR4iXFCw", "Jessica",          "Chatty"),
+    ("lcMyyd2HUfFzxdCaC4Ta", "Lucy",             "Fresh"),
+    ("6aDn1KB0hjpdcocrUkmq", "Tiffany",          "Welcoming"),
+    ("Sq93GQT4X1lKDXsQcixO", "Felix",            "Warm"),
+    ("flHkNRp1BlvT73UL6gyz", "Jessica (Villain)","Eloquent"),
+    ("9yzdeviXkFddZ4Oz8Mok", "Lutz",             "Cheerful"),
+    ("pPdl9cQBQq4p6mRkZy2Z", "Emma",             "Upbeat"),
+    ("zYcjlYFOd3taleS0gkk3", "Edward",           "Confident"),
+    ("nzeAacJi50IvxcyDnMXa", "Marshal",          "Professor"),
+    ("ruirxsoakN0GWmGNIo04", "John Morgan",      "Cowboy"),
+    ("TC0Zp7WVFzhA8zpTlRqV", "Aria",             "Villain"),
+    ("ljo9gAlSqKOvF6D8sOsX", "Viking Bjorn",     "Epic"),
+    ("PPzYpIqttlTYA83688JI", "Pirate Marshal",   ""),
+    ("8JVbfL6oEdmuxKn5DK2C", "Johnny Kid",       "Calm"),
+    ("iCrDUkL56s3C8sCRl7wb", "Hope (Romantic)",  "Poetic"),
+    ("wJqPPQ618aTW29mptyoc", "Ana Rita",          "Expressive"),
+    ("EiNlNiXeDU1pqqOPrYMO", "John Doe",         "Deep"),
+    ("4YYIPFl9wE5c4L2eu2Gb", "Burt Reynolds™",   "Deep & Smooth"),
+    ("6F5Zhi321D3Oq7v1oNT4", "Hank",             "Narrator"),
+    ("YXpFCvM1S3JbWEJhoskW", "Wyatt",            "Cowboy"),
+    ("LG95yZDEHg6fCZdQjLqj", "Phil",             "Announcer"),
+    ("CeNX9CMwmxDxUF5Q2Inm", "Johnny Dynamite",  "Radio DJ"),
+    ("aD6riP1btT197c6dACmy", "Rachel M",          "British Radio"),
+    ("mtrellq69YZsNwzUSyXh", "Rex Thunder",       "Deep & Tough"),
+    ("dHd5gvgSOzSfduK4CvEg", "Ed",               "Late Night"),
+    ("eVItLK1UvXctxuaRV2Oq", "Jean",             "Playful"),
+    ("esy0r39YPLQjOczyOib8", "Britney",           "Villain"),
+    ("Tsns2HvNFKfGiNjllgqo", "Sven",             "Emotional"),
+    ("1U02n4nD6AdIZ9CjF053", "Viraj (Smooth)",   "Gentle"),
+    ("AeRdCCKzvd23BpJoofzx", "Nathaniel",        "British"),
+    ("LruHrtVF6PSyGItzMNHS", "Benjamin",         "Deep & Warm"),
+    ("1wGbFxmAM3Fgw63G1zZJ", "Allison",          "Meditative"),
+    ("hqfrgApggtO1785R4Fsn", "Theodore",         "Grounded"),
+    ("MJ0RnG71ty4LH3dvNfSd", "Leon",             "Soothing"),
+]
+
+GEM25_VOICES: list[str] = [
+    "Achernar", "Achird", "Algenib", "Algieba", "Alnilam",
+    "Aoede", "Autonoe", "Callirrhoe", "Charon", "Despina",
+    "Enceladus", "Erinome", "Fenrir", "Gacrux", "Iapetus",
+    "Kore", "Laomedeia", "Leda", "Orus", "Puck",
+    "Pulcherrima", "Rasalgethi", "Sadachbia", "Sadaltager", "Schedar",
+    "Sulafat", "Umbriel", "Vindemiatrix", "Zephyr", "Zubenelgenubi",
+]
+
+_EL11_PREVIEW_BASE = "https://static.aiquickdraw.com/elevenlabs/voice"
+
+
+def _tts_coin_menu(lang: str):
+    text = (
+        f"{t('audio_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('tts_coin_menu_body', lang)}"
+    )
+    markup = kb(
+        [InlineKeyboardButton(
+            text=f"ElevenLabs Multilingual v2   {EL11_COINS}◈",
+            callback_data="tts_model_el11",
+        )],
+        [InlineKeyboardButton(
+            text=f"Gemini 2.5 Pro TTS   {GEM25_COINS}◈",
+            callback_data="tts_model_gem25",
+        )],
+        [menu_btn(lang)],
+    )
+    return text, markup
+
+
+# ── ElevenLabs voice picker ──────────────────────────────────────────────────
+
+async def _show_el11_page(message, lang: str, page: int):
+    total = (len(EL11_VOICES) + _TTS_PAGE_SIZE - 1) // _TTS_PAGE_SIZE
+    start = page * _TTS_PAGE_SIZE
+    voices = EL11_VOICES[start:start + _TTS_PAGE_SIZE]
+    buttons = [
+        InlineKeyboardButton(
+            text=f"{name} — {desc}" if desc else name,
+            callback_data=f"tts_el11_v_{vid}",
+        )
+        for vid, name, desc in voices
+    ]
+    rows = list(chunked(buttons, 2))
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text="◀", callback_data=f"tts_el11_p_{page - 1}"))
+    if page < total - 1:
+        nav.append(InlineKeyboardButton(text="▶", callback_data=f"tts_el11_p_{page + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([back_btn("cat_audio", lang=lang), menu_btn(lang)])
+    page_ind = t("tts_page_indicator", lang, page=page + 1, total=total)
+    await message.edit_text(
+        f"◈  <b>ElevenLabs Multilingual v2</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('tts_select_voice', lang)}  {page_ind}",
+        reply_markup=kb(*rows),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data == "tts_model_el11")
+async def tts_el11_start(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(tts_provider="el11", tts_coins=EL11_COINS, tts_page=0)
+    await _show_el11_page(cb.message, lang, 0)
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("tts_el11_p_"))
+async def tts_el11_page(cb: CallbackQuery, state: FSMContext):
+    page = int(cb.data.replace("tts_el11_p_", "", 1))
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(tts_page=page)
+    await _show_el11_page(cb.message, lang, page)
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("tts_el11_v_"))
+async def tts_el11_voice_selected(cb: CallbackQuery, state: FSMContext):
+    voice_id = cb.data.replace("tts_el11_v_", "", 1)
+    lang = get_lang(cb.from_user.id)
+    voice = next((v for v in EL11_VOICES if v[0] == voice_id), None)
+    if not voice:
+        await cb.answer("Voice not found")
+        return
+    _, voice_name, voice_desc = voice
+    await state.update_data(
+        tts_voice_id=voice_id, tts_voice_name=voice_name, tts_voice_desc=voice_desc,
+    )
+    data = await state.get_data()
+    page = data.get("tts_page", 0)
+    await cb.message.edit_text(
+        f"◈  <b>{voice_name}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  {voice_desc}\n\n"
+        f"{t('tts_voice_card_prompt', lang)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text=t("tts_btn_preview", lang), callback_data="tts_el11_preview")],
+            [InlineKeyboardButton(text=t("tts_btn_choose", lang),  callback_data="tts_enter_text")],
+            [back_btn(f"tts_el11_p_{page}", lang=lang), menu_btn(lang)],
+        ),
+        parse_mode="HTML",
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data == "tts_el11_preview")
+async def tts_el11_preview(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    voice_id   = data.get("tts_voice_id")
+    voice_name = data.get("tts_voice_name", "—")
+    if not voice_id:
+        await cb.answer(t("tts_session_expired", lang), show_alert=True)
+        return
+    url = f"{_EL11_PREVIEW_BASE}/{voice_id}.mp3"
+    audio_bytes = await _fetch_preview_bytes(url)
+    if not audio_bytes:
+        await cb.answer(t("vo_preview_error", lang), show_alert=True)
+        return
+    await cb.message.answer_document(
+        document=BufferedInputFile(audio_bytes, filename=f"{voice_name}.mp3"),
+        thumbnail=_audio_thumb(),
+        caption=f"◈  {voice_name}",
+    )
+    await cb.answer()
+
+
+# ── Gemini voice picker ──────────────────────────────────────────────────────
+
+async def _show_gem25_page(message, lang: str, page: int):
+    total = (len(GEM25_VOICES) + _TTS_PAGE_SIZE - 1) // _TTS_PAGE_SIZE
+    start = page * _TTS_PAGE_SIZE
+    voices = GEM25_VOICES[start:start + _TTS_PAGE_SIZE]
+    buttons = [
+        InlineKeyboardButton(text=v, callback_data=f"tts_gem25_v_{v}")
+        for v in voices
+    ]
+    rows = list(chunked(buttons, 2))
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text="◀", callback_data=f"tts_gem25_p_{page - 1}"))
+    if page < total - 1:
+        nav.append(InlineKeyboardButton(text="▶", callback_data=f"tts_gem25_p_{page + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([back_btn("cat_audio", lang=lang), menu_btn(lang)])
+    page_ind = t("tts_page_indicator", lang, page=page + 1, total=total)
+    await message.edit_text(
+        f"◈  <b>Gemini 2.5 Pro TTS</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('tts_select_voice', lang)}  {page_ind}",
+        reply_markup=kb(*rows),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data == "tts_model_gem25")
+async def tts_gem25_start(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(tts_provider="gem25", tts_coins=GEM25_COINS, tts_page=0)
+    await _show_gem25_page(cb.message, lang, 0)
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("tts_gem25_p_"))
+async def tts_gem25_page(cb: CallbackQuery, state: FSMContext):
+    page = int(cb.data.replace("tts_gem25_p_", "", 1))
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(tts_page=page)
+    await _show_gem25_page(cb.message, lang, page)
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("tts_gem25_v_"))
+async def tts_gem25_voice_selected(cb: CallbackQuery, state: FSMContext):
+    voice_name = cb.data.replace("tts_gem25_v_", "", 1)
+    lang = get_lang(cb.from_user.id)
+    if voice_name not in GEM25_VOICES:
+        await cb.answer("Voice not found")
+        return
+    await state.update_data(tts_voice_name=voice_name)
+    await _show_tts_text_entry(cb.message, lang, state)
+    await cb.answer()
+
+
+# ── Shared text entry ────────────────────────────────────────────────────────
+
+async def _show_tts_text_entry(message, lang: str, state: FSMContext):
+    data = await state.get_data()
+    provider    = data.get("tts_provider", "el11")
+    voice_name  = data.get("tts_voice_name", "—")
+    max_chars   = 5000 if provider == "el11" else 10000
+    model_label = "ElevenLabs Multilingual v2" if provider == "el11" else "Gemini 2.5 Pro TTS"
+    await message.edit_text(
+        f"◈  <b>{voice_name}</b>  —  {model_label}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('tts_enter_text_prompt', lang, max=max_chars)}",
+        reply_markup=kb([back_btn("cat_audio", lang=lang), menu_btn(lang)]),
+        parse_mode="HTML",
+    )
+    await state.set_state(TTSStates.entering_text)
+
+
+@router.callback_query(F.data == "tts_enter_text")
+async def tts_enter_text_cb(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await _show_tts_text_entry(cb.message, lang, state)
+    await cb.answer()
+
+
+@router.message(TTSStates.entering_text)
+async def tts_text_received(msg: Message, state: FSMContext):
+    lang      = get_lang(msg.from_user.id)
+    data      = await state.get_data()
+    provider  = data.get("tts_provider", "el11")
+    max_chars = 5000 if provider == "el11" else 10000
+    text      = msg.text or ""
+
+    if len(text) > max_chars:
+        await msg.answer(t("tts_text_too_long", lang, max=max_chars), parse_mode="HTML")
+        return
+
+    await state.update_data(tts_text=text)
+    voice_name   = data.get("tts_voice_name", "—")
+    price_coins  = data.get("tts_coins", EL11_COINS)
+    user_coins   = get_coins(msg.from_user.id)
+    model_label  = "ElevenLabs Multilingual v2" if provider == "el11" else "Gemini 2.5 Pro TTS"
+    coins_word   = t("coins_word", lang)
+    preview      = text if len(text) <= 200 else text[:200] + "…"
+
+    await msg.answer(
+        f"{t('tts_order_summary_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('tts_voice_label', lang, name=voice_name)}\n"
+        f"{t('tts_model_label', lang, model=model_label)}\n"
+        f"{t('tts_cost_label', lang)}<b>{price_coins} {coins_word}</b>\n"
+        f"{t('tts_balance_label', lang)}{user_coins} {coins_word}\n\n"
+        f"{t('tts_text_label', lang)}\n<i>{preview}</i>\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━",
+        reply_markup=kb(
+            [InlineKeyboardButton(
+                text=t("tts_confirm_btn", lang, coins=price_coins),
+                callback_data="tts_confirm",
+            )],
+            [InlineKeyboardButton(
+                text=t("tts_edit_text_btn", lang),
+                callback_data="tts_edit_text",
+            )],
+            [menu_btn(lang)],
+        ),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data == "tts_edit_text")
+async def tts_edit_text(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await _show_tts_text_entry(cb.message, lang, state)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "tts_confirm")
+async def tts_confirm(cb: CallbackQuery, state: FSMContext):
+    lang        = get_lang(cb.from_user.id)
+    data        = await state.get_data()
+    uid         = cb.from_user.id
+    provider    = data.get("tts_provider", "el11")
+    voice_name  = data.get("tts_voice_name")
+    voice_id    = data.get("tts_voice_id")  # EL11 only
+    voice_desc  = data.get("tts_voice_desc", "")
+    text        = data.get("tts_text")
+    price_coins = data.get("tts_coins", EL11_COINS)
+    price_usd   = coins_to_usd(price_coins)
+
+    if not voice_name or not text:
+        await cb.answer(t("tts_session_expired", lang), show_alert=True)
+        await state.clear()
+        return
+
+    if not spend_coins(uid, price_coins):
+        await cb.answer(t("tts_insufficient_coins", lang), show_alert=True)
+        return
+
+    model_label = "ElevenLabs Multilingual v2" if provider == "el11" else "Gemini 2.5 Pro TTS"
+    tool_name   = f"{model_label} — {voice_name}"
+
+    if provider == "el11":
+        params = {
+            "text":             text,
+            "voice_id":         voice_id or "EkK5I93UQWFDigLMpZcX",
+            "voice_name":       voice_name,
+            "stability":        0.5,
+            "similarity_boost": 0.75,
+        }
+    else:
+        params = {
+            "text":       text,
+            "voice_name": voice_name,
+        }
+
+    try:
+        oid = create_order(
+            uid, cb.from_user.username or cb.from_user.first_name,
+            tool_name, params, price_coins, price_usd,
+        )
+    except Exception:
+        add_coins(uid, price_coins)
+        await state.clear()
+        await cb.message.edit_text(
+            t("vid_order_error", lang),
+            reply_markup=kb([menu_btn(lang)]),
+            parse_mode="HTML",
+        )
+        return
+
+    if not oid:
+        add_coins(uid, price_coins)
+        await state.clear()
+        await cb.message.edit_text(
+            t("vid_order_error", lang),
+            reply_markup=kb([menu_btn(lang)]),
+            parse_mode="HTML",
+        )
+        return
+
+    wait_min  = sp.wait_minutes(tool_name, "audio")
+    base_text = (
+        f"{t('tts_order_placed_title', lang, oid=oid)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('tts_voice_row', lang, name=voice_name)}\n"
+        f"{t('tts_coins_deducted', lang, coins=price_coins)}\n\n"
+        f"{t('tts_estimated_delivery', lang, minutes=wait_min)}\n\n"
+        f"{t('tts_will_deliver', lang)}"
+    )
+    await cb.message.edit_text(base_text, reply_markup=kb([menu_btn(lang)]), parse_mode="HTML")
+    sp.start(oid, cb.message.chat.id, cb.message.message_id, base_text, wait_min)
+    await state.clear()
+
+    await _push_tts_to_queue(
+        oid, uid, provider, tool_name, params, price_coins, price_usd,
+        username=cb.from_user.username or cb.from_user.first_name or "",
+    )
+    try:
+        await _notify_admin_tts(cb, oid, provider, voice_name, text, price_coins, price_usd)
+    except Exception:
+        pass
+
+
+async def _push_tts_to_queue(
+    oid: int, uid: int, provider: str, tool: str, params: dict,
+    coins: int, usd: float, username: str = "",
+):
+    import logging as _log, json
+    log = _log.getLogger(__name__)
+    try:
+        import redis.asyncio as aioredis
+        redis_url = os.environ.get("REDIS_URL", "")
+        if not redis_url:
+            return
+        r = await aioredis.from_url(redis_url, decode_responses=True)
+        order_data = {
+            "order_id": oid,
+            "user_id":  uid,
+            "tool_id":  provider,   # "el11" or "gem25" — routed to kie.ai in worker
+            "tool_name": tool,
+            "type":     "audio",
+            "params":   params,
+            "coins":    coins,
+            "usd":      usd,
+        }
+        await r.rpush("retainx:orders", json.dumps(order_data))
+        log.info(f"[QUEUE] TTS order #{oid} pushed (provider={provider})")
+        from worker_monitor import check_workers_alive, send_no_workers_alert
+        if not await check_workers_alive(redis_url):
+            await send_no_workers_alert(
+                order_id=oid, user_id=uid, username=username,
+                tool=tool, params=params, coins=coins, redis_url=redis_url,
+            )
+        await r.aclose()
+    except Exception as e:
+        log.error(f"[QUEUE] Failed to push TTS order #{oid}: {e}")
+
+
+async def _notify_admin_tts(
+    cb, oid: int, provider: str, voice_name: str, text: str, coins: int, price_usd: float,
+):
+    from config import ADMIN_ID, BOT_TOKEN
+    from aiogram import Bot
+    bot = Bot(token=BOT_TOKEN)
+    model_label = "ElevenLabs Multilingual v2" if provider == "el11" else "Gemini 2.5 Pro TTS"
+    await bot.send_message(
+        ADMIN_ID,
+        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
+        f"◈  <b>New TTS Order #{oid}</b>\n"
+        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
+        f"  User    @{cb.from_user.username or '—'} (<code>{cb.from_user.id}</code>)\n"
+        f"  Voice   <b>{voice_name}</b>\n"
+        f"  Model   {model_label}\n"
+        f"  Coins   <b>{coins}◈</b>  (${price_usd})\n\n"
+        f"  Text:\n<code>{text[:400]}</code>",
+        parse_mode="HTML",
     )
     await bot.session.close()
