@@ -489,6 +489,7 @@ STR = {
         # ── Video generation flow ──────────────────────────────
         "vid_menu_title": "◈  <b>Video Generation</b>",
         "vid_select_category": "Select a category:",
+        "vid_low_balance_notice": "Low balance: {coins} coins — top up before ordering.",
         "vid_sub_standard": "▸  Standard Video",
         "vid_sub_premium": "▸  Premium Video",
         "vid_sub_kling": "▸  Kling Video",
@@ -508,6 +509,7 @@ STR = {
         "vid_duration_label": "  Duration       {dur} sec",
         "vid_cost_label": "  Cost              <b>{coins} coins</b>",
         "vid_cost_label_short": "  Cost   <b>{coins} coins</b>",
+        "vid_balance_label": "  Balance        {coins} coins",
         "vid_audio_label": "  Audio            {audio}",
         "vid_audio_yes": "Yes",
         "vid_audio_no": "No",
@@ -1505,6 +1507,7 @@ STR = {
         # ── Video generation flow ──────────────────────────────
         "vid_menu_title": "◈  <b>Генерация видео</b>",
         "vid_select_category": "Выберите категорию:",
+        "vid_low_balance_notice": "Низкий баланс: {coins} монет — пополните перед заказом.",
         "vid_sub_standard": "▸  Стандартное видео",
         "vid_sub_premium": "▸  Премиум видео",
         "vid_sub_kling": "▸  Kling видео",
@@ -1524,6 +1527,7 @@ STR = {
         "vid_duration_label": "  Длительность   {dur} сек",
         "vid_cost_label": "  Стоимость       <b>{coins} монет</b>",
         "vid_cost_label_short": "  Стоимость   <b>{coins} монет</b>",
+        "vid_balance_label": "  Баланс        {coins} монет",
         "vid_audio_label": "  Аудио            {audio}",
         "vid_audio_yes": "Да",
         "vid_audio_no": "Нет",
@@ -2519,6 +2523,7 @@ STR = {
         # ── Video generation flow ──────────────────────────────
         "vid_menu_title": "◈  <b>إنشاء الفيديو</b>",
         "vid_select_category": "اختر فئة:",
+        "vid_low_balance_notice": "رصيد منخفض: {coins} عملة — أضف رصيداً قبل الطلب.",
         "vid_sub_standard": "▸  فيديو قياسي",
         "vid_sub_premium": "▸  فيديو مميز",
         "vid_sub_kling": "▸  Kling فيديو",
@@ -2538,6 +2543,7 @@ STR = {
         "vid_duration_label": "  المدة       {dur} ثانية",
         "vid_cost_label": "  التكلفة       <b>{coins} عملة</b>",
         "vid_cost_label_short": "  التكلفة   <b>{coins} عملة</b>",
+        "vid_balance_label": "  الرصيد        {coins} عملة",
         "vid_audio_label": "  الصوت      {audio}",
         "vid_audio_yes": "نعم",
         "vid_audio_no": "لا",

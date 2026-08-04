@@ -10,7 +10,7 @@ from config import (
     usd_to_coins,
     SEEDANCE_20_PRICES, SEEDANCE_20_FAST_PRICES, HAPPY_HORSE_PRICES,
     VEO_31_PRICES, VEO_31_FAST_PRICES, VEO_31_LITE_PRICES,
-    KLING_30_VIDEO_PRICES, KLING_03_VIDEO_PRICES,
+    KLING_30_VIDEO_PRICES, KLING_03_VIDEO_PRICES, KLING_30_MOTION_CONTROL_PRICES,
     WAN_27_PRICES, SORA_2_PRO_PRICES, LTX_23_PRICES,
     GROK_IMAGINE_15_PRICES, HEYGEN_AVATAR_PRICES, HEYGEN_TRANSLATE_PRICES,
     HEYGEN_TRANSLATE_PRECISION_PRICES, HEYGEN_TRANSLATE_SPEED_PRICES,
@@ -60,7 +60,6 @@ TOOL_IDS = {
     "kl30":   "Kling 3.0",
     "kl03":   "Kling O3",
     "klmc":   "Kling 3.0 Motion Control",
-    "klve":   "Kling O3 Video Edit",
     "hga4":   "HeyGen Avatar 4",
     "hgtr":   "HeyGen Translate",
     "eldb":   "ElevenLabs Dubbing",
@@ -100,7 +99,7 @@ TOOL_DESCS = {
 VIDEO_SUBCATS = {
     "Standard":  ["sd20","sd20f","hh10","wan27","grok"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
-    "Kling":     ["kl30","kl03"],
+    "Kling":     ["kl30","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
 def subcat_label(sub: str, lang: str = "en") -> str:
@@ -124,6 +123,7 @@ def get_price_table(tid: str):
         "ltx23": LTX_23_PRICES,
         "kl30":  KLING_30_VIDEO_PRICES,
         "kl03":  KLING_03_VIDEO_PRICES,
+        "klmc":  KLING_30_MOTION_CONTROL_PRICES,
     }.get(tid, {})
 
 def get_resolutions(tid: str):
@@ -139,6 +139,7 @@ def get_resolutions(tid: str):
         "ltx23": ["720p","1080p","2K","4K"],
         "kl30":  ["720p","1080p","4K"],
         "kl03":  ["720p","1080p","4K"],
+        "klmc":  ["1080p"],
     }.get(tid, ["720p","1080p"])
 
 def get_aspect_ratios(tid: str):
@@ -154,6 +155,7 @@ def get_aspect_ratios(tid: str):
         "ltx23": ["16:9","9:16"],
         "kl30":  ["16:9","9:16","1:1"],
         "kl03":  ["16:9","9:16","1:1"],
+        "klmc":  ["16:9","9:16","1:1"],
     }.get(tid, ["16:9","9:16"])
 
 def get_durations(tid: str):
@@ -169,6 +171,7 @@ def get_durations(tid: str):
         "ltx23": [6,8,10],
         "kl30":  list(range(3,16)),
         "kl03":  list(range(3,16)),
+        "klmc":  list(range(3,16)),
     }.get(tid, [4,8,12])
 
 HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl03","hgtr","eldb","lips"}
@@ -179,7 +182,7 @@ async def video_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
     uid = cb.from_user.id
     lang = get_lang(uid)
-    from database import has_unlimited, get_unlimited_tier
+    from database import has_unlimited, get_unlimited_tier, get_coins
     from config import UNLIMITED_TIER_CONFIG
     unlim = has_unlimited(uid)
     if unlim:
@@ -191,10 +194,12 @@ async def video_menu(cb: CallbackQuery, state: FSMContext):
         visible_subcats = list(VIDEO_SUBCATS.keys())
     buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in visible_subcats]
     buttons.append([back_btn("main_menu", t("menu_main_menu", lang))])
+    balance = get_coins(uid)
+    low_bal = f"\n⚠️  {t('vid_low_balance_notice', lang, coins=balance)}" if not unlim and balance < 5 else ""
     await cb.message.edit_text(
         f"{t('vid_menu_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('vid_select_category', lang)}",
+        f"{t('vid_select_category', lang)}{low_bal}",
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
 
@@ -759,10 +764,12 @@ async def prompt_received(msg: Message, state: FSMContext):
     audio_word = t("vid_audio_yes", ui_lang) if audio else t("vid_audio_no", ui_lang)
     if tid not in no_res_tools: lines += t("vid_audio_label", ui_lang, audio=audio_word) + "\n"
     if attach_summary: lines += t("vid_attachments_label", ui_lang) + attach_summary
-    from database import has_unlimited
+    from database import has_unlimited, get_coins
     unlimited = has_unlimited(msg.from_user.id)
     if not unlimited:
+        user_balance = get_coins(msg.from_user.id)
         lines += t("vid_cost_label", ui_lang, coins=coins) + "\n"
+        lines += t("vid_balance_label", ui_lang, coins=user_balance) + "\n"
     confirm_btn = t("vid_btn_confirm_order", ui_lang) if unlimited else t("vid_btn_confirm", ui_lang, coins=coins)
 
     await msg.answer(
@@ -1560,7 +1567,7 @@ async def att_back(cb: CallbackQuery, state: FSMContext):
 # ── Proceed to prompt ─────────────────────────────────────────
 # Tools that need resolution/duration selection after attachments
 NEEDS_RESOLUTION = {"sd20", "sd20f", "hh10", "veo31", "veo31f", "veo31l",
-                    "kl30", "kl03", "ltx23", "wan27", "sora2", "hail23"}
+                    "kl30", "kl03", "klmc", "ltx23", "wan27", "sora2", "hail23"}
 
 @router.callback_query(F.data == "att_to_prompt")
 async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
