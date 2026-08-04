@@ -1558,7 +1558,8 @@ def _build_attach_buttons(tid: str, data: dict, lang: str = "en") -> list:
 
     # Start/End frame section
     if start_frame and (mode == "startend" or not exclusive):
-        s_label = f"✓  {t('vid_btn_start_frame', lang)}" if start else f"◈  {t('vid_btn_start_frame', lang)}"
+        _sf_key = cfg.get("start_frame_label_key", "vid_btn_start_frame")
+        s_label = f"✓  {t(_sf_key, lang)}" if start else f"◈  {t(_sf_key, lang)}"
         buttons.append([InlineKeyboardButton(text=s_label, callback_data="att_set_start")])
         if end_frame:
             e_label = f"✓  {t('vid_btn_end_frame', lang)}" if end_ else f"◈  {t('vid_btn_end_frame', lang)}"
@@ -1653,9 +1654,13 @@ async def att_clear_startend(cb: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "att_set_start")
 async def att_set_start(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    cfg_local = get_attach_config(data.get("v_tid", ""))
+    title_key = cfg_local.get("start_frame_title_key", "vid_start_frame_title")
+    desc_key  = cfg_local.get("start_frame_desc_key",  "vid_start_frame_desc_short")
     await cb.message.edit_text(
-        f"{t('vid_start_frame_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('vid_start_frame_desc_short', lang)}",
+        f"{t(title_key, lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t(desc_key, lang)}",
         reply_markup=kb([back_btn("att_back", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
