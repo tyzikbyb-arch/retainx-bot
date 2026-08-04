@@ -111,8 +111,7 @@ TOOL_DESCS = {
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["sd20","sd20f","hh10","wan27"],
-    "Grok":      ["grokimag"],
+    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
