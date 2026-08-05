@@ -48,12 +48,12 @@ IMAGE_TOOLS = {
         "pricing": {"per_gen": 0.05},
         "coins": 1,
     },
-    "Seedream 5.0": {
+    "Seedream 5.0 Pro": {
         "emoji": "✦",
         "max_refs": 9,
         "desc": "Advanced AI image synthesis with cinematic quality",
         "aspect_ratios": ["1:1","2:3","3:2","3:4","4:3","4:5","5:4","9:16","16:9","21:9"],
-        "quality": ["1K","2K","4K"],
+        "quality": ["1K","2K"],
         "pricing": {"per_gen": 0.05},
         "coins": 1,
     },
@@ -92,14 +92,6 @@ IMAGE_TOOLS = {
         "coins": 2,
     },
 
-    "Topaz Image Upscaler": {
-        "emoji": "🔎",
-        "max_refs": 1,
-        "desc": "AI-powered image upscaling to 8K resolution — just send any image",
-        "requires_ref": True,
-        "pricing": {"per_gen": 0.14},
-        "coins": 3,
-    },
     "Topaz Image Upscaler": {
         "emoji": "🔎",
         "max_refs": 1,
