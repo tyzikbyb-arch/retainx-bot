@@ -51,7 +51,31 @@ async def image_tool_selected(cb: CallbackQuery, state: FSMContext):
     # Build aspect ratio buttons
     ars = tool.get("aspect_ratios", [])
     if not ars:
-        # No AR step (e.g. Topaz Image Upscaler) — go straight to prompt/refs
+        qualities = tool.get("quality", [])
+        if qualities:
+            # No AR but has quality tiers — show quality picker with pricing
+            await state.update_data(img_ar="—")
+            cbq = tool.get("coins_by_quality", {})
+            coins_word = t("coins_word", lang)
+            if cbq:
+                price_line = "  " + "  /  ".join(f"{q}: <b>{c} {coins_word}</b>" for q, c in cbq.items())
+            else:
+                coins = tool.get("coins", 1)
+                price_line = f"  <b>{coins} {coins_word}</b>  {t('img_per_gen', lang)}"
+            q_buttons = [InlineKeyboardButton(text=q, callback_data=f"img_q_{q}") for q in qualities]
+            rows = list(chunked(q_buttons, 3))
+            rows.append([back_btn("cat_images", lang=lang), menu_btn(lang)])
+            await cb.message.edit_text(
+                f"{tool['emoji']}  <b>{name}</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"  {tool['desc']}\n\n"
+                f"  {t('img_price_label', lang)}   {price_line}\n\n"
+                f"  {t('img_select_quality', lang)}",
+                reply_markup=kb(*rows),
+                parse_mode="HTML"
+            )
+            return
+        # No AR and no quality — go straight to prompt/refs
         await state.update_data(img_ar="—", img_quality=None)
         await ask_prompt(cb, state, name, tool)
         return
