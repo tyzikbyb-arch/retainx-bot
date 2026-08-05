@@ -78,6 +78,8 @@ TOOL_IDS = {
     "grok":     "Grok Imagine 1.5",
     "grokt":    "Grok Text-to-Video",
     "groki":    "Grok Image-to-Video",
+    "groke":    "Grok Extend",
+    "groku":    "Grok Upscale",
     "grokimag": "Grok Imagine 1.5",
 }
 ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
@@ -94,7 +96,7 @@ TOOL_DESCS = {
     "Sora 2 Pro":              "OpenAI's advanced video generation model with premium realism.",
     "LTX 2.3 Pro":             "High-framerate professional video — up to 4K at 50fps.",
     "Kling 3.0":               "One of the most powerful AI video models of 2026. Realistic motion, character consistency, built-in audio, image-to-video, up to 4K.",
-    "Kling 0.3":               "Kling compact model — same visual quality, optimised for speed.",
+    "Kling O3":                "Kling compact model — same visual quality, optimised for speed.",
     "Kling 3.0 Motion Control":"Precise scene-level motion control in 1080p, 30-second output.",
     "Kling 3.0 Video Edit":    "Edit and enhance existing video clips using Kling AI.",
     "HeyGen Avatar 4":         "Photorealistic talking avatar — sync any script to a lifelike presenter.",
@@ -119,7 +121,6 @@ VIDEO_SUBCATS = {
 def subcat_label(sub: str, lang: str = "en") -> str:
     return {
         "Standard": t("vid_sub_standard", lang),
-        "Grok":     t("vid_sub_grok", lang),
         "Premium":  t("vid_sub_premium", lang),
         "Kling":    t("vid_sub_kling", lang),
         "Avatar":   t("vid_sub_avatar", lang),
@@ -189,7 +190,7 @@ def get_durations(tid: str):
         "klmc":  list(range(3,16)),
     }.get(tid, [4,8,12])
 
-HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl03","hgtr","eldb","lips"}
+HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl03"}
 
 # ── Video menu ────────────────────────────────────────────────
 @router.callback_query(F.data == "cat_video")
@@ -543,7 +544,7 @@ async def veo_extend(cb: CallbackQuery, state: FSMContext):
     mode = cb.data[5:]
     usd = 0.70 if mode == "Fast" else 1.50
     coins = usd_to_coins(usd)
-    await state.update_data(v_tool="Veo 3.1 Extend", v_tid="veo31e", v_coins=coins, v_usd=usd, v_ext_mode=mode,
+    await state.update_data(v_tool="Veo 3.1 Extend Video", v_tid="veo31e", v_coins=coins, v_usd=usd, v_ext_mode=mode,
                             att_mode="free", att_start=None, att_end=None,
                             att_imgs=[], att_vids=[], att_auds=[])
     await _show_attach_menu(cb, state)
@@ -1857,7 +1858,7 @@ async def att_back(cb: CallbackQuery, state: FSMContext):
 # ── Proceed to prompt ─────────────────────────────────────────
 # Tools that need resolution/duration selection after attachments
 NEEDS_RESOLUTION = {"sd20", "sd20f", "hh10", "veo31", "veo31f", "veo31l",
-                    "kl30", "kl03", "klmc", "ltx23", "wan27", "sora2", "hail23"}
+                    "kl30", "kl03", "klmc", "ltx23", "wan27", "sora2"}
 
 @router.callback_query(F.data == "att_to_prompt")
 async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
@@ -2222,7 +2223,7 @@ async def omni_dur(cb: CallbackQuery, state: FSMContext):
     usd = OMNIHUMAN_PRICES.get(minutes, 3.00)
     coins = usd_to_coins(usd)
     await state.update_data(
-        v_tool="OmniHuman 1.5", v_tid="omni",
+        v_tool="OmniHuman 1.5 Avatar", v_tid="omni",
         v_dur=minutes, v_coins=coins, v_usd=usd,
         att_mode="free", att_start=None, att_end=None,
         att_imgs=[], att_vids=[], att_auds=[],
@@ -2234,7 +2235,6 @@ async def omni_dur(cb: CallbackQuery, state: FSMContext):
 # AURORA AVATAR — AR → Resolution → Duration → Attachments
 # ═══════════════════════════════════════════════════════════
 
-@router.callback_query(F.data == "vt_aur1")
 async def aur1_start(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     await state.update_data(v_tool="Aurora Avatar", v_tid="aur1")

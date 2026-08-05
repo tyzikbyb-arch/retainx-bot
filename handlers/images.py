@@ -138,7 +138,13 @@ async def ask_prompt(cb: CallbackQuery, state: FSMContext, name: str, tool: dict
         f"  {t('img_balance_label', lang)}   {user_coins} {coins_word}\n"
     ) if not unlimited else ""
 
+    requires_ref = tool.get("requires_ref", False)
     if max_refs > 0:
+        ref_btn_text = t("img_btn_add_ref", lang, max=max_refs)
+        ref_rows = [[InlineKeyboardButton(text=ref_btn_text, callback_data="img_add_refs")]]
+        if not requires_ref:
+            ref_rows.append([InlineKeyboardButton(text=t("img_btn_skip_prompt", lang), callback_data="img_to_prompt")])
+        ref_rows.append([back_btn(f"img_{name}", lang=lang), menu_btn(lang)])
         await cb.message.edit_text(
             f"◈  <b>{name}</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -146,11 +152,7 @@ async def ask_prompt(cb: CallbackQuery, state: FSMContext, name: str, tool: dict
             f"  {t('img_quality_label', lang)}           {quality or '—'}\n"
             f"{cost_lines}\n"
             f"{t('img_attach_optional', lang)}",
-            reply_markup=kb(
-                [InlineKeyboardButton(text=t("img_btn_add_ref", lang, max=max_refs), callback_data="img_add_refs")],
-                [InlineKeyboardButton(text=t("img_btn_skip_prompt", lang), callback_data="img_to_prompt")],
-                [back_btn(f"img_{name}", lang=lang), menu_btn(lang)],
-            ),
+            reply_markup=kb(*ref_rows),
             parse_mode="HTML"
         )
     else:
@@ -405,17 +407,24 @@ async def img_collect_ref(msg: Message, state: FSMContext):
 
 @router.callback_query(F.data == "img_refs_done")
 async def img_refs_done(cb: CallbackQuery, state: FSMContext):
-    await cb.answer()
     lang = get_lang(cb.from_user.id)
     data = await state.get_data()
     refs = data.get("img_refs", [])
     name = data.get("img_tool", "")
+    from config import IMAGE_TOOLS
+    tool = IMAGE_TOOLS.get(name, {})
+    if tool.get("requires_ref") and not refs:
+        await cb.answer(t("img_ref_required_alert", lang), show_alert=True)
+        return
+    await cb.answer()
     coins = data.get("img_coins", 1)
     coins_word = t("coins_word", lang)
     ar = data.get("img_ar", "—")
     quality = data.get("img_quality", "—")
+    unlimited = has_unlimited(cb.from_user.id)
 
     ref_line = f"\n{t('img_refs_attached', lang, count=len(refs))}" if refs else ""
+    cost_line = f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n\n" if not unlimited else "\n"
 
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
@@ -423,7 +432,7 @@ async def img_refs_done(cb: CallbackQuery, state: FSMContext):
         f"  {t('img_aspect_ratio_label', lang)}   {ar}\n"
         f"  {t('img_quality_label', lang)}           {quality or '—'}\n"
         f"{ref_line}\n"
-        f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n\n"
+        f"{cost_line}"
         f"{t('img_enter_prompt', lang)}",
         reply_markup=kb([menu_btn(lang)]),
         parse_mode="HTML"
@@ -440,12 +449,14 @@ async def img_to_prompt(cb: CallbackQuery, state: FSMContext):
     coins_word = t("coins_word", lang)
     ar = data.get("img_ar", "—")
     quality = data.get("img_quality", "—")
+    unlimited = has_unlimited(cb.from_user.id)
+    cost_line = f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n\n" if not unlimited else "\n"
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {t('img_aspect_ratio_label', lang)}   {ar}\n"
         f"  {t('img_quality_label', lang)}           {quality or '—'}\n"
-        f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n\n"
+        f"{cost_line}"
         f"{t('img_enter_prompt', lang)}",
         reply_markup=kb([back_btn(f"img_{name}", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"

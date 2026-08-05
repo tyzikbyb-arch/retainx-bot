@@ -221,7 +221,7 @@ UNLIMITED_TIER_CONFIG = {
         "emoji": "⚡",
         "subcats": ["Standard", "Kling"],
         "subcat_overrides": {
-            "Standard": ["sd20f", "wan27", "ltx23", "veo31l", "grokimag"],
+            "Standard": ["sd20f", "wan27", "veo31l", "grokimag"],
         },
         "max_resolution": "720p",
         "voiceover": False,

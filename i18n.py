@@ -140,12 +140,12 @@ STR = {
             "━━━━━━━━━━━━━━━━━━━━\n\n"
             "  <b>1◈ per generation:</b>\n"
             "  Nano Banana · Seedream 5.0 Pro\n"
-            "  GPT Image 2 (Medium) · Kling 3.0\n"
-            "  Kling O3 (1K / 2K)\n\n"
+            "  GPT Image 2 (Medium)\n\n"
             "  <b>2◈ per generation:</b>\n"
             "  Nano Banana Pro · Flux 2.0 Pro\n"
-            "  Wan 2.7 Pro · Ideogram v3\n"
-            "  Hunyuan V3 · Kling O3 (4K)\n\n"
+            "  Wan 2.7 Pro · Ideogram v3\n\n"
+            "  <b>3◈ per generation:</b>\n"
+            "  Topaz Image Upscaler\n\n"
             "  <b>6◈ per generation:</b>\n"
             "  GPT Image 2 (High)\n\n"
             "  Formats: 1:1 · 16:9 · 9:16 · 3:4 and more\n"
@@ -510,6 +510,7 @@ STR = {
         "img_ref_send_more": "Send more or tap Done.",
         "img_ref_max_reached": "Maximum reached. Tap Done.",
         "img_ref_max_alert": "Maximum {max} images reached. Tap Done to continue.",
+        "img_ref_required_alert": "Please attach an image before continuing.",
         "img_refs_attached": "  ◈  {count} image ref(s) attached\n",
 
         # ── Video generation flow ──────────────────────────────
@@ -1200,12 +1201,12 @@ STR = {
             "━━━━━━━━━━━━━━━━━━━━\n\n"
             "  <b>1◈ за генерацию:</b>\n"
             "  Nano Banana · Seedream 5.0 Pro\n"
-            "  GPT Image 2 (Medium) · Kling 3.0\n"
-            "  Kling O3 (1K / 2K)\n\n"
+            "  GPT Image 2 (Medium)\n\n"
             "  <b>2◈ за генерацию:</b>\n"
             "  Nano Banana Pro · Flux 2.0 Pro\n"
-            "  Wan 2.7 Pro · Ideogram v3\n"
-            "  Hunyuan V3 · Kling O3 (4K)\n\n"
+            "  Wan 2.7 Pro · Ideogram v3\n\n"
+            "  <b>3◈ за генерацию:</b>\n"
+            "  Topaz Image Upscaler\n\n"
             "  <b>6◈ за генерацию:</b>\n"
             "  GPT Image 2 (High)\n\n"
             "  Форматы: 1:1 · 16:9 · 9:16 · 3:4 и другие\n"
@@ -1572,6 +1573,7 @@ STR = {
         "img_ref_send_more": "Отправьте ещё или нажмите Готово.",
         "img_ref_max_reached": "Достигнут максимум. Нажмите Готово.",
         "img_ref_max_alert": "Достигнут максимум {max} изображений. Нажмите Готово, чтобы продолжить.",
+        "img_ref_required_alert": "Пожалуйста, прикрепите изображение перед продолжением.",
         "img_refs_attached": "  ◈  {count} референс(ов) прикреплено\n",
 
         # ── Video generation flow ──────────────────────────────
@@ -2262,12 +2264,12 @@ STR = {
             "━━━━━━━━━━━━━━━━━━━━\n\n"
             "  <b>1◈ لكل توليد:</b>\n"
             "  Nano Banana · Seedream 5.0 Pro\n"
-            "  GPT Image 2 (Medium) · Kling 3.0\n"
-            "  Kling O3 (1K / 2K)\n\n"
+            "  GPT Image 2 (Medium)\n\n"
             "  <b>2◈ لكل توليد:</b>\n"
             "  Nano Banana Pro · Flux 2.0 Pro\n"
-            "  Wan 2.7 Pro · Ideogram v3\n"
-            "  Hunyuan V3 · Kling O3 (4K)\n\n"
+            "  Wan 2.7 Pro · Ideogram v3\n\n"
+            "  <b>3◈ لكل توليد:</b>\n"
+            "  Topaz Image Upscaler\n\n"
             "  <b>6◈ لكل توليد:</b>\n"
             "  GPT Image 2 (High)\n\n"
             "  الصيغ: 1:1 · 16:9 · 9:16 · 3:4 وأكثر\n"
@@ -2632,6 +2634,7 @@ STR = {
         "img_ref_send_more": "أرسل المزيد أو اضغط تم.",
         "img_ref_max_reached": "تم الوصول للحد الأقصى. اضغط تم.",
         "img_ref_max_alert": "تم الوصول للحد الأقصى {max} صورة. اضغط تم للمتابعة.",
+        "img_ref_required_alert": "يرجى إرفاق صورة قبل المتابعة.",
         "img_refs_attached": "  ◈  {count} صورة مرجعية مرفقة\n",
 
         # ── Video generation flow ──────────────────────────────
