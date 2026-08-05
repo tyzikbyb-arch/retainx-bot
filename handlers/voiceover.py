@@ -1133,8 +1133,13 @@ class TTSStates(StatesGroup):
     entering_text = State()
 
 
-EL11_COINS  = 5   # per generation ($0.25)
-GEM25_COINS = 8   # per generation ($0.40)
+EL11_RATE_PER_1K  = 0.09   # $0.09 per 1000 chars (pricesheet $0.06 × 1.5)
+GEM25_RATE_PER_1K = 0.042  # $0.042 per 1000 chars (pricesheet $0.028 × 1.5)
+
+
+def _tts_calc_coins(rate_per_1k: float, char_count: int) -> int:
+    usd = char_count / 1000 * rate_per_1k
+    return max(1, usd_to_coins(usd))
 
 _TTS_PAGE_SIZE = 8
 
@@ -1245,11 +1250,11 @@ def _tts_coin_menu(lang: str):
     )
     markup = kb(
         [InlineKeyboardButton(
-            text=f"ElevenLabs Multilingual v2   {EL11_COINS}◈",
+            text="ElevenLabs Multilingual v2   2◈/1000 симв.",
             callback_data="tts_model_el11",
         )],
         [InlineKeyboardButton(
-            text=f"Gemini 2.5 Pro TTS   {GEM25_COINS}◈",
+            text="Gemini 2.5 Pro TTS   1◈/1000 симв.",
             callback_data="tts_model_gem25",
         )],
         [menu_btn(lang)],
@@ -1314,7 +1319,7 @@ async def _show_el11_page(message, lang: str, page: int, fg: str = "", fa: str =
 async def tts_el11_start(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
     await state.update_data(
-        tts_provider="el11", tts_coins=EL11_COINS, tts_page=0,
+        tts_provider="el11", tts_rate=EL11_RATE_PER_1K, tts_page=0,
         tts_filter_gender="", tts_filter_accent="",
     )
     await _show_el11_page(cb.message, lang, 0)
@@ -1427,7 +1432,7 @@ async def _show_gem25_page(message, lang: str, page: int):
 @router.callback_query(F.data == "tts_model_gem25")
 async def tts_gem25_start(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
-    await state.update_data(tts_provider="gem25", tts_coins=GEM25_COINS, tts_page=0)
+    await state.update_data(tts_provider="gem25", tts_rate=GEM25_RATE_PER_1K, tts_page=0)
     await _show_gem25_page(cb.message, lang, 0)
     await cb.answer()
 
@@ -1510,9 +1515,11 @@ async def tts_text_received(msg: Message, state: FSMContext):
         await msg.answer(t("tts_text_too_long", lang, max=max_chars), parse_mode="HTML")
         return
 
-    await state.update_data(tts_text=text)
+    char_count   = len(text)
+    rate         = data.get("tts_rate", EL11_RATE_PER_1K)
+    price_coins  = _tts_calc_coins(rate, char_count)
+    await state.update_data(tts_text=text, tts_coins=price_coins)
     voice_name   = data.get("tts_voice_name", "—")
-    price_coins  = data.get("tts_coins", EL11_COINS)
     user_coins   = get_coins(msg.from_user.id)
     model_label  = "ElevenLabs Multilingual v2" if provider == "el11" else "Gemini 2.5 Pro TTS"
     coins_word   = t("coins_word", lang)
@@ -1522,6 +1529,7 @@ async def tts_text_received(msg: Message, state: FSMContext):
         f"{t('tts_order_summary_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('tts_voice_label', lang, name=voice_name)}\n"
         f"{t('tts_model_label', lang, model=model_label)}\n"
+        f"{t('tts_chars_label', lang, chars=char_count)}\n"
         f"{t('tts_cost_label', lang)}<b>{price_coins} {coins_word}</b>\n"
         f"{t('tts_balance_label', lang)}{user_coins} {coins_word}\n\n"
         f"{t('tts_text_label', lang)}\n<i>{preview}</i>\n\n"
@@ -1558,7 +1566,7 @@ async def tts_confirm(cb: CallbackQuery, state: FSMContext):
     voice_id    = data.get("tts_voice_id")  # EL11 only
     voice_desc  = data.get("tts_voice_desc", "")
     text        = data.get("tts_text")
-    price_coins = data.get("tts_coins", EL11_COINS)
+    price_coins = data.get("tts_coins", 1)
     price_usd   = coins_to_usd(price_coins)
 
     if not voice_name or not text:
