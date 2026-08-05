@@ -191,6 +191,7 @@ def get_durations(tid: str):
     }.get(tid, [4,8,12])
 
 HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl03"}
+FLAT_PRICE_TOOLS = {"veo31","veo31f","veo31l"}  # flat per-video price, all durations cost the same
 
 # ── Video menu ────────────────────────────────────────────────
 @router.callback_query(F.data == "cat_video")
@@ -439,19 +440,24 @@ async def show_duration(cb, state, tid, res, ar, name):
     lang = get_lang(cb.from_user.id)
     price_table = get_price_table(tid)
     durations = get_durations(tid)
+    is_flat = tid in FLAT_PRICE_TOOLS
+    flat_coins = None
     buttons = []
     for d in durations:
         usd = price_table.get(res, {}).get(d, 0)
         coins = usd_to_coins(usd) if usd > 0 else 0
-        buttons.append(InlineKeyboardButton(
-            text=f"{d}s — {coins}◈",
-            callback_data=f"vd_{d}"
-        ))
+        if is_flat:
+            flat_coins = coins
+            buttons.append(InlineKeyboardButton(text=f"{d}s", callback_data=f"vd_{d}"))
+        else:
+            buttons.append(InlineKeyboardButton(text=f"{d}s — {coins}◈", callback_data=f"vd_{d}"))
     rows = list(chunked(buttons, 3))
     rows.append([back_btn(f"vr_{res}", lang=lang), menu_btn(lang)])
+    price_line = f"<b>{flat_coins}◈</b> — {t('vid_flat_price', lang)}\n\n" if is_flat else ""
     await cb.message.edit_text(
         f"◈  <b>{name}</b>  —  {res}  {ar}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{price_line}"
         f"{t('vid_select_duration', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
     )
