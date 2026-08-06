@@ -23,6 +23,7 @@ from config import (
     HEYGEN_TRANSLATE_LANGUAGES, ELEVENLABS_DUBBING_LANGUAGES,
     RUNWAY_PRICES, RUNWAY_ALEPH_PRICE, MINIMAX_H3_PRICES, MINIMAX_H3_VIDEO_REF_RATES,
     TOPAZ_VIDEO_UPSCALE_RATES,
+    HAILUO_23_PRO_PRICES, HAILUO_23_STD_PRICES,
 )
 import math
 
@@ -88,6 +89,8 @@ TOOL_IDS = {
     "rwya":  "Runway Aleph",
     "mmh3":  "MiniMax H3",
     "tpzv":  "Topaz Video Upscale",
+    "hl23p": "Hailuo 2.3 Pro",
+    "hl23s": "Hailuo 2.3 Standard",
 }
 ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 
@@ -121,10 +124,12 @@ TOOL_DESCS = {
     "Runway Aleph":  "Runway Aleph — transform and enhance an existing video guided by your text prompt.",
     "MiniMax H3":         "MiniMax H3 — supports text, image (start/end frame), and multi-modal references in 768P or 2K.",
     "Topaz Video Upscale":"Topaz Video Upscale — enhance video resolution with AI upscaling (2× or 4×).",
+    "Hailuo 2.3 Pro":     "MiniMax Hailuo 2.3 Pro — premium image-to-video, 6s or 10s, up to 1080P.",
+    "Hailuo 2.3 Standard":"MiniMax Hailuo 2.3 Standard — fast image-to-video, 6s or 10s, up to 1080P.",
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","mmh3","tpzv"],
+    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","mmh3","hl23p","hl23s","tpzv"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
@@ -153,6 +158,8 @@ def get_price_table(tid: str):
         "klmc":  KLING_30_MOTION_CONTROL_PRICES,
         "rwy":   RUNWAY_PRICES,
         "mmh3":  MINIMAX_H3_PRICES,
+        "hl23p": HAILUO_23_PRO_PRICES,
+        "hl23s": HAILUO_23_STD_PRICES,
     }.get(tid, {})
 
 def get_resolutions(tid: str):
@@ -171,6 +178,8 @@ def get_resolutions(tid: str):
         "klmc":  ["1080p"],
         "rwy":   ["720p","1080p"],
         "mmh3":  ["768P","2K"],
+        "hl23p": ["768P","1080P"],
+        "hl23s": ["768P","1080P"],
     }.get(tid, ["720p","1080p"])
 
 def get_aspect_ratios(tid: str):
@@ -207,6 +216,8 @@ def get_durations(tid: str):
         "klmc":  list(range(3,16)),
         "rwy":   [5,10],
         "mmh3":  list(range(4,16)),
+        "hl23p": [6, 10],
+        "hl23s": [6, 10],
     }.get(tid, [4,8,12])
 
 HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl03"}
@@ -435,6 +446,12 @@ async def res_selected(cb: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     tid = data.get("v_tid","")
     name = data.get("v_tool","")
+
+    # Hailuo 2.3: no aspect ratio parameter — go straight to duration
+    if tid in {"hl23p", "hl23s"}:
+        await show_duration(cb, state, tid, res, "—", name)
+        return
+
     ars = get_aspect_ratios(tid)
     buttons = [InlineKeyboardButton(text=ar, callback_data=f"va_{ar.replace(':','x')}") for ar in ars]
     rows = list(chunked(buttons, 3))
@@ -491,7 +508,9 @@ async def show_duration(cb, state, tid, res, ar, name):
         else:
             buttons.append(InlineKeyboardButton(text=f"{d}s — {coins}◈", callback_data=f"vd_{d}"))
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn(f"vr_{res}", lang=lang), menu_btn(lang)])
+    # Hailuo 2.3 has no aspect ratio step — back goes to resolution picker
+    back_to = "att_to_prompt" if tid in {"hl23p", "hl23s"} else f"vr_{res}"
+    rows.append([back_btn(back_to, lang=lang), menu_btn(lang)])
     price_line = f"<b>{flat_coins}◈</b> — {t('vid_flat_price', lang)}\n\n" if is_flat else ""
     ref_note = f"📎 Ref video: {ref_sec}s\n\n" if ref_sec > 0 else ""
     await cb.message.edit_text(
@@ -572,11 +591,11 @@ async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
     from database import has_unlimited
     unlimited = has_unlimited(uid)
     audio_word = t("vid_audio_yes", lang) if audio else t("vid_audio_no", lang)
+    data = await state.get_data()
+    tid = data.get("v_tid", "")
     if unlimited:
         cost_line = ""
     else:
-        data = await state.get_data()
-        tid = data.get("v_tid", "")
         ref_breakdown = ""
         if tid in VIDEO_REF_RATES or tid == "mmh3":
             att_vids = data.get("att_vids", [])
@@ -588,16 +607,20 @@ async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
                 ref_coins = coins - base_coins
                 ref_breakdown = f"\n  ↳ {base_coins}◈ video  +  {ref_coins}◈ ref ({ref_sec}s)"
         cost_line = f"{t('vid_cost_label', lang, coins=coins)}{ref_breakdown}\n"
+    no_ar = tid in {"hl23p", "hl23s"}
+    ar_line = "" if no_ar else f"{t('vid_aspect_ratio_label', lang, ar=ar)}\n"
+    # For tools without aspect ratio, "Back" re-shows the duration picker via va_— → ar_selected → show_duration
+    back_cb = "va_—" if no_ar else f"va_{str(ar).replace(':','x')}"
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_resolution_label', lang, res=res)}\n"
-        f"{t('vid_aspect_ratio_label', lang, ar=ar)}\n"
+        f"{ar_line}"
         f"{t('vid_duration_label', lang, dur=dur)}\n"
         f"{t('vid_audio_label', lang, audio=audio_word)}\n"
         f"{cost_line}\n"
         f"{t('vid_enter_prompt', lang)}",
-        reply_markup=kb([back_btn(f"va_{str(ar).replace(':','x')}", lang=lang), menu_btn(lang)]),
+        reply_markup=kb([back_btn(back_cb, lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.entering_prompt)
@@ -1936,7 +1959,7 @@ async def att_back(cb: CallbackQuery, state: FSMContext):
 # Tools that need resolution/duration selection after attachments
 NEEDS_RESOLUTION = {"sd20", "sd20f", "hh10", "veo31", "veo31f", "veo31l",
                     "kl30", "kl03", "klmc", "ltx23", "wan27", "sora2",
-                    "rwy", "mmh3"}
+                    "rwy", "mmh3", "hl23p", "hl23s"}
 
 @router.callback_query(F.data == "att_to_prompt")
 async def att_to_prompt(cb: CallbackQuery, state: FSMContext):

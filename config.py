@@ -271,6 +271,17 @@ MINIMAX_H3_VIDEO_REF_RATES = {"768P": 0.14625, "2K": 0.23725}
 # kie.ai rates: 1x/2x=$0.04/sec, 4x=$0.07/sec — × 1.30 markup
 TOPAZ_VIDEO_UPSCALE_RATES = {"2": 0.052, "4": 0.091}
 
+# ─── HAILUO 2.3 ────────────────────────────────────────────────
+# kie.ai prices × 1.30 markup (flat per-clip price; 10s not supported at 1080P)
+HAILUO_23_PRO_PRICES = {
+    "768P":  {6: 0.2925, 10: 0.585},
+    "1080P": {6: 0.52},
+}
+HAILUO_23_STD_PRICES = {
+    "768P":  {6: 0.195, 10: 0.325},
+    "1080P": {6: 0.325},
+}
+
 # ─── UNLIMITED PASS ───────────────────────────────────────────
 RESOLUTION_ORDER = ["480p", "720p", "1080p", "2K", "4K"]
 

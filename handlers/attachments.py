@@ -158,6 +158,17 @@ TOOL_ATTACHMENTS = {
         "hint": "Upload a character image and a voice recording to make your avatar talk",
     },
 
+    # ── Hailuo 2.3 ───────────────────────────────────────────────────────────
+
+    "hl23p": {  # Hailuo 2.3 Pro I2V — start frame (image) is required
+        "start_frame": True, "end_frame": False,
+        "start_frame_required": True,
+    },
+    "hl23s": {  # Hailuo 2.3 Standard I2V — start frame (image) is required
+        "start_frame": True, "end_frame": False,
+        "start_frame_required": True,
+    },
+
     # ── Topaz Video Upscale ───────────────────────────────────────────────────
 
     "tpzv": {   # Topaz Video Upscale — upload video, then pick 2× or 4× factor
