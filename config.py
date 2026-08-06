@@ -115,6 +115,19 @@ SEEDANCE_20_FAST_PRICES = {
     "480p": {4:0.40,5:0.50,6:0.60,7:0.71,8:0.81,9:0.91,10:1.01,11:1.11,12:1.21,13:1.31,14:1.41,15:1.51},
     "720p": {4:0.86,5:1.07,6:1.29,7:1.50,8:1.72,9:1.93,10:2.15,11:2.36,12:2.57,13:2.79,14:3.00,15:3.22},
 }
+
+# kie.ai tokens-per-second WITH a reference video attached (×0.005 → USD, ×1.30 → our price)
+VIDEO_REF_RATES = {
+    "sd20":  {"4K": 128.0, "1080p": 62.0, "720p": 25.0, "480p": 11.5},
+    "sd20f": {"720p": 20.0, "480p": 9.0},
+}
+
+def calc_video_ref_usd(tid: str, res: str, output_sec: int, ref_sec: int) -> float:
+    """Return our price (USD) for sd20/sd20f when a reference video is attached."""
+    rate = VIDEO_REF_RATES.get(tid, {}).get(res, 0.0)
+    if rate == 0.0:
+        return 0.0
+    return (output_sec + ref_sec) * rate * 0.005 * 1.30
 HAPPY_HORSE_PRICES = {
     "720p": {3:0.44,4:0.59,5:0.73,6:0.88,7:1.02,8:1.17,9:1.32,10:1.46,11:1.61,12:1.76,13:1.90,14:2.05,15:2.19},
     "1080p":{3:0.57,4:0.75,5:0.94,6:1.13,7:1.32,8:1.51,9:1.70,10:1.89,11:2.07,12:2.26,13:2.45,14:2.64,15:2.83},

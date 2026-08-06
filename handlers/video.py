@@ -9,6 +9,7 @@ from i18n import t
 from config import (
     usd_to_coins,
     SEEDANCE_20_PRICES, SEEDANCE_20_FAST_PRICES, HAPPY_HORSE_PRICES,
+    VIDEO_REF_RATES, calc_video_ref_usd,
     VEO_31_PRICES, VEO_31_FAST_PRICES, VEO_31_LITE_PRICES,
     KLING_30_VIDEO_PRICES, KLING_03_VIDEO_PRICES, KLING_30_MOTION_CONTROL_PRICES,
     WAN_27_PRICES, SORA_2_PRO_PRICES, LTX_23_PRICES,
@@ -474,6 +475,16 @@ async def dur_selected(cb: CallbackQuery, state: FSMContext):
 
     price_table = get_price_table(tid)
     usd   = price_table.get(res, {}).get(dur, 0)
+
+    # If a reference video was attached for sd20/sd20f, recalculate using kie.ai ref formula
+    if tid in VIDEO_REF_RATES:
+        att_vids = data.get("att_vids", [])
+        ref_sec = sum(v.get("duration", 0) for v in att_vids if v.get("duration", 0) > 0)
+        if ref_sec > 0:
+            ref_usd = calc_video_ref_usd(tid, res, dur, ref_sec)
+            if ref_usd > 0:
+                usd = ref_usd
+
     coins = usd_to_coins(usd) if usd > 0 else 1
     await state.update_data(v_dur=dur, v_coins=coins, v_usd=usd)
 
@@ -1791,12 +1802,12 @@ async def att_collect_vid(msg: Message, state: FSMContext):
         await msg.answer(t("vid_vid_max_reached_short", lang, max=max_vids))
         return
     if msg.video:
-        file_id, ftype = msg.video.file_id, "video"
+        file_id, ftype, duration = msg.video.file_id, "video", msg.video.duration or 0
     elif msg.animation:
-        file_id, ftype = msg.animation.file_id, "animation"
+        file_id, ftype, duration = msg.animation.file_id, "animation", msg.animation.duration or 0
     else:
-        file_id, ftype = msg.document.file_id, "document"
-    vids.append({"file_id": file_id, "type": ftype, "ref": f"vid{len(vids)+1}"})
+        file_id, ftype, duration = msg.document.file_id, "document", 0
+    vids.append({"file_id": file_id, "type": ftype, "ref": f"vid{len(vids)+1}", "duration": duration})
     await state.update_data(att_vids=vids)
     await msg.answer(
         t("vid_vid_saved_short", lang, n=len(vids), count=len(vids), max=max_vids),
