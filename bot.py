@@ -29,7 +29,7 @@ from config import BOT_TOKEN, ADMIN_ID, WELCOME_BONUS, REFERRAL_JOIN_BONUS
 from database import is_new_user, add_coins, get_coins, set_referred_by, get_lang, set_lang, set_can_buy_unlimited, set_unlimited, get_unlimited_tier, cancel_order_atomic
 from keyboards import kb, menu_btn, client_kb
 from i18n import t, CLIENT_ACTION_BY_TEXT, CLIENT_TEXTS
-from handlers import credits, images, video, voiceover, admin as admin_handler, orders as orders_handler, help as help_handler
+from handlers import credits, images, video, voiceover, suno as suno_handler, admin as admin_handler, orders as orders_handler, help as help_handler
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
@@ -40,6 +40,7 @@ dp.include_router(credits.router)
 dp.include_router(images.router)
 dp.include_router(video.router)
 dp.include_router(voiceover.router)
+dp.include_router(suno_handler.router)
 dp.include_router(admin_handler.router)
 dp.include_router(orders_handler.router)
 
@@ -86,7 +87,8 @@ def build_main_menu_kb(coins: int, lang: str) -> InlineKeyboardMarkup:
     return kb(
         [InlineKeyboardButton(text=t("btn_video_generation", lang), callback_data="cat_video")],
         [InlineKeyboardButton(text=t("btn_image_generation", lang), callback_data="cat_images")],
-        [InlineKeyboardButton(text=t("btn_audio_voice", lang),      callback_data="cat_audio")],
+        [InlineKeyboardButton(text=t("btn_audio_voice", lang),      callback_data="cat_audio"),
+         InlineKeyboardButton(text=t("btn_music_generation", lang), callback_data="cat_music")],
         [InlineKeyboardButton(text=t("btn_wallet_coins", lang, coins=coins), callback_data="wallet")],
         [InlineKeyboardButton(text=t("menu_orders", lang),          callback_data="my_orders")],
         [InlineKeyboardButton(text=t("btn_pricing", lang),  callback_data="pricing_menu"),

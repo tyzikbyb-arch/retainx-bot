@@ -226,6 +226,30 @@ AURORA_AVATAR_PRICES = {
     11: 28.8, 12: 31.5, 13: 34.2, 14: 36.9, 15: 39.6,
 }
 
+# ─── SUNO MUSIC ────────────────────────────────────────────────
+SUNO_MUSIC_MODELS = {
+    "V4":       {"coins": 4,  "usd": 0.20, "label": "Suno V4",        "emoji": "◈"},
+    "V4_5":     {"coins": 8,  "usd": 0.40, "label": "Suno V4.5",      "emoji": "◈"},
+    "V4_5PLUS": {"coins": 12, "usd": 0.60, "label": "Suno V4.5 Plus", "emoji": "✦"},
+    "V5":       {"coins": 10, "usd": 0.50, "label": "Suno V5",        "emoji": "✦"},
+    "V5_5":     {"coins": 15, "usd": 0.75, "label": "Suno V5.5",      "emoji": "♛"},
+}
+SUNO_VOCAL_TYPES = {
+    "separate_vocal":      {"coins": 10, "usd": 0.50,
+                            "label_en": "2-Stem (Vocal + Instrumental)",
+                            "label_ru": "2 трека (Голос + Инструментал)",
+                            "label_ar": "مسارَين (صوت + موسيقى)"},
+    "split_stem":          {"coins": 50, "usd": 2.50,
+                            "label_en": "12-Stem Full Breakdown",
+                            "label_ru": "12 треков (полное разделение)",
+                            "label_ar": "12 مساراً (تقسيم كامل)"},
+    "split_stem_advanced": {"coins": 20, "usd": 1.00,
+                            "label_en": "Single Stem Extraction",
+                            "label_ru": "Извлечь один трек",
+                            "label_ar": "استخراج مسار واحد"},
+}
+SUNO_LYRICS_PRICE = {"coins": 2, "usd": 0.10}
+
 # ─── UNLIMITED PASS ───────────────────────────────────────────
 RESOLUTION_ORDER = ["480p", "720p", "1080p", "2K", "4K"]
 
