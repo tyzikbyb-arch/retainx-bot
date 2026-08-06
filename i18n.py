@@ -944,10 +944,17 @@ STR = {
 
         # ── Unlimited pass UI ────────────────────────────────────
         "unlim_active_line": "\n{emoji} <b>Unlimited {name} active</b> — {mins}m {secs}s left\n",
-        "unlim_btn_buy": "⚡  Unlimited — buy a plan",
+        "unlim_btn_buy": "⚡  Unlimited — get a plan",
         "unlim_btn_active": "⚡  Unlimited {name} active ✓",
         "unlim_active_toast": "⚡ Unlimited is active!",
         "unlim_buy_title": "⚡  <b>Unlimited Plans</b>",
+        "unlim_support_body": (
+            "  Unlimited passes are activated by our team.\n\n"
+            "  Contact support and we will help you\n"
+            "  choose the right plan and activate it."
+        ),
+        "unlim_support_btn": "💬  Contact @RetainXStudio",
+        "unlim_support_toast": "⚡ Purchase via support — tap Contact Support below.",
         "unlim_buy_balance": "  Your balance:  <b>{coins}◈</b>",
         "unlim_buy_select": "  Choose a plan:",
         "unlim_btn_info": "ℹ  Plan details",
@@ -2006,10 +2013,17 @@ STR = {
 
         # ── Unlimited pass UI ────────────────────────────────────
         "unlim_active_line": "\n{emoji} <b>Безлимит {name} активен</b> — осталось {mins}м {secs}с\n",
-        "unlim_btn_buy": "⚡  Безлимит — купить пакет",
+        "unlim_btn_buy": "⚡  Безлимит — получить пакет",
         "unlim_btn_active": "⚡  Безлимит {name} активен ✓",
         "unlim_active_toast": "⚡ Безлимит активен!",
         "unlim_buy_title": "⚡  <b>Безлимитные пакеты</b>",
+        "unlim_support_body": (
+            "  Безлимитные пакеты активируются нашей командой.\n\n"
+            "  Напишите в поддержку — мы поможем выбрать\n"
+            "  подходящий тариф и активируем его для вас."
+        ),
+        "unlim_support_btn": "💬  Написать @RetainXStudio",
+        "unlim_support_toast": "⚡ Покупка через поддержку — нажмите кнопку ниже.",
         "unlim_buy_balance": "  Ваш баланс:  <b>{coins}◈</b>",
         "unlim_buy_select": "  Выберите тариф:",
         "unlim_btn_info": "ℹ  Подробнее о пакетах",
@@ -3066,10 +3080,17 @@ STR = {
 
         # ── Unlimited pass UI ────────────────────────────────────
         "unlim_active_line": "\n{emoji} <b>اشتراك {name} لا محدود نشط</b> — {mins}د {secs}ث متبقية\n",
-        "unlim_btn_buy": "⚡  لا محدود — شراء خطة",
+        "unlim_btn_buy": "⚡  لا محدود — الحصول على خطة",
         "unlim_btn_active": "⚡  لا محدود {name} نشط ✓",
         "unlim_active_toast": "⚡ الاشتراك اللامحدود نشط!",
         "unlim_buy_title": "⚡  <b>خطط لا محدود</b>",
+        "unlim_support_body": (
+            "  يتم تفعيل باقات اللا محدود من قبل فريقنا.\n\n"
+            "  تواصل مع الدعم وسنساعدك في اختيار\n"
+            "  الخطة المناسبة وتفعيلها لك."
+        ),
+        "unlim_support_btn": "💬  تواصل مع @RetainXStudio",
+        "unlim_support_toast": "⚡ الشراء عبر الدعم — اضغط على زر الاتصال بالدعم.",
         "unlim_buy_balance": "  رصيدك:  <b>{coins}◈</b>",
         "unlim_buy_select": "  اختر خطة:",
         "unlim_btn_info": "ℹ  تفاصيل الخطط",

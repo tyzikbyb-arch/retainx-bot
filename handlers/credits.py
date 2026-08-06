@@ -90,30 +90,24 @@ def _tier_info_text(tier: str, lang: str) -> str:
 @router.callback_query(F.data == "unlimited_buy")
 async def unlimited_buy(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
-    coins = get_coins(cb.from_user.id)
-    rows = []
-    for tier in _TIER_ORDER:
-        cfg = UNLIMITED_TIER_CONFIG[tier]
-        price_1h = UNLIMITED_PLANS[tier][1]
-        name = cfg["name_ru"] if lang == "ru" else cfg["name_en"]
-        rows.append([InlineKeyboardButton(
-            text=t("unlim_info_tier_btn", lang, emoji=cfg["emoji"], name=name, coins=price_1h),
-            callback_data=f"ulim_t_{tier}"
-        )])
-    rows.append([InlineKeyboardButton(text=t("unlim_btn_info", lang), callback_data="unlim_info")])
-    rows.append([back_btn("wallet", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"{t('unlim_buy_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('unlim_buy_balance', lang, coins=coins)}\n\n"
-        f"{t('unlim_buy_select', lang)}",
-        reply_markup=kb(*rows),
+        f"{t('unlim_support_body', lang)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text=t("unlim_support_btn", lang), url="https://t.me/RetainXStudio")],
+            [InlineKeyboardButton(text=t("unlim_btn_info", lang), callback_data="unlim_info")],
+            [back_btn("wallet", lang=lang), menu_btn(lang)],
+        ),
         parse_mode="HTML"
     )
     await cb.answer()
 
 @router.callback_query(F.data.startswith("ulim_t_"))
 async def unlim_tier_selected(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await cb.answer(t("unlim_support_toast", lang), show_alert=True)
+    return
     tier = cb.data[7:]
     if tier not in UNLIMITED_TIER_CONFIG:
         await cb.answer()
@@ -142,6 +136,9 @@ async def unlim_tier_selected(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("ulim_d_"))
 async def unlim_duration_selected(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await cb.answer(t("unlim_support_toast", lang), show_alert=True)
+    return
     parts = cb.data[7:].split("_")
     if len(parts) != 2:
         await cb.answer()
@@ -182,6 +179,9 @@ async def unlim_duration_selected(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("ulim_c_"))
 async def unlim_confirm(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await cb.answer(t("unlim_support_toast", lang), show_alert=True)
+    return
     parts = cb.data[7:].split("_")
     if len(parts) != 2:
         await cb.answer()
