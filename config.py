@@ -267,6 +267,10 @@ MINIMAX_H3_PRICES = {
 # Additional charge when a video reference is attached (kie.ai charges same per-sec rate for input)
 MINIMAX_H3_VIDEO_REF_RATES = {"768P": 0.14625, "2K": 0.23725}
 
+# ─── TOPAZ VIDEO UPSCALE ──────────────────────────────────────
+# kie.ai rates: 1x/2x=$0.04/sec, 4x=$0.07/sec — × 1.30 markup
+TOPAZ_VIDEO_UPSCALE_RATES = {"2": 0.052, "4": 0.091}
+
 # ─── UNLIMITED PASS ───────────────────────────────────────────
 RESOLUTION_ORDER = ["480p", "720p", "1080p", "2K", "4K"]
 

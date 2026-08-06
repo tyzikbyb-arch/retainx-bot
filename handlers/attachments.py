@@ -158,6 +158,14 @@ TOOL_ATTACHMENTS = {
         "hint": "Upload a character image and a voice recording to make your avatar talk",
     },
 
+    # ── Topaz Video Upscale ───────────────────────────────────────────────────
+
+    "tpzv": {   # Topaz Video Upscale — upload video, then pick 2× or 4× factor
+        "vid_refs": 1,
+        "vid_ref_required": True,
+        "hint": "Upload a video to upscale — then select the enhancement factor (2× or 4×).",
+    },
+
     # ── Runway ────────────────────────────────────────────────────────────────
 
     "rwy": {    # Runway Gen 4 — optional start image

@@ -22,6 +22,7 @@ from config import (
     ELEVENLABS_DUBBING_PRICES, LIPSYNC_PRICES,
     HEYGEN_TRANSLATE_LANGUAGES, ELEVENLABS_DUBBING_LANGUAGES,
     RUNWAY_PRICES, RUNWAY_ALEPH_PRICE, MINIMAX_H3_PRICES, MINIMAX_H3_VIDEO_REF_RATES,
+    TOPAZ_VIDEO_UPSCALE_RATES,
 )
 import math
 
@@ -86,6 +87,7 @@ TOOL_IDS = {
     "rwy":   "Runway Gen 4",
     "rwya":  "Runway Aleph",
     "mmh3":  "MiniMax H3",
+    "tpzv":  "Topaz Video Upscale",
 }
 ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 
@@ -117,11 +119,12 @@ TOOL_DESCS = {
     "Grok Imagine":            "xAI's Grok video generation — Classic 1.5, Text-to-Video, or Image-to-Video.",
     "Runway Gen 4":  "Runway Gen 4 — photorealistic cinematic video, 720p or 1080p, 5 or 10 seconds.",
     "Runway Aleph":  "Runway Aleph — transform and enhance an existing video guided by your text prompt.",
-    "MiniMax H3":    "MiniMax H3 — supports text, image (start/end frame), and multi-modal references in 768P or 2K.",
+    "MiniMax H3":         "MiniMax H3 — supports text, image (start/end frame), and multi-modal references in 768P or 2K.",
+    "Topaz Video Upscale":"Topaz Video Upscale — enhance video resolution with AI upscaling (2× or 4×).",
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","mmh3"],
+    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","mmh3","tpzv"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
@@ -1944,6 +1947,24 @@ async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
     tool = data.get("v_tool", "")
     coins = data.get("v_coins", 0)
 
+    if tid == "tpzv":
+        vids = data.get("att_vids", [])
+        dur = vids[0].get("duration", 0) if vids else 0
+        buttons = []
+        for factor, rate in TOPAZ_VIDEO_UPSCALE_RATES.items():
+            usd = dur * rate
+            btn_coins = max(1, usd_to_coins(usd))
+            buttons.append([InlineKeyboardButton(text=f"{factor}× — {btn_coins}◈", callback_data=f"vtpzf_{factor}")])
+        buttons.append([back_btn("att_back", lang=lang), menu_btn(lang)])
+        dur_display = f"{dur}s" if dur else "?"
+        await cb.message.edit_text(
+            f"◈  <b>{tool}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"  Video: {dur_display}\n\n"
+            f"  Select upscale factor:",
+            reply_markup=kb(*buttons), parse_mode="HTML"
+        )
+        return
+
     if tid in NEEDS_RESOLUTION:
         # Go to resolution selection first
         resolutions = get_resolutions(tid)
@@ -1984,6 +2005,20 @@ async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
         parse_mode="HTML"
     )
     await state.set_state(VideoStates.entering_prompt)
+
+# ── Topaz Video Upscale factor selection ─────────────────────
+@router.callback_query(F.data.startswith("vtpzf_"))
+async def tpzv_factor_selected(cb: CallbackQuery, state: FSMContext):
+    factor = cb.data[6:]  # "2" or "4"
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    vids = data.get("att_vids", [])
+    dur = vids[0].get("duration", 0) if vids else 0
+    rate = TOPAZ_VIDEO_UPSCALE_RATES.get(factor, 0)
+    usd = round(dur * rate, 4) if dur and rate else 0
+    coins = max(1, usd_to_coins(usd)) if usd > 0 else 1
+    await state.update_data(v_coins=coins, v_usd=usd, v_prompt="—", tpzv_factor=factor)
+    await _do_confirm(cb, state)
 
 # ── Confirm without prompt (no_prompt tools) ──────────────────
 @router.callback_query(F.data == "att_confirm_no_prompt")
@@ -2102,6 +2137,7 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
         "grok_mode":     data.get("v_grok_mode"),
         "grok_task_id":  data.get("v_grok_task_id"),
         "extend_times":  data.get("v_extend_times"),
+        "upscale_factor":data.get("tpzv_factor"),
     }
     usd = data.get("v_usd", 0)
     try:
