@@ -125,9 +125,9 @@ TOOL_DESCS = {
     "Runway Aleph":  "Runway Aleph — transform and enhance an existing video guided by your text prompt.",
     "MiniMax H3":         "MiniMax H3 — supports text, image (start/end frame), and multi-modal references in 768P or 2K.",
     "Topaz Video Upscale":"Topaz Video Upscale — enhance video resolution with AI upscaling (2× or 4×).",
-    "Hailuo 2.3":         "MiniMax Hailuo 2.3 — image-to-video, 6s or 10s, up to 1080P. Choose Pro or Standard.",
-    "Hailuo 2.3 Pro":     "MiniMax Hailuo 2.3 Pro — premium image-to-video, 6s or 10s, up to 1080P.",
-    "Hailuo 2.3 Standard":"MiniMax Hailuo 2.3 Standard — fast image-to-video, 6s or 10s, up to 1080P.",
+    "Hailuo 2.3":         "Hailuo 2.3 — image-to-video, 6s or 10s, up to 1080P. Choose Pro or Standard.",
+    "Hailuo 2.3 Pro":     "Hailuo 2.3 Pro — premium image-to-video, 6s or 10s, up to 1080P.",
+    "Hailuo 2.3 Standard":"Hailuo 2.3 Standard — fast image-to-video, 6s or 10s, up to 1080P.",
 }
 
 VIDEO_SUBCATS = {
