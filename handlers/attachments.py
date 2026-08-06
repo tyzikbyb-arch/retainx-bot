@@ -97,6 +97,9 @@ TOOL_ATTACHMENTS = {
         "start_frame": True, "end_frame": True,
         "exclusive_startend": True,
     },
+    "kl3t": {   # Kling V3 Turbo — optional start frame; auto-selects T2V or I2V
+        "start_frame": True, "end_frame": False,
+    },
     "kl03": {   # Kling 0.3 — Artlist's UI shows Image Reference as disabled
                 # for this model (confirmed live, order #401), so don't offer it.
         "start_frame": True, "end_frame": True,

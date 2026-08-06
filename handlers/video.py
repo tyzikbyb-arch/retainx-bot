@@ -24,6 +24,7 @@ from config import (
     RUNWAY_PRICES, RUNWAY_ALEPH_PRICE, MINIMAX_H3_PRICES, MINIMAX_H3_VIDEO_REF_RATES,
     TOPAZ_VIDEO_UPSCALE_RATES,
     HAILUO_23_PRO_PRICES, HAILUO_23_STD_PRICES,
+    KLING_V3_TURBO_PRICES,
 )
 import math
 
@@ -70,6 +71,7 @@ TOOL_IDS = {
     "sora2":  "Sora 2 Pro",
     "ltx23":  "LTX 2.3 Pro",
     "kl30":   "Kling 3.0",
+    "kl3t":   "Kling V3 Turbo",
     "kl03":   "Kling O3",
     "klmc":   "Kling 3.0 Motion Control",
     "hga4":   "HeyGen Avatar 4",
@@ -107,6 +109,7 @@ TOOL_DESCS = {
     "Sora 2 Pro":              "OpenAI's advanced video generation model with premium realism.",
     "LTX 2.3 Pro":             "High-framerate professional video — up to 4K at 50fps.",
     "Kling 3.0":               "One of the most powerful AI video models of 2026. Realistic motion, character consistency, built-in audio, image-to-video, up to 4K.",
+    "Kling V3 Turbo":          "Kling V3 Turbo — faster Kling 3.0, T2V and I2V, 720p or 1080p, 3–15s.",
     "Kling O3":                "Kling compact model — same visual quality, optimised for speed.",
     "Kling 3.0 Motion Control":"Precise scene-level motion control in 1080p, 30-second output.",
     "Kling 3.0 Video Edit":    "Edit and enhance existing video clips using Kling AI.",
@@ -133,7 +136,7 @@ TOOL_DESCS = {
 VIDEO_SUBCATS = {
     "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","mmh3","hl23","tpzv"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
-    "Kling":     ["kl30","kl03","klmc"],
+    "Kling":     ["kl30","kl3t","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
 }
 def subcat_label(sub: str, lang: str = "en") -> str:
@@ -156,6 +159,7 @@ def get_price_table(tid: str):
         "sora2": SORA_2_PRO_PRICES,
         "ltx23": LTX_23_PRICES,
         "kl30":  KLING_30_VIDEO_PRICES,
+        "kl3t":  KLING_V3_TURBO_PRICES,
         "kl03":  KLING_03_VIDEO_PRICES,
         "klmc":  KLING_30_MOTION_CONTROL_PRICES,
         "rwy":   RUNWAY_PRICES,
@@ -176,6 +180,7 @@ def get_resolutions(tid: str):
         "sora2": ["720p","1080p"],
         "ltx23": ["720p","1080p","2K","4K"],
         "kl30":  ["720p","1080p","4K"],
+        "kl3t":  ["720p","1080p"],
         "kl03":  ["720p","1080p","4K"],
         "klmc":  ["1080p"],
         "rwy":   ["720p","1080p"],
@@ -196,6 +201,7 @@ def get_aspect_ratios(tid: str):
         "sora2": ["16:9","9:16"],
         "ltx23": ["16:9","9:16"],
         "kl30":  ["16:9","9:16","1:1"],
+        "kl3t":  ["16:9","9:16","1:1"],
         "kl03":  ["16:9","9:16","1:1"],
         "klmc":  ["16:9","9:16","1:1"],
         "rwy":   ["16:9","9:16","1:1","4:3","3:4"],
@@ -214,6 +220,7 @@ def get_durations(tid: str):
         "sora2": [4,8,12],
         "ltx23": [6,8,10],
         "kl30":  list(range(3,16)),
+        "kl3t":  list(range(3,16)),
         "kl03":  list(range(3,16)),
         "klmc":  list(range(3,16)),
         "rwy":   [5,10],
@@ -1984,7 +1991,7 @@ async def att_back(cb: CallbackQuery, state: FSMContext):
 # ── Proceed to prompt ─────────────────────────────────────────
 # Tools that need resolution/duration selection after attachments
 NEEDS_RESOLUTION = {"sd20", "sd20f", "hh10", "veo31", "veo31f", "veo31l",
-                    "kl30", "kl03", "klmc", "ltx23", "wan27", "sora2",
+                    "kl30", "kl3t", "kl03", "klmc", "ltx23", "wan27", "sora2",
                     "rwy", "mmh3", "hl23p", "hl23s"}
 
 @router.callback_query(F.data == "att_to_prompt")
