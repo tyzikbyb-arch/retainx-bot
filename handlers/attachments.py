@@ -157,6 +157,23 @@ TOOL_ATTACHMENTS = {
         "prompt_label": "Describe your character's expressions and gestures (optional)",
         "hint": "Upload a character image and a voice recording to make your avatar talk",
     },
+
+    # ── Runway ────────────────────────────────────────────────────────────────
+
+    "rwy": {    # Runway Gen 4 — optional start image
+        "start_frame": True, "end_frame": False,
+        "hint": "Optional: attach a reference image to guide the generation.",
+    },
+
+    # ── MiniMax H3 ────────────────────────────────────────────────────────────
+
+    "mmh3i": {  # MiniMax H3 Image-to-Video — first/last frame
+        "start_frame": True, "end_frame": True,
+        "exclusive_startend": True,
+    },
+    "mmh3r": {  # MiniMax H3 Reference-to-Video — multi-modal references
+        "img_refs": 9, "vid_refs": 3, "aud_refs": 3,
+    },
 }
 
 

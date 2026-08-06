@@ -21,6 +21,7 @@ from config import (
     OMNIHUMAN_PRICES, AURORA_AVATAR_PRICES,
     ELEVENLABS_DUBBING_PRICES, LIPSYNC_PRICES,
     HEYGEN_TRANSLATE_LANGUAGES, ELEVENLABS_DUBBING_LANGUAGES,
+    RUNWAY_PRICES, MINIMAX_H3_PRICES,
 )
 import math
 
@@ -82,6 +83,10 @@ TOOL_IDS = {
     "groke":    "Grok Extend",
     "groku":    "Grok Upscale",
     "grokimag": "Grok Imagine 1.5",
+    "rwy":    "Runway Gen 4",
+    "mmh3t":  "MiniMax H3 T2V",
+    "mmh3i":  "MiniMax H3 I2V",
+    "mmh3r":  "MiniMax H3 R2V",
 }
 ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 
@@ -111,10 +116,14 @@ TOOL_DESCS = {
     "Grok Text-to-Video":      "Grok's next-gen text-to-video with Fun, Normal, and Spicy modes.",
     "Grok Image-to-Video":     "Animate any image with Grok's image-to-video model.",
     "Grok Imagine":            "xAI's Grok video generation — Classic 1.5, Text-to-Video, or Image-to-Video.",
+    "Runway Gen 4":            "Runway Gen 4 — photorealistic cinematic video, 720p or 1080p, 5 or 10 seconds.",
+    "MiniMax H3 T2V":          "MiniMax H3 text-to-video — high-fidelity motion in 768P or 2K, 4–15 seconds.",
+    "MiniMax H3 I2V":          "MiniMax H3 image-to-video — animate any image into a dynamic clip.",
+    "MiniMax H3 R2V":          "MiniMax H3 reference-to-video — generate from image, video, and audio references.",
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag"],
+    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","mmh3t","mmh3i","mmh3r"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
@@ -141,6 +150,10 @@ def get_price_table(tid: str):
         "kl30":  KLING_30_VIDEO_PRICES,
         "kl03":  KLING_03_VIDEO_PRICES,
         "klmc":  KLING_30_MOTION_CONTROL_PRICES,
+        "rwy":   RUNWAY_PRICES,
+        "mmh3t": MINIMAX_H3_PRICES,
+        "mmh3i": MINIMAX_H3_PRICES,
+        "mmh3r": MINIMAX_H3_PRICES,
     }.get(tid, {})
 
 def get_resolutions(tid: str):
@@ -157,6 +170,10 @@ def get_resolutions(tid: str):
         "kl30":  ["720p","1080p","4K"],
         "kl03":  ["720p","1080p","4K"],
         "klmc":  ["1080p"],
+        "rwy":   ["720p","1080p"],
+        "mmh3t": ["768P","2K"],
+        "mmh3i": ["768P","2K"],
+        "mmh3r": ["768P","2K"],
     }.get(tid, ["720p","1080p"])
 
 def get_aspect_ratios(tid: str):
@@ -173,6 +190,10 @@ def get_aspect_ratios(tid: str):
         "kl30":  ["16:9","9:16","1:1"],
         "kl03":  ["16:9","9:16","1:1"],
         "klmc":  ["16:9","9:16","1:1"],
+        "rwy":   ["16:9","9:16","1:1","4:3","3:4"],
+        "mmh3t": ["16:9","9:16","1:1","4:3","3:4"],
+        "mmh3i": ["16:9","9:16","1:1","4:3","3:4"],
+        "mmh3r": ["16:9","9:16","1:1","4:3","3:4"],
     }.get(tid, ["16:9","9:16"])
 
 def get_durations(tid: str):
@@ -189,6 +210,10 @@ def get_durations(tid: str):
         "kl30":  list(range(3,16)),
         "kl03":  list(range(3,16)),
         "klmc":  list(range(3,16)),
+        "rwy":   [5,10],
+        "mmh3t": [4,6,8,10,12,15],
+        "mmh3i": [4,6,8,10,12,15],
+        "mmh3r": [4,6,8,10,12,15],
     }.get(tid, [4,8,12])
 
 HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl03"}
@@ -454,6 +479,8 @@ async def show_duration(cb, state, tid, res, ar, name):
     buttons = []
     for d in durations:
         usd = price_table.get(res, {}).get(d, 0)
+        if not usd:
+            continue  # skip unsupported combos (e.g. Runway 1080p 10s)
         if ref_sec > 0:
             ref_usd = calc_video_ref_usd(tid, res, d, ref_sec)
             if ref_usd > 0:
@@ -1904,7 +1931,8 @@ async def att_back(cb: CallbackQuery, state: FSMContext):
 # ── Proceed to prompt ─────────────────────────────────────────
 # Tools that need resolution/duration selection after attachments
 NEEDS_RESOLUTION = {"sd20", "sd20f", "hh10", "veo31", "veo31f", "veo31l",
-                    "kl30", "kl03", "klmc", "ltx23", "wan27", "sora2"}
+                    "kl30", "kl03", "klmc", "ltx23", "wan27", "sora2",
+                    "rwy", "mmh3t", "mmh3i", "mmh3r"}
 
 @router.callback_query(F.data == "att_to_prompt")
 async def att_to_prompt(cb: CallbackQuery, state: FSMContext):
