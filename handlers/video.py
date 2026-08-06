@@ -21,7 +21,7 @@ from config import (
     OMNIHUMAN_PRICES, AURORA_AVATAR_PRICES,
     ELEVENLABS_DUBBING_PRICES, LIPSYNC_PRICES,
     HEYGEN_TRANSLATE_LANGUAGES, ELEVENLABS_DUBBING_LANGUAGES,
-    RUNWAY_PRICES, MINIMAX_H3_PRICES,
+    RUNWAY_PRICES, MINIMAX_H3_PRICES, MINIMAX_H3_VIDEO_REF_RATES,
 )
 import math
 
@@ -201,7 +201,7 @@ def get_durations(tid: str):
         "kl03":  list(range(3,16)),
         "klmc":  list(range(3,16)),
         "rwy":   [5,10],
-        "mmh3":  [4,6,8,10,12,15],
+        "mmh3":  list(range(4,16)),
     }.get(tid, [4,8,12])
 
 HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl03"}
@@ -458,9 +458,9 @@ async def show_duration(cb, state, tid, res, ar, name):
     is_flat = tid in FLAT_PRICE_TOOLS
     flat_coins = None
 
-    # For sd20/sd20f: if ref videos already attached, adjust button prices
+    # If ref videos already attached, adjust button prices
     ref_sec = 0
-    if tid in VIDEO_REF_RATES:
+    if tid in VIDEO_REF_RATES or tid == "mmh3":
         att_vids = data.get("att_vids", [])
         ref_sec = sum(v.get("duration", 0) for v in att_vids if v.get("duration", 0) > 0)
 
@@ -470,9 +470,14 @@ async def show_duration(cb, state, tid, res, ar, name):
         if not usd:
             continue  # skip unsupported combos (e.g. Runway 1080p 10s)
         if ref_sec > 0:
-            ref_usd = calc_video_ref_usd(tid, res, d, ref_sec)
-            if ref_usd > 0:
-                usd = ref_usd
+            if tid in VIDEO_REF_RATES:
+                ref_usd = calc_video_ref_usd(tid, res, d, ref_sec)
+                if ref_usd > 0:
+                    usd = ref_usd
+            elif tid == "mmh3":
+                rate = MINIMAX_H3_VIDEO_REF_RATES.get(res, 0.0)
+                if rate > 0:
+                    usd = usd + ref_sec * rate
         coins = usd_to_coins(usd) if usd > 0 else 0
         if is_flat:
             flat_coins = coins
@@ -505,14 +510,19 @@ async def dur_selected(cb: CallbackQuery, state: FSMContext):
     price_table = get_price_table(tid)
     usd   = price_table.get(res, {}).get(dur, 0)
 
-    # If a reference video was attached for sd20/sd20f, recalculate using kie.ai ref formula
-    if tid in VIDEO_REF_RATES:
+    # Recalculate price if a reference video was attached
+    if tid in VIDEO_REF_RATES or tid == "mmh3":
         att_vids = data.get("att_vids", [])
         ref_sec = sum(v.get("duration", 0) for v in att_vids if v.get("duration", 0) > 0)
         if ref_sec > 0:
-            ref_usd = calc_video_ref_usd(tid, res, dur, ref_sec)
-            if ref_usd > 0:
-                usd = ref_usd
+            if tid in VIDEO_REF_RATES:
+                ref_usd = calc_video_ref_usd(tid, res, dur, ref_sec)
+                if ref_usd > 0:
+                    usd = ref_usd
+            elif tid == "mmh3":
+                rate = MINIMAX_H3_VIDEO_REF_RATES.get(res, 0.0)
+                if rate > 0:
+                    usd = usd + ref_sec * rate
 
     coins = usd_to_coins(usd) if usd > 0 else 1
     await state.update_data(v_dur=dur, v_coins=coins, v_usd=usd)
@@ -562,7 +572,7 @@ async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
         data = await state.get_data()
         tid = data.get("v_tid", "")
         ref_breakdown = ""
-        if tid in VIDEO_REF_RATES:
+        if tid in VIDEO_REF_RATES or tid == "mmh3":
             att_vids = data.get("att_vids", [])
             ref_sec = sum(v.get("duration", 0) for v in att_vids if v.get("duration", 0) > 0)
             if ref_sec > 0:
