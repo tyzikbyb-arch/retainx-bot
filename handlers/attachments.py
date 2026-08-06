@@ -164,6 +164,11 @@ TOOL_ATTACHMENTS = {
         "start_frame": True, "end_frame": False,
         "hint": "Optional: attach a reference image to guide the generation.",
     },
+    "rwya": {   # Runway Aleph — video-to-video; input video is required
+        "vid_refs": 1, "vid_ref_required": True,
+        "img_refs": 1,
+        "hint": "Upload a video to transform — Aleph will enhance it based on your prompt.",
+    },
 
     # ── MiniMax H3 ────────────────────────────────────────────────────────────
 

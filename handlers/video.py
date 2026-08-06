@@ -21,7 +21,7 @@ from config import (
     OMNIHUMAN_PRICES, AURORA_AVATAR_PRICES,
     ELEVENLABS_DUBBING_PRICES, LIPSYNC_PRICES,
     HEYGEN_TRANSLATE_LANGUAGES, ELEVENLABS_DUBBING_LANGUAGES,
-    RUNWAY_PRICES, MINIMAX_H3_PRICES, MINIMAX_H3_VIDEO_REF_RATES,
+    RUNWAY_PRICES, RUNWAY_ALEPH_PRICE, MINIMAX_H3_PRICES, MINIMAX_H3_VIDEO_REF_RATES,
 )
 import math
 
@@ -84,6 +84,7 @@ TOOL_IDS = {
     "groku":    "Grok Upscale",
     "grokimag": "Grok Imagine 1.5",
     "rwy":   "Runway Gen 4",
+    "rwya":  "Runway Aleph",
     "mmh3":  "MiniMax H3",
 }
 ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
@@ -115,11 +116,12 @@ TOOL_DESCS = {
     "Grok Image-to-Video":     "Animate any image with Grok's image-to-video model.",
     "Grok Imagine":            "xAI's Grok video generation — Classic 1.5, Text-to-Video, or Image-to-Video.",
     "Runway Gen 4":  "Runway Gen 4 — photorealistic cinematic video, 720p or 1080p, 5 or 10 seconds.",
+    "Runway Aleph":  "Runway Aleph — transform and enhance an existing video guided by your text prompt.",
     "MiniMax H3":    "MiniMax H3 — supports text, image (start/end frame), and multi-modal references in 768P or 2K.",
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","mmh3"],
+    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","rwya","mmh3"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
@@ -324,7 +326,8 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     # Fixed price tools
     fixed = {
-        "fab1": ({t("vid_type_word", lang): t("vid_avatar_video_word", lang)}, 0.90),
+        "fab1":  ({t("vid_type_word", lang): t("vid_avatar_video_word", lang)}, 0.90),
+        "rwya":  ({}, RUNWAY_ALEPH_PRICE),
         # omni, aur1 handled separately
     }
     if tid in fixed:
@@ -1112,7 +1115,7 @@ async def prompt_received(msg: Message, state: FSMContext):
         pass  # already handled above
 
     # Tools that don't show resolution/aspect/audio in summary
-    no_res_tools = {"aur1", "omni", "hga4", "lips"}
+    no_res_tools = {"aur1", "omni", "hga4", "lips", "rwya"}
     lines = t("vid_model_label", ui_lang, name=tool) + "\n"
     if res != "—" and tid not in no_res_tools:   lines += t("vid_resolution_label", ui_lang, res=res) + "\n"
     if ar  != "—" and tid not in no_res_tools:   lines += t("vid_aspect_ratio_label", ui_lang, ar=ar) + "\n"
