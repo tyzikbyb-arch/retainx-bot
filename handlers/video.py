@@ -89,6 +89,7 @@ TOOL_IDS = {
     "rwya":  "Runway Aleph",
     "mmh3":  "MiniMax H3",
     "tpzv":  "Topaz Video Upscale",
+    "hl23":  "Hailuo 2.3",
     "hl23p": "Hailuo 2.3 Pro",
     "hl23s": "Hailuo 2.3 Standard",
 }
@@ -124,12 +125,13 @@ TOOL_DESCS = {
     "Runway Aleph":  "Runway Aleph — transform and enhance an existing video guided by your text prompt.",
     "MiniMax H3":         "MiniMax H3 — supports text, image (start/end frame), and multi-modal references in 768P or 2K.",
     "Topaz Video Upscale":"Topaz Video Upscale — enhance video resolution with AI upscaling (2× or 4×).",
+    "Hailuo 2.3":         "MiniMax Hailuo 2.3 — image-to-video, 6s or 10s, up to 1080P. Choose Pro or Standard.",
     "Hailuo 2.3 Pro":     "MiniMax Hailuo 2.3 Pro — premium image-to-video, 6s or 10s, up to 1080P.",
     "Hailuo 2.3 Standard":"MiniMax Hailuo 2.3 Standard — fast image-to-video, 6s or 10s, up to 1080P.",
 }
 
 VIDEO_SUBCATS = {
-    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","mmh3","hl23p","hl23s","tpzv"],
+    "Standard":  ["sd20","sd20f","hh10","wan27","grokimag","rwy","mmh3","hl23","tpzv"],
     "Premium":   ["veo31","veo31f","veo31l","veo31e","sora2","ltx23"],
     "Kling":     ["kl30","kl03","klmc"],
     "Avatar":    ["hga4","hgtr","eldb","lips","omni","aur1","fab1"],
@@ -376,6 +378,10 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
 
     if tid == "grokimag":
         await show_grokimag(cb, state)
+        return
+
+    if tid == "hl23":
+        await show_hl23(cb, state)
         return
 
     if tid == "grok":
@@ -661,6 +667,23 @@ def _grok_resolution(uid: int) -> str:
 
 async def show_grokimag(cb, state):
     await show_grok(cb, state)
+
+
+# ── Hailuo 2.3 hub ───────────────────────────────────────────────────────────
+async def show_hl23(cb, state):
+    lang = get_lang(cb.from_user.id)
+    sub = (await state.get_data()).get("v_sub", "cat_video")
+    await cb.message.edit_text(
+        f"◈  <b>Hailuo 2.3</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"  {TOOL_DESCS['Hailuo 2.3']}\n\n"
+        f"{t('vid_select_model', lang)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text="Pro",      callback_data="vt_hl23p"),
+             InlineKeyboardButton(text="Standard", callback_data="vt_hl23s")],
+            [back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)],
+        ), parse_mode="HTML"
+    )
 
 
 async def show_grok(cb, state):
@@ -1700,11 +1723,14 @@ def _build_attach_buttons(tid: str, data: dict, lang: str = "en") -> list:
     if aud_required and not auds: missing.append(t("vid_required_audio", lang))
     if start_required and not start: missing.append(t("vid_required_start_frame", lang))
 
+    # Hub tools: back goes to the hub, not the variant
+    back_tid = "hl23" if tid in {"hl23p", "hl23s"} else tid
+
     if missing:
         items = t("vid_required_and", lang).join(missing)
         label = t("vid_btn_upload_required", lang, items=items)
         buttons.append([InlineKeyboardButton(text=label, callback_data="att_required_alert")])
-        buttons.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
+        buttons.append([back_btn(f"vt_{back_tid}", lang=lang), menu_btn(lang)])
         return buttons
 
     if no_prompt:
@@ -1715,7 +1741,7 @@ def _build_attach_buttons(tid: str, data: dict, lang: str = "en") -> list:
         proceed_cb = "att_to_prompt"
 
     buttons.append([InlineKeyboardButton(text=proceed_label, callback_data=proceed_cb)])
-    buttons.append([back_btn(f"vt_{tid}", lang=lang), menu_btn(lang)])
+    buttons.append([back_btn(f"vt_{back_tid}", lang=lang), menu_btn(lang)])
     return buttons
 
 async def _show_attach_menu(target, state: FSMContext, edit: bool = True):
