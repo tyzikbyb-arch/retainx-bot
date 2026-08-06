@@ -439,13 +439,25 @@ async def ar_selected(cb: CallbackQuery, state: FSMContext):
 
 async def show_duration(cb, state, tid, res, ar, name):
     lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
     price_table = get_price_table(tid)
     durations = get_durations(tid)
     is_flat = tid in FLAT_PRICE_TOOLS
     flat_coins = None
+
+    # For sd20/sd20f: if ref videos already attached, adjust button prices
+    ref_sec = 0
+    if tid in VIDEO_REF_RATES:
+        att_vids = data.get("att_vids", [])
+        ref_sec = sum(v.get("duration", 0) for v in att_vids if v.get("duration", 0) > 0)
+
     buttons = []
     for d in durations:
         usd = price_table.get(res, {}).get(d, 0)
+        if ref_sec > 0:
+            ref_usd = calc_video_ref_usd(tid, res, d, ref_sec)
+            if ref_usd > 0:
+                usd = ref_usd
         coins = usd_to_coins(usd) if usd > 0 else 0
         if is_flat:
             flat_coins = coins
@@ -455,9 +467,11 @@ async def show_duration(cb, state, tid, res, ar, name):
     rows = list(chunked(buttons, 3))
     rows.append([back_btn(f"vr_{res}", lang=lang), menu_btn(lang)])
     price_line = f"<b>{flat_coins}◈</b> — {t('vid_flat_price', lang)}\n\n" if is_flat else ""
+    ref_note = f"📎 Ref video: {ref_sec}s\n\n" if ref_sec > 0 else ""
     await cb.message.edit_text(
         f"◈  <b>{name}</b>  —  {res}  {ar}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{ref_note}"
         f"{price_line}"
         f"{t('vid_select_duration', lang)}",
         reply_markup=kb(*rows), parse_mode="HTML"
@@ -527,7 +541,22 @@ async def _ask_prompt(cb, state, name, res, ar, dur, audio, coins):
     from database import has_unlimited
     unlimited = has_unlimited(uid)
     audio_word = t("vid_audio_yes", lang) if audio else t("vid_audio_no", lang)
-    cost_line = "" if unlimited else f"{t('vid_cost_label', lang, coins=coins)}\n"
+    if unlimited:
+        cost_line = ""
+    else:
+        data = await state.get_data()
+        tid = data.get("v_tid", "")
+        ref_breakdown = ""
+        if tid in VIDEO_REF_RATES:
+            att_vids = data.get("att_vids", [])
+            ref_sec = sum(v.get("duration", 0) for v in att_vids if v.get("duration", 0) > 0)
+            if ref_sec > 0:
+                price_table = get_price_table(tid)
+                base_usd = price_table.get(res, {}).get(dur, 0)
+                base_coins = usd_to_coins(base_usd) if base_usd > 0 else 0
+                ref_coins = coins - base_coins
+                ref_breakdown = f"\n  ↳ {base_coins}◈ video  +  {ref_coins}◈ ref ({ref_sec}s)"
+        cost_line = f"{t('vid_cost_label', lang, coins=coins)}{ref_breakdown}\n"
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
