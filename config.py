@@ -101,6 +101,23 @@ IMAGE_TOOLS = {
         "pricing": {"2K": 0.065, "4K": 0.13, "8K": 0.26},
         "coins_by_quality": {"2K": 2, "4K": 3, "8K": 6},
     },
+    "GPT Image 4o": {
+        "emoji": "◈",
+        "max_refs": 5,
+        "desc": "OpenAI's GPT-4o image model — generate from text or edit existing images",
+        "aspect_ratios": ["1:1", "3:2", "2:3"],
+        "pricing": {"per_gen": 0.039},
+        "coins": 1,
+    },
+    "Flux Kontext": {
+        "emoji": "⚡",
+        "max_refs": 1,
+        "desc": "FLUX Kontext — generate or edit images with natural language instructions",
+        "aspect_ratios": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
+        "quality": ["Pro", "Max"],
+        "pricing": {"Pro": 0.0325, "Max": 0.065},
+        "coins_by_quality": {"Pro": 1, "Max": 2},
+    },
 }
 
 # ─── VIDEO TOOLS ──────────────────────────────────────────────
