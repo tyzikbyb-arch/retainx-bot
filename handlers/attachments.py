@@ -167,12 +167,10 @@ TOOL_ATTACHMENTS = {
 
     # ── MiniMax H3 ────────────────────────────────────────────────────────────
 
-    "mmh3i": {  # MiniMax H3 Image-to-Video — first/last frame
+    "mmh3": {   # MiniMax H3 — auto-selects T2V/I2V/R2V based on attachments
         "start_frame": True, "end_frame": True,
-        "exclusive_startend": True,
-    },
-    "mmh3r": {  # MiniMax H3 Reference-to-Video — multi-modal references
         "img_refs": 9, "vid_refs": 3, "aud_refs": 3,
+        "exclusive_startend": True,
     },
 }
 
