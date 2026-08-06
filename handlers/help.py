@@ -117,18 +117,21 @@ def _page_unlim(lang: str):
 
 def _page_unlim_std(lang: str):
     return t("help_unlim_std_text", lang), kb(
+        [InlineKeyboardButton(text=t("unlim_support_btn", lang), url="https://t.me/RetainXStudio")],
         _back(lang, "help_unlim"),
     )
 
 
 def _page_unlim_pro(lang: str):
     return t("help_unlim_pro_text", lang), kb(
+        [InlineKeyboardButton(text=t("unlim_support_btn", lang), url="https://t.me/RetainXStudio")],
         _back(lang, "help_unlim"),
     )
 
 
 def _page_unlim_vip(lang: str):
     return t("help_unlim_vip_text", lang), kb(
+        [InlineKeyboardButton(text=t("unlim_support_btn", lang), url="https://t.me/RetainXStudio")],
         _back(lang, "help_unlim"),
     )
 

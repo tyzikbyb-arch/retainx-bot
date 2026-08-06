@@ -228,7 +228,8 @@ STR = {
             "  ⚡  Standard  —  from 268◈/hr\n"
             "  ⚡⚡  Pro       —  from 662◈/hr\n"
             "  ♛   VIP       —  from 1619◈/hr\n\n"
-            "  Tap a plan for details ↓\n"
+            "  Tap a plan for details ↓\n\n"
+            "  <b>To purchase:</b> contact @RetainXStudio\n"
             "━━━━━━━━━━━━━━━━━━━━"
         ),
         "help_unlim_std_text": (
@@ -1296,7 +1297,8 @@ STR = {
             "  ⚡  Standard  —  от 268◈/ч\n"
             "  ⚡⚡  Pro       —  от 662◈/ч\n"
             "  ♛   VIP       —  от 1619◈/ч\n\n"
-            "  Нажмите на тариф для подробностей ↓\n"
+            "  Нажмите на тариф для подробностей ↓\n\n"
+            "  <b>Купить:</b> напишите в @RetainXStudio\n"
             "━━━━━━━━━━━━━━━━━━━━"
         ),
         "help_unlim_std_text": (
@@ -2364,7 +2366,8 @@ STR = {
             "  ⚡  Standard  —  من 268◈/ساعة\n"
             "  ⚡⚡  Pro       —  من 662◈/ساعة\n"
             "  ♛   VIP       —  من 1619◈/ساعة\n\n"
-            "  اضغط على خطة للتفاصيل ↓\n"
+            "  اضغط على خطة للتفاصيل ↓\n\n"
+            "  <b>للشراء:</b> تواصل مع @RetainXStudio\n"
             "━━━━━━━━━━━━━━━━━━━━"
         ),
         "help_unlim_std_text": (
