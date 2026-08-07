@@ -305,10 +305,11 @@ async def _show_music_confirm(msg_or_cb, state: FSMContext, data: dict, lang: st
         [InlineKeyboardButton(text=f"{instr_label}  ↕", callback_data="suno_toggle_instr")],
     ]
     if model == "V5_5":
-        rows.append([InlineKeyboardButton(
-            text=f"⏱  {duration} {t('suno_sec', lang)}  ↕",
-            callback_data="suno_toggle_duration",
-        )])
+        rows.append([
+            InlineKeyboardButton(text="◄", callback_data="suno_dur_dec"),
+            InlineKeyboardButton(text=f"⏱  {duration} {t('suno_sec', lang)}", callback_data="suno_dur_noop"),
+            InlineKeyboardButton(text="►", callback_data="suno_dur_inc"),
+        ])
 
     if custom_mode:
         rows.append([
@@ -355,15 +356,32 @@ async def suno_toggle_voice(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 
-@router.callback_query(F.data == "suno_toggle_duration")
-async def suno_toggle_duration(cb: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data == "suno_dur_dec")
+async def suno_duration_dec(cb: CallbackQuery, state: FSMContext):
     data     = await state.get_data()
     duration = data.get("suno_duration", 30)
     idx      = DURATION_PRESETS.index(duration) if duration in DURATION_PRESETS else 1
-    await state.update_data(suno_duration=DURATION_PRESETS[(idx + 1) % len(DURATION_PRESETS)])
+    await state.update_data(suno_duration=DURATION_PRESETS[max(0, idx - 1)])
     data = await state.get_data()
     lang = get_lang(cb.from_user.id)
     await _show_music_confirm(cb, state, data, lang)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "suno_dur_inc")
+async def suno_duration_inc(cb: CallbackQuery, state: FSMContext):
+    data     = await state.get_data()
+    duration = data.get("suno_duration", 30)
+    idx      = DURATION_PRESETS.index(duration) if duration in DURATION_PRESETS else 1
+    await state.update_data(suno_duration=DURATION_PRESETS[min(len(DURATION_PRESETS) - 1, idx + 1)])
+    data = await state.get_data()
+    lang = get_lang(cb.from_user.id)
+    await _show_music_confirm(cb, state, data, lang)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "suno_dur_noop")
+async def suno_duration_noop(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 
