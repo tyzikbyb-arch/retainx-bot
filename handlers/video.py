@@ -97,6 +97,33 @@ TOOL_IDS = {
 }
 ID_TO_TOOL = {v: k for k, v in TOOL_IDS.items()}
 
+# ── Brand / family navigation ─────────────────────────────────
+# old_sub maps to UNLIMITED_TIER_CONFIG subcat names for tier filtering
+VIDEO_FAMILIES = {
+    "seedance": {"label": "Seedance",    "tids": ["sd20","sd20f"],                           "old_sub": "Standard"},
+    "kling":    {"label": "Kling",       "tids": ["kl30","kl3t","kl03","klmc"],               "old_sub": "Kling"},
+    "veo":      {"label": "Veo",         "tids": ["veo31","veo31f","veo31l","veo31e"],         "old_sub": "Premium"},
+    "grok":     {"label": "Grok",        "tids": ["grok","grokt","groki","grokimag"],          "old_sub": "Standard"},
+    "hailuo":   {"label": "Hailuo",      "tids": ["hl23p","hl23s"],                           "old_sub": "Standard"},
+    "runway":   {"label": "Runway",      "tids": ["rwy","rwya"],                              "old_sub": "Standard"},
+    "heygen":   {"label": "HeyGen",      "tids": ["hga4","hgtr"],                             "old_sub": "Avatar"},
+    "hh10":     {"label": "Happy Horse", "tids": ["hh10"],                                    "old_sub": "Standard"},
+    "wan27":    {"label": "Wan 2.7",     "tids": ["wan27"],                                   "old_sub": "Standard"},
+    "sora2":    {"label": "Sora 2 Pro",  "tids": ["sora2"],                                   "old_sub": "Premium"},
+    "ltx23":    {"label": "LTX 2.3 Pro", "tids": ["ltx23"],                                   "old_sub": "Premium"},
+    "mmh3":     {"label": "MiniMax H3",  "tids": ["mmh3"],                                    "old_sub": "Standard"},
+    "tpzv":     {"label": "Topaz",       "tids": ["tpzv"],                                    "old_sub": "Standard"},
+    "omni":     {"label": "OmniHuman",   "tids": ["omni"],                                    "old_sub": "Avatar"},
+    "lips":     {"label": "Lipsync",     "tids": ["lips"],                                    "old_sub": "Avatar"},
+    "eldb":     {"label": "ElevenLabs",  "tids": ["eldb"],                                    "old_sub": "Avatar"},
+    "fab1":     {"label": "Fabric",      "tids": ["fab1"],                                    "old_sub": "Avatar"},
+    "aur1":     {"label": "Aurora",      "tids": ["aur1"],                                    "old_sub": "Avatar"},
+}
+TID_TO_FAMILY: dict[str, str] = {}
+for _fk, _fd in VIDEO_FAMILIES.items():
+    for _tid in _fd["tids"]:
+        TID_TO_FAMILY[_tid] = _fk
+
 TOOL_DESCS = {
     "Seedance 2.0":            "High-quality cinematic video generation up to 1080p with optional audio.",
     "Seedance 2.0 Fast":       "Faster variant of Seedance 2.0 — up to 720p, quicker turnaround.",
@@ -241,25 +268,43 @@ async def video_menu(cb: CallbackQuery, state: FSMContext):
     from database import has_unlimited, get_unlimited_tier, get_coins
     from config import UNLIMITED_TIER_CONFIG
     unlim = has_unlimited(uid)
-    if unlim:
-        tier = get_unlimited_tier(uid) or "standard"
-        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
-        allowed = set(tier_cfg["subcats"])
-        visible_subcats = [s for s in VIDEO_SUBCATS if s in allowed]
-    else:
-        visible_subcats = [
-            s for s in VIDEO_SUBCATS
-            if any(tid not in _MANUAL_VIDEO_TOOL_IDS for tid in VIDEO_SUBCATS[s])
-        ]
-    buttons = [[InlineKeyboardButton(text=subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in visible_subcats]
-    buttons.append([back_btn("main_menu", t("menu_main_menu", lang))])
+
+    fam_buttons = []
+    for fk, fd in VIDEO_FAMILIES.items():
+        tids = fd["tids"]
+        old_sub = fd["old_sub"]
+        if unlim:
+            tier = get_unlimited_tier(uid) or "standard"
+            tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+            if old_sub not in set(tier_cfg["subcats"]):
+                continue
+            overrides = tier_cfg.get("subcat_overrides", {})
+            if old_sub in overrides:
+                allowed_tids = set(overrides[old_sub])
+                tids = [t for t in tids if t in allowed_tids]
+                if not tids:
+                    continue
+        else:
+            tids = [t for t in tids if t not in _MANUAL_VIDEO_TOOL_IDS]
+            if not tids:
+                continue
+
+        # Single-model family: button goes directly to model; multi-model: opens sub-menu
+        if len(fd["tids"]) == 1:
+            cb_data = f"vt_{tids[0]}"
+        else:
+            cb_data = f"vfam_{fk}"
+        fam_buttons.append(InlineKeyboardButton(text=fd["label"], callback_data=cb_data))
+
+    rows = list(chunked(fam_buttons, 2))
+    rows.append([back_btn("main_menu", t("menu_main_menu", lang))])
     balance = get_coins(uid)
     low_bal = f"\n⚠️  {t('vid_low_balance_notice', lang, coins=balance)}" if not unlim and balance < 5 else ""
     await cb.message.edit_text(
         f"{t('vid_menu_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_select_category', lang)}{low_bal}",
-        reply_markup=kb(*buttons), parse_mode="HTML"
+        reply_markup=kb(*rows), parse_mode="HTML"
     )
 
 @router.callback_query(F.data.startswith("vsub_"))
@@ -293,6 +338,50 @@ async def video_subcat(cb: CallbackQuery, state: FSMContext):
         reply_markup=kb(*buttons), parse_mode="HTML"
     )
     await state.update_data(v_sub=sub)
+
+@router.callback_query(F.data.startswith("vfam_"))
+async def video_family(cb: CallbackQuery, state: FSMContext):
+    fk = cb.data[5:]
+    uid = cb.from_user.id
+    lang = get_lang(uid)
+    fam = VIDEO_FAMILIES.get(fk)
+    if not fam:
+        await cb.answer()
+        return
+    from database import has_unlimited, get_unlimited_tier
+    from config import UNLIMITED_TIER_CONFIG
+    unlim = has_unlimited(uid)
+    tids = list(fam["tids"])
+    old_sub = fam["old_sub"]
+    if unlim:
+        tier = get_unlimited_tier(uid) or "standard"
+        tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
+        overrides = tier_cfg.get("subcat_overrides", {})
+        if old_sub in overrides:
+            allowed_tids = set(overrides[old_sub])
+            tids = [t for t in tids if t in allowed_tids]
+    else:
+        tids = [t for t in tids if t not in _MANUAL_VIDEO_TOOL_IDS]
+    if not tids:
+        await cb.answer(t("vid_subcat_tier_alert", lang), show_alert=True)
+        return
+    await state.update_data(v_fam=fk)
+    # Deduplicate by display name (grokimag aliases grok)
+    seen: set[str] = set()
+    deduped = []
+    for t_ in tids:
+        name_ = TOOL_IDS.get(t_, t_)
+        if name_ not in seen:
+            seen.add(name_)
+            deduped.append(t_)
+    buttons = [[InlineKeyboardButton(text=TOOL_IDS[t_], callback_data=f"vt_{t_}")] for t_ in deduped]
+    buttons.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
+    await cb.message.edit_text(
+        f"▸  <b>{fam['label']}</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('vid_select_model', lang)}",
+        reply_markup=kb(*buttons), parse_mode="HTML"
+    )
 
 # ── Tool selected ─────────────────────────────────────────────
 def _sd_attach_menu(coins: int = 0, lang: str = "en") -> str:
@@ -364,7 +453,8 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
             await state.set_state(VideoStates.attach_mode)
         else:
             lines = "\n".join(f"  {k:<14}{v}" for k,v in params.items())
-            sub = (await state.get_data()).get("v_sub","cat_video")
+            _fam = (await state.get_data()).get("v_fam")
+            _back = f"vfam_{_fam}" if _fam else "cat_video"
             from database import has_unlimited
             cost_short = "" if has_unlimited(cb.from_user.id) else f"  {t('vid_cost_label_short', lang, coins=coins)}\n\n"
             await cb.message.edit_text(
@@ -374,7 +464,7 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
                 f"{lines}\n"
                 f"{cost_short}"
                 f"{t('vid_enter_prompt', lang)}",
-                reply_markup=kb([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)]), parse_mode="HTML"
+                reply_markup=kb([back_btn(_back, lang=lang), menu_btn(lang)]), parse_mode="HTML"
             )
             await state.set_state(VideoStates.entering_prompt)
         return
@@ -440,9 +530,10 @@ async def tool_selected(cb: CallbackQuery, state: FSMContext):
         tier = get_unlimited_tier(cb.from_user.id) or "standard"
         tier_cfg = UNLIMITED_TIER_CONFIG.get(tier, UNLIMITED_TIER_CONFIG["standard"])
         resolutions = filter_resolutions(resolutions, tier_cfg["max_resolution"])
-    sub = (await state.get_data()).get("v_sub","cat_video")
+    _fam = (await state.get_data()).get("v_fam")
+    _back = f"vfam_{_fam}" if _fam else "cat_video"
     buttons = [[InlineKeyboardButton(text=r, callback_data=f"vr_{r}")] for r in resolutions]
-    buttons.append([back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)])
+    buttons.append([back_btn(_back, lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -648,7 +739,7 @@ async def show_veo_extend(cb, state):
         reply_markup=kb(
             [InlineKeyboardButton(text=t("vid_extend_fast", lang), callback_data="vext_Fast")],
             [InlineKeyboardButton(text=t("vid_extend_premium", lang), callback_data="vext_Premium")],
-            [back_btn("vsub_Premium", lang=lang), menu_btn(lang)],
+            [back_btn("vfam_veo", lang=lang), menu_btn(lang)],
         ), parse_mode="HTML"
     )
 
@@ -679,7 +770,6 @@ async def show_grokimag(cb, state):
 # ── Hailuo 2.3 hub ───────────────────────────────────────────────────────────
 async def show_hl23(cb, state):
     lang = get_lang(cb.from_user.id)
-    sub = (await state.get_data()).get("v_sub", "cat_video")
     await cb.message.edit_text(
         f"◈  <b>Hailuo 2.3</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -688,7 +778,7 @@ async def show_hl23(cb, state):
         reply_markup=kb(
             [InlineKeyboardButton(text="Pro",      callback_data="vt_hl23p"),
              InlineKeyboardButton(text="Standard", callback_data="vt_hl23s")],
-            [back_btn(f"vsub_{sub}", lang=lang), menu_btn(lang)],
+            [back_btn("cat_video", lang=lang), menu_btn(lang)],
         ), parse_mode="HTML"
     )
 
@@ -705,7 +795,7 @@ async def show_grok(cb, state):
         for s, usd in GROK_IMAGINE_15_PRICES.items()
     ]
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
+    rows.append([back_btn("vfam_grok", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"{t('vid_grok_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -742,7 +832,7 @@ async def show_grokt(cb, state):
         f"{t('vid_grokt_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {TOOL_DESCS['Grok Text-to-Video']}\n\n"
         f"{t('vid_grok_mode_select', lang)}",
-        reply_markup=kb(buttons, [back_btn("vsub_Grok", lang=lang), menu_btn(lang)]),
+        reply_markup=kb(buttons, [back_btn("vfam_grok", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
 
@@ -824,7 +914,7 @@ async def show_groki(cb, state):
         f"{t('vid_groki_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {TOOL_DESCS['Grok Image-to-Video']}\n\n"
         f"{t('vid_grok_mode_select', lang)}",
-        reply_markup=kb(buttons, [back_btn("vsub_Grok", lang=lang), menu_btn(lang)]),
+        reply_markup=kb(buttons, [back_btn("vfam_grok", lang=lang), menu_btn(lang)]),
         parse_mode="HTML"
     )
 
@@ -994,7 +1084,10 @@ async def show_duration_tool(cb, state, tid):
     ]
     buttons = btns
     rows = list(chunked(buttons, 3))
-    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
+    _fk = TID_TO_FAMILY.get(tid)
+    _multi = _fk and len(VIDEO_FAMILIES[_fk]["tids"]) > 1
+    _back = f"vfam_{_fk}" if _multi else "cat_video"
+    rows.append([back_btn(_back, lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -2241,7 +2334,7 @@ async def _do_confirm(cb: CallbackQuery, state: FSMContext):
 async def show_hga4_ar(cb, state):
     lang = get_lang(cb.from_user.id)
     buttons = [[InlineKeyboardButton(text=ar, callback_data=f"hga4_ar_{ar}")] for ar in HEYGEN_AVATAR_ASPECT_RATIOS]
-    buttons.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
+    buttons.append([back_btn("vfam_heygen", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         "◈  <b>HeyGen Avatar 4</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_hga4_select_ar', lang)}",
@@ -2326,7 +2419,7 @@ async def show_hgtr_quality(cb, state):
         reply_markup=kb(
             [InlineKeyboardButton(text=t("vid_btn_precision", lang), callback_data="hgtr_q_Precision")],
             [InlineKeyboardButton(text=t("vid_btn_speed", lang),     callback_data="hgtr_q_Speed")],
-            [back_btn("vsub_Avatar", lang=lang), menu_btn(lang)],
+            [back_btn("vfam_heygen", lang=lang), menu_btn(lang)],
         ),
         parse_mode="HTML"
     )
@@ -2377,7 +2470,7 @@ async def show_omni_dur(cb, state):
         for m, usd in OMNIHUMAN_PRICES.items()
     ]
     rows = list(chunked(btns[:9], 3)) + list(chunked(btns[9:], 2))
-    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
+    rows.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         "◈  <b>OmniHuman 1.5</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_omni_desc', lang)}",
@@ -2413,7 +2506,7 @@ async def aur1_start(cb: CallbackQuery, state: FSMContext):
         for m, usd in AURORA_AVATAR_PRICES.items()
     ]
     rows = list(chunked(btns[:9], 3)) + list(chunked(btns[9:], 2))
-    rows.append([back_btn("vsub_Avatar", lang=lang), menu_btn(lang)])
+    rows.append([back_btn("cat_video", lang=lang), menu_btn(lang)])
     await cb.message.edit_text(
         "◈  <b>Aurora Avatar</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('vid_select_duration', lang)}",
