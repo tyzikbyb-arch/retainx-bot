@@ -239,6 +239,28 @@ async def regen_order(cb: CallbackQuery):
     tool      = order["tool"]
     price_usd = float(order.get("price_usd") or 0)
 
+    # Infer queue type and tool_id from the stored tool name
+    from config import IMAGE_TOOLS
+    from handlers.video import ID_TO_TOOL
+    if tool in IMAGE_TOOLS:
+        order_type = "image"
+        tool_id    = tool
+    elif tool.startswith("Voiceover —"):
+        order_type = "voiceover"
+        tool_id    = str(params.get("voice_id", ""))
+    elif "ElevenLabs" in tool:
+        order_type = "audio"
+        tool_id    = "el11"
+    elif "Gemini" in tool:
+        order_type = "audio"
+        tool_id    = "gem25"
+    elif "Suno" in tool:
+        order_type = "suno_music"
+        tool_id    = "suno_music"
+    else:
+        order_type = "video"
+        tool_id    = ID_TO_TOOL.get(tool, tool)
+
     if not spend_coins(uid, coins):
         await cb.answer(t("regen_no_coins", lang), show_alert=True)
         return
@@ -262,12 +284,12 @@ async def regen_order(cb: CallbackQuery):
             "order_id":  new_oid,
             "user_id":   uid,
             "username":  cb.from_user.username or "",
-            "tool_id":   tool,
+            "tool_id":   tool_id,
             "tool_name": tool,
             "params":    params,
             "coins":     coins,
             "usd":       price_usd,
-            "type":      "image",
+            "type":      order_type,
         }))
         await r.aclose()
     except Exception:
