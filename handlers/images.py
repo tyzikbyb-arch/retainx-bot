@@ -1,3 +1,7 @@
+import asyncio
+import math
+from collections import defaultdict
+
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
@@ -7,7 +11,9 @@ from database import get_coins, add_coins, spend_coins, create_order, get_lang, 
 from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
 from handlers.attachments import file_too_large
-import math
+
+# Per-user lock prevents album race conditions (multiple photos arriving simultaneously)
+_ref_locks: dict = defaultdict(asyncio.Lock)
 
 router = Router()
 
@@ -401,27 +407,34 @@ async def img_add_refs(cb: CallbackQuery, state: FSMContext):
 @router.message(ImageStates.collecting_refs, F.photo | F.document)
 async def img_collect_ref(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
-    data = await state.get_data()
-    refs = data.get("img_refs", [])
-    name = data.get("img_tool", "")
-    from config import IMAGE_TOOLS
-    tool = IMAGE_TOOLS.get(name, {})
-    max_refs = tool.get("max_refs", 9)
+    uid  = msg.from_user.id
 
-    if len(refs) >= max_refs:
-        await msg.answer(t("img_ref_max_alert", lang, max=max_refs))
-        return
     if file_too_large(msg):
         await msg.answer(t("err_file_too_large", lang))
         return
 
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
-    ftype = "photo" if msg.photo else "document"
-    refs.append({"file_id": file_id, "type": ftype, "ref": f"img{len(refs)+1}"})
-    await state.update_data(img_refs=refs)
-    follow_up = t("img_ref_send_more", lang) if len(refs) < max_refs else t("img_ref_max_reached", lang)
+    ftype   = "photo" if msg.photo else "document"
+
+    # Lock per user so album photos (arriving simultaneously) don't overwrite each other
+    async with _ref_locks[uid]:
+        data    = await state.get_data()
+        refs    = data.get("img_refs", [])
+        name    = data.get("img_tool", "")
+        tool    = IMAGE_TOOLS.get(name, {})
+        max_refs = tool.get("max_refs", 9)
+
+        if len(refs) >= max_refs:
+            await msg.answer(t("img_ref_max_alert", lang, max=max_refs))
+            return
+
+        refs.append({"file_id": file_id, "type": ftype, "ref": f"img{len(refs)+1}"})
+        await state.update_data(img_refs=refs)
+        count = len(refs)
+
+    follow_up = t("img_ref_send_more", lang) if count < max_refs else t("img_ref_max_reached", lang)
     await msg.answer(
-        f"{t('img_ref_saved', lang, n=len(refs), count=len(refs), max=max_refs)}\n"
+        f"{t('img_ref_saved', lang, n=count, count=count, max=max_refs)}\n"
         f"{follow_up}",
         reply_markup=kb(
             [InlineKeyboardButton(text=t("btn_done", lang), callback_data="img_refs_done")],
