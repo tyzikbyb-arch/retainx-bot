@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
-from database import get_user_orders, get_lang
+from database import get_user_orders, get_order, get_lang, get_coins, spend_coins, create_order, add_coins
 from keyboards import kb, menu_btn, back_btn
 from i18n import t
 import time
@@ -220,3 +220,57 @@ async def repeat_order(cb: CallbackQuery, state: FSMContext):
     else:
         await state.set_state(VideoStates.entering_prompt)
     await cb.answer()
+
+
+@router.callback_query(F.data.startswith("regen_"))
+async def regen_order(cb: CallbackQuery):
+    import json, os
+    lang = get_lang(cb.from_user.id)
+    uid  = cb.from_user.id
+    oid  = int(cb.data.removeprefix("regen_"))
+
+    order = get_order(oid)
+    if not order or int(order["user_id"]) != uid:
+        await cb.answer(t("order_not_found", lang), show_alert=True)
+        return
+
+    coins     = int(order["coins"])
+    params    = order.get("params", {})
+    tool      = order["tool"]
+    price_usd = float(order.get("price_usd") or 0)
+
+    if not spend_coins(uid, coins):
+        await cb.answer(t("regen_no_coins", lang), show_alert=True)
+        return
+
+    try:
+        new_oid = create_order(
+            uid,
+            cb.from_user.username or cb.from_user.first_name,
+            tool, params, coins, price_usd,
+        )
+    except Exception:
+        add_coins(uid, coins)
+        await cb.answer(t("order_not_found", lang), show_alert=True)
+        return
+
+    try:
+        import redis.asyncio as aioredis
+        redis_url = os.environ.get("REDIS_URL", "")
+        r = await aioredis.from_url(redis_url, decode_responses=True)
+        await r.rpush("retainx:orders", json.dumps({
+            "order_id":  new_oid,
+            "user_id":   uid,
+            "username":  cb.from_user.username or "",
+            "tool_id":   tool,
+            "tool_name": tool,
+            "params":    params,
+            "coins":     coins,
+            "usd":       price_usd,
+            "type":      "image",
+        }))
+        await r.aclose()
+    except Exception:
+        pass
+
+    await cb.answer(t("regen_queued", lang, oid=new_oid), show_alert=True)

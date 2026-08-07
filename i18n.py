@@ -997,6 +997,9 @@ STR = {
         "order_status_delivered": "Delivered",
         "order_status_cancelled": "Cancelled",
         "order_your_result": "◈  Your generated result",
+        "regen_btn":         "♻️  Regenerate",
+        "regen_queued":      "✓  Regeneration queued — order #{oid}",
+        "regen_no_coins":    "Insufficient coins for regeneration",
 
         # ── Maintenance ──────────────────────────────────────────
         "maintenance_msg": "🔧 <b>Maintenance</b>\n\nThe bot is temporarily unavailable. Please try again later.",
@@ -2126,6 +2129,9 @@ STR = {
         "order_status_delivered": "Доставлен",
         "order_status_cancelled": "Отменён",
         "order_your_result": "◈  Ваш результат",
+        "regen_btn":         "♻️  Регенерировать",
+        "regen_queued":      "✓  Регенерация поставлена в очередь — заказ #{oid}",
+        "regen_no_coins":    "Недостаточно монет для регенерации",
 
         # ── Maintenance ──────────────────────────────────────────
         "maintenance_msg": "🔧 <b>Технические работы</b>\n\nБот временно недоступен. Попробуйте позже.",
@@ -3253,6 +3259,9 @@ STR = {
         "order_status_delivered": "مُسلَّم",
         "order_status_cancelled": "ملغى",
         "order_your_result": "◈  نتيجتك",
+        "regen_btn":         "♻️  إعادة إنشاء",
+        "regen_queued":      "✓  جاري إعادة الإنشاء — طلب #{oid}",
+        "regen_no_coins":    "رصيد غير كافٍ لإعادة الإنشاء",
 
         # ── Maintenance ──────────────────────────────────────────
         "maintenance_msg": "🔧 <b>صيانة</b>\n\nالبوت غير متاح مؤقتاً. يرجى المحاولة لاحقاً.",
