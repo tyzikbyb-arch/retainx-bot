@@ -19,11 +19,17 @@ from handlers import spinner as sp
 log = logging.getLogger(__name__)
 router = Router()
 
+DURATION_PRESETS = [20, 30, 60, 90, 120, 180, 240]
+VOICE_OPTIONS    = ["auto", "male", "female"]
+
+
 # ─── FSM states ──────────────────────────────────────────────────────────────
 
 class SunoStates(StatesGroup):
     entering_music_prompt  = State()
     entering_style         = State()
+    entering_title         = State()
+    entering_custom_lyrics = State()
     entering_lyrics_prompt = State()
     waiting_for_audio      = State()
     entering_stem_name     = State()
@@ -87,12 +93,35 @@ async def suno_music_model_selected(cb: CallbackQuery, state: FSMContext):
         suno_usd=cfg["usd"],
         suno_instrumental=False,
         suno_style="",
+        suno_title="",
+        suno_voice="auto",
+        suno_duration=30,
+        suno_custom_mode=False,
+        suno_style_edit_mode=False,
     )
     await cb.message.edit_text(
-        f"🎵  <b>{cfg['label']}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_prompt', lang)}",
+        f"🎵  <b>{cfg['label']}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_select_mode', lang)}",
         reply_markup=kb(
+            [InlineKeyboardButton(text=t("suno_btn_mode_normal", lang), callback_data="suno_mode_normal")],
+            [InlineKeyboardButton(text=t("suno_btn_mode_custom", lang), callback_data="suno_mode_custom")],
             [back_btn("suno_gen_music", lang=lang), menu_btn(lang)],
         ),
+        parse_mode="HTML",
+    )
+    await cb.answer()
+
+
+# ── Normal mode ──────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data == "suno_mode_normal")
+async def suno_mode_normal(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    await state.update_data(suno_custom_mode=False)
+    await cb.message.edit_text(
+        f"🎵  <b>{data.get('suno_model_label', 'Suno')}</b>  ·  {t('suno_mode_normal_label', lang)}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_prompt', lang)}",
+        reply_markup=kb([menu_btn(lang)]),
         parse_mode="HTML",
     )
     await state.set_state(SunoStates.entering_music_prompt)
@@ -101,7 +130,7 @@ async def suno_music_model_selected(cb: CallbackQuery, state: FSMContext):
 
 @router.message(SunoStates.entering_music_prompt)
 async def suno_music_prompt_received(msg: Message, state: FSMContext):
-    lang = get_lang(msg.from_user.id)
+    lang   = get_lang(msg.from_user.id)
     prompt = (msg.text or "").strip()
     if not prompt:
         await msg.answer(t("suno_enter_prompt", lang))
@@ -111,42 +140,198 @@ async def suno_music_prompt_received(msg: Message, state: FSMContext):
     await _show_music_confirm(msg, state, data, lang)
 
 
+# ── Custom mode ──────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data == "suno_mode_custom")
+async def suno_mode_custom(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    await state.update_data(suno_custom_mode=True)
+    await cb.message.edit_text(
+        f"🎵  <b>{data.get('suno_model_label', 'Suno')}</b>  ·  {t('suno_mode_custom_label', lang)}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_title', lang)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text=t("suno_btn_skip", lang), callback_data="suno_skip_title")],
+            [menu_btn(lang)],
+        ),
+        parse_mode="HTML",
+    )
+    await state.set_state(SunoStates.entering_title)
+    await cb.answer()
+
+
+@router.message(SunoStates.entering_title)
+async def suno_title_received(msg: Message, state: FSMContext):
+    lang  = get_lang(msg.from_user.id)
+    title = (msg.text or "").strip()
+    await state.update_data(suno_title=title)
+    data = await state.get_data()
+    await msg.answer(
+        f"🎵  <b>{data.get('suno_model_label', 'Suno')}</b>  ·  {t('suno_mode_custom_label', lang)}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_style', lang)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text=t("suno_btn_skip", lang), callback_data="suno_skip_style")],
+            [menu_btn(lang)],
+        ),
+        parse_mode="HTML",
+    )
+    await state.set_state(SunoStates.entering_style)
+
+
+@router.callback_query(F.data == "suno_skip_title")
+async def suno_skip_title(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(suno_title="")
+    data = await state.get_data()
+    await cb.message.edit_text(
+        f"🎵  <b>{data.get('suno_model_label', 'Suno')}</b>  ·  {t('suno_mode_custom_label', lang)}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_style', lang)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text=t("suno_btn_skip", lang), callback_data="suno_skip_style")],
+            [menu_btn(lang)],
+        ),
+        parse_mode="HTML",
+    )
+    await state.set_state(SunoStates.entering_style)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "suno_skip_style")
+async def suno_skip_style(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(suno_style="")
+    data = await state.get_data()
+    await cb.message.edit_text(
+        f"🎵  <b>{data.get('suno_model_label', 'Suno')}</b>  ·  {t('suno_mode_custom_label', lang)}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_custom_lyrics', lang)}",
+        reply_markup=kb([menu_btn(lang)]),
+        parse_mode="HTML",
+    )
+    await state.set_state(SunoStates.entering_custom_lyrics)
+    await cb.answer()
+
+
+@router.message(SunoStates.entering_style)
+async def suno_style_received(msg: Message, state: FSMContext):
+    lang = get_lang(msg.from_user.id)
+    await state.update_data(suno_style=(msg.text or "").strip())
+    data = await state.get_data()
+    if data.get("suno_custom_mode") and not data.get("suno_style_edit_mode"):
+        # Custom mode initial flow: proceed to lyrics input
+        await msg.answer(
+            f"🎵  <b>{data.get('suno_model_label', 'Suno')}</b>  ·  {t('suno_mode_custom_label', lang)}\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_custom_lyrics', lang)}",
+            reply_markup=kb([menu_btn(lang)]),
+            parse_mode="HTML",
+        )
+        await state.set_state(SunoStates.entering_custom_lyrics)
+    else:
+        # Normal mode or editing style from confirm: return to confirm
+        await state.update_data(suno_style_edit_mode=False)
+        data = await state.get_data()
+        await _show_music_confirm(msg, state, data, lang)
+
+
+@router.message(SunoStates.entering_custom_lyrics)
+async def suno_custom_lyrics_received(msg: Message, state: FSMContext):
+    lang   = get_lang(msg.from_user.id)
+    lyrics = (msg.text or "").strip()
+    if not lyrics:
+        await msg.answer(t("suno_enter_custom_lyrics", lang))
+        return
+    await state.update_data(suno_prompt=lyrics)
+    data = await state.get_data()
+    await _show_music_confirm(msg, state, data, lang)
+
+
+# ── Shared confirm screen ─────────────────────────────────────────────────────
+
 async def _show_music_confirm(msg_or_cb, state: FSMContext, data: dict, lang: str):
     model_label  = data.get("suno_model_label", "—")
+    model        = data.get("suno_model", "")
     coins        = data.get("suno_coins", 0)
     prompt       = data.get("suno_prompt", "—")
     style        = data.get("suno_style", "")
+    title        = data.get("suno_title", "")
     instrumental = data.get("suno_instrumental", False)
+    custom_mode  = data.get("suno_custom_mode", False)
+    voice        = data.get("suno_voice", "auto")
+    duration     = data.get("suno_duration", 30)
     balance      = get_coins(msg_or_cb.from_user.id)
     coins_word   = t("coins_word", lang)
 
-    style_line  = f"  {t('suno_style_label', lang)}   <i>{style}</i>\n" if style else ""
+    mode_label  = t("suno_mode_custom_label", lang) if custom_mode else t("suno_mode_normal_label", lang)
     instr_label = t("suno_instrumental_on", lang) if instrumental else t("suno_instrumental_off", lang)
 
+    voice_map = {
+        "auto":   t("suno_voice_auto", lang),
+        "male":   t("suno_voice_male", lang),
+        "female": t("suno_voice_female", lang),
+    }
+    voice_label = voice_map.get(voice, voice_map["auto"])
+
+    prompt_display = prompt[:200] + ("…" if len(prompt) > 200 else "")
+
+    if custom_mode:
+        title_line = f"  {t('suno_title_label', lang)}   <i>{title}</i>\n" if title else ""
+        style_line = f"  {t('suno_style_label', lang)}   <i>{style}</i>\n" if style else ""
+        content_block = (
+            f"{title_line}"
+            f"{style_line}"
+            f"\n  {t('suno_lyrics_label', lang)}\n"
+            f"  <i>{prompt_display}</i>\n\n"
+        )
+    else:
+        style_line = f"  {t('suno_style_label', lang)}   <i>{style}</i>\n" if style else ""
+        content_block = (
+            f"{style_line}"
+            f"\n  {t('suno_prompt_label', lang)}\n"
+            f"  <i>{prompt_display}</i>\n\n"
+        )
+
     text = (
-        f"🎵  <b>{t('suno_order_summary', lang)}</b>\n"
+        f"🎵  <b>{t('suno_order_summary', lang)}</b>  ·  {mode_label}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"  {t('suno_model_label', lang)}   <b>{model_label}</b>\n"
-        f"{style_line}"
-        f"  {t('suno_instrumental_label', lang)}   {instr_label}\n"
         f"  {t('suno_cost_label', lang)}   <b>{coins} {coins_word}</b>\n"
-        f"  {t('suno_balance_label', lang)}   {balance} {coins_word}\n\n"
-        f"  {t('suno_prompt_label', lang)}\n"
-        f"  <i>{prompt}</i>\n\n"
+        f"  {t('suno_balance_label', lang)}   {balance} {coins_word}\n"
+        f"{content_block}"
         f"━━━━━━━━━━━━━━━━━━━━"
     )
-    markup = kb(
+
+    rows = [
         [InlineKeyboardButton(text=t("suno_btn_confirm", lang, coins=coins), callback_data="suno_music_confirm")],
-        [InlineKeyboardButton(text=instr_label + "  ↕", callback_data="suno_toggle_instr")],
-        [InlineKeyboardButton(text=t("suno_btn_add_style", lang), callback_data="suno_add_style")],
-        [InlineKeyboardButton(text=t("suno_btn_edit_prompt", lang), callback_data="suno_edit_prompt")],
-        [menu_btn(lang)],
-    )
+        [InlineKeyboardButton(text=f"{voice_label}  ↕", callback_data="suno_toggle_voice")],
+        [InlineKeyboardButton(text=f"{instr_label}  ↕", callback_data="suno_toggle_instr")],
+    ]
+    if model == "V5_5":
+        rows.append([InlineKeyboardButton(
+            text=f"⏱  {duration} {t('suno_sec', lang)}  ↕",
+            callback_data="suno_toggle_duration",
+        )])
+
+    if custom_mode:
+        rows.append([
+            InlineKeyboardButton(text=t("suno_btn_edit_lyrics", lang), callback_data="suno_edit_lyrics"),
+            InlineKeyboardButton(text=t("suno_btn_edit_style", lang),  callback_data="suno_edit_style_custom"),
+        ])
+    else:
+        style_btn = t("suno_btn_edit_style", lang) if style else t("suno_btn_add_style", lang)
+        rows.append([
+            InlineKeyboardButton(text=t("suno_btn_edit_prompt", lang), callback_data="suno_edit_prompt"),
+            InlineKeyboardButton(text=style_btn,                       callback_data="suno_add_style"),
+        ])
+
+    rows.append([menu_btn(lang)])
+    markup = kb(*rows)
+
     if isinstance(msg_or_cb, Message):
         await msg_or_cb.answer(text, reply_markup=markup, parse_mode="HTML")
     else:
         await msg_or_cb.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
 
+
+# ── Toggle handlers ───────────────────────────────────────────────────────────
 
 @router.callback_query(F.data == "suno_toggle_instr")
 async def suno_toggle_instrumental(cb: CallbackQuery, state: FSMContext):
@@ -158,6 +343,32 @@ async def suno_toggle_instrumental(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 
+@router.callback_query(F.data == "suno_toggle_voice")
+async def suno_toggle_voice(cb: CallbackQuery, state: FSMContext):
+    data  = await state.get_data()
+    voice = data.get("suno_voice", "auto")
+    idx   = VOICE_OPTIONS.index(voice) if voice in VOICE_OPTIONS else 0
+    await state.update_data(suno_voice=VOICE_OPTIONS[(idx + 1) % len(VOICE_OPTIONS)])
+    data  = await state.get_data()
+    lang  = get_lang(cb.from_user.id)
+    await _show_music_confirm(cb, state, data, lang)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "suno_toggle_duration")
+async def suno_toggle_duration(cb: CallbackQuery, state: FSMContext):
+    data     = await state.get_data()
+    duration = data.get("suno_duration", 30)
+    idx      = DURATION_PRESETS.index(duration) if duration in DURATION_PRESETS else 1
+    await state.update_data(suno_duration=DURATION_PRESETS[(idx + 1) % len(DURATION_PRESETS)])
+    data = await state.get_data()
+    lang = get_lang(cb.from_user.id)
+    await _show_music_confirm(cb, state, data, lang)
+    await cb.answer()
+
+
+# ── Edit handlers ─────────────────────────────────────────────────────────────
+
 @router.callback_query(F.data == "suno_add_style")
 async def suno_add_style(cb: CallbackQuery, state: FSMContext):
     lang = get_lang(cb.from_user.id)
@@ -168,14 +379,6 @@ async def suno_add_style(cb: CallbackQuery, state: FSMContext):
     )
     await state.set_state(SunoStates.entering_style)
     await cb.answer()
-
-
-@router.message(SunoStates.entering_style)
-async def suno_style_received(msg: Message, state: FSMContext):
-    lang = get_lang(msg.from_user.id)
-    await state.update_data(suno_style=(msg.text or "").strip())
-    data = await state.get_data()
-    await _show_music_confirm(msg, state, data, lang)
 
 
 @router.callback_query(F.data == "suno_edit_prompt")
@@ -191,6 +394,35 @@ async def suno_edit_prompt(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 
+@router.callback_query(F.data == "suno_edit_lyrics")
+async def suno_edit_lyrics(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    data = await state.get_data()
+    await cb.message.edit_text(
+        f"🎵  <b>{data.get('suno_model_label', 'Suno')}</b>  ·  {t('suno_mode_custom_label', lang)}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_custom_lyrics', lang)}",
+        reply_markup=kb([menu_btn(lang)]),
+        parse_mode="HTML",
+    )
+    await state.set_state(SunoStates.entering_custom_lyrics)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "suno_edit_style_custom")
+async def suno_edit_style_custom(cb: CallbackQuery, state: FSMContext):
+    lang = get_lang(cb.from_user.id)
+    await state.update_data(suno_style_edit_mode=True)
+    await cb.message.edit_text(
+        f"🎵  <b>Suno</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_style', lang)}",
+        reply_markup=kb([menu_btn(lang)]),
+        parse_mode="HTML",
+    )
+    await state.set_state(SunoStates.entering_style)
+    await cb.answer()
+
+
+# ── Confirm & submit ──────────────────────────────────────────────────────────
+
 @router.callback_query(F.data == "suno_music_confirm")
 async def suno_music_confirm(cb: CallbackQuery, state: FSMContext):
     lang  = get_lang(cb.from_user.id)
@@ -203,7 +435,11 @@ async def suno_music_confirm(cb: CallbackQuery, state: FSMContext):
     price_usd    = data.get("suno_usd", 0.20)
     prompt       = data.get("suno_prompt", "")
     style        = data.get("suno_style", "")
+    title        = data.get("suno_title", "")
     instrumental = data.get("suno_instrumental", False)
+    custom_mode  = data.get("suno_custom_mode", False)
+    voice        = data.get("suno_voice", "auto")
+    duration     = data.get("suno_duration", 30)
 
     if not prompt:
         await cb.answer(t("suno_session_expired", lang), show_alert=True)
@@ -214,13 +450,21 @@ async def suno_music_confirm(cb: CallbackQuery, state: FSMContext):
         await cb.answer(t("suno_insufficient_coins", lang), show_alert=True)
         return
 
-    params = {
+    params: dict = {
         "model":        model,
         "prompt":       prompt,
-        "style":        style,
         "instrumental": instrumental,
-        "custom_mode":  bool(style),
+        "custom_mode":  custom_mode,
     }
+    if style:
+        params["style"] = style
+    if title:
+        params["title"] = title
+    if voice != "auto":
+        params["vocal_gender"] = voice
+    if model == "V5_5":
+        params["duration"] = duration
+
     tool_name = f"Suno Music — {model_label}"
     try:
         oid = create_order(uid, cb.from_user.username or cb.from_user.first_name or "",
@@ -369,11 +613,11 @@ async def suno_vocal_confirm(cb: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     uid  = cb.from_user.id
 
-    vtype      = data.get("suno_vocal_type", "separate_vocal")
+    vtype       = data.get("suno_vocal_type", "separate_vocal")
     price_coins = data.get("suno_coins", 10)
     price_usd   = data.get("suno_usd", 0.50)
-    file_id    = data.get("suno_audio_file_id")
-    stem_name  = data.get("suno_stem_name", "")
+    file_id     = data.get("suno_audio_file_id")
+    stem_name   = data.get("suno_stem_name", "")
 
     if not file_id:
         await cb.answer(t("suno_session_expired", lang), show_alert=True)
@@ -386,7 +630,6 @@ async def suno_vocal_confirm(cb: CallbackQuery, state: FSMContext):
 
     label_key = f"label_{lang}" if lang in ("ru", "ar") else "label_en"
     label = SUNO_VOCAL_TYPES[vtype].get(label_key) or SUNO_VOCAL_TYPES[vtype]["label_en"]
-    # Pass file_id; worker will upload it to kie.ai CDN via _upload_tg_file_to_kie
     params = {"type": vtype, "file_id": file_id}
     if stem_name:
         params["stem_name"] = stem_name
@@ -429,7 +672,7 @@ async def suno_vocal_confirm(cb: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "suno_gen_lyrics")
 async def suno_lyrics_menu(cb: CallbackQuery, state: FSMContext):
     await state.clear()
-    lang = get_lang(cb.from_user.id)
+    lang  = get_lang(cb.from_user.id)
     coins = SUNO_LYRICS_PRICE["coins"]
     await cb.message.edit_text(
         f"📝  <b>{t('suno_btn_generate_lyrics', lang)}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n{t('suno_enter_lyrics_prompt', lang, coins=coins)}",
@@ -442,7 +685,7 @@ async def suno_lyrics_menu(cb: CallbackQuery, state: FSMContext):
 
 @router.message(SunoStates.entering_lyrics_prompt)
 async def suno_lyrics_prompt_received(msg: Message, state: FSMContext):
-    lang  = get_lang(msg.from_user.id)
+    lang   = get_lang(msg.from_user.id)
     prompt = (msg.text or "").strip()
     if not prompt:
         await msg.answer(t("suno_enter_lyrics_prompt", lang, coins=SUNO_LYRICS_PRICE["coins"]))
