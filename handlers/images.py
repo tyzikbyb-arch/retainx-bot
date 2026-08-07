@@ -1,6 +1,6 @@
-import asyncio
+import json
 import math
-from collections import defaultdict
+import os
 
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
@@ -12,8 +12,50 @@ from keyboards import kb, back_btn, menu_btn, chunked
 from i18n import t
 from handlers.attachments import file_too_large
 
-# Per-user lock prevents album race conditions (multiple photos arriving simultaneously)
-_ref_locks: dict = defaultdict(asyncio.Lock)
+# ── Redis-backed atomic ref storage ──────────────────────────────────────────
+# Using RPUSH (atomic) instead of FSM read-modify-write to avoid race
+# conditions when album photos arrive simultaneously.
+
+_REFS_TTL = 3600  # 1 h
+
+
+def _ref_key(uid: int) -> str:
+    return f"retainx:img_refs:{uid}"
+
+
+async def _refs_clear(uid: int) -> None:
+    redis_url = os.environ.get("REDIS_URL", "")
+    if not redis_url:
+        return
+    import redis.asyncio as aioredis
+    r = await aioredis.from_url(redis_url, decode_responses=True)
+    await r.delete(_ref_key(uid))
+    await r.aclose()
+
+
+async def _refs_push(uid: int, ref: dict) -> int:
+    """Atomically append one ref; returns new list length."""
+    redis_url = os.environ.get("REDIS_URL", "")
+    if not redis_url:
+        return 0
+    import redis.asyncio as aioredis
+    r = await aioredis.from_url(redis_url, decode_responses=True)
+    key = _ref_key(uid)
+    count = await r.rpush(key, json.dumps(ref))
+    await r.expire(key, _REFS_TTL)
+    await r.aclose()
+    return count
+
+
+async def _refs_get(uid: int) -> list:
+    redis_url = os.environ.get("REDIS_URL", "")
+    if not redis_url:
+        return []
+    import redis.asyncio as aioredis
+    r = await aioredis.from_url(redis_url, decode_responses=True)
+    raw = await r.lrange(_ref_key(uid), 0, -1)
+    await r.aclose()
+    return [json.loads(x) for x in raw]
 
 router = Router()
 
@@ -384,16 +426,16 @@ async def _notify_admin(cb: CallbackQuery, oid: int, name: str, params: dict, co
 @router.callback_query(F.data == "img_add_refs")
 async def img_add_refs(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
-    lang = get_lang(cb.from_user.id)
+    uid  = cb.from_user.id
+    lang = get_lang(uid)
     data = await state.get_data()
-    refs = data.get("img_refs", [])
     name = data.get("img_tool", "")
-    from config import IMAGE_TOOLS
     tool = IMAGE_TOOLS.get(name, {})
     max_refs = tool.get("max_refs", 9)
 
+    await _refs_clear(uid)  # reset for fresh collection
     await cb.message.edit_text(
-        f"{t('img_ref_title', lang, count=len(refs), max=max_refs)}\n"
+        f"{t('img_ref_title', lang, count=0, max=max_refs)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{t('img_ref_instructions', lang, max=max_refs)}",
         reply_markup=kb(
@@ -413,24 +455,22 @@ async def img_collect_ref(msg: Message, state: FSMContext):
         await msg.answer(t("err_file_too_large", lang))
         return
 
+    data     = await state.get_data()
+    name     = data.get("img_tool", "")
+    tool     = IMAGE_TOOLS.get(name, {})
+    max_refs = tool.get("max_refs", 9)
+
+    # Check current count before pushing (slight race ok — capped hard at Done)
+    current = await _refs_get(uid)
+    if len(current) >= max_refs:
+        await msg.answer(t("img_ref_max_alert", lang, max=max_refs))
+        return
+
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     ftype   = "photo" if msg.photo else "document"
 
-    # Lock per user so album photos (arriving simultaneously) don't overwrite each other
-    async with _ref_locks[uid]:
-        data    = await state.get_data()
-        refs    = data.get("img_refs", [])
-        name    = data.get("img_tool", "")
-        tool    = IMAGE_TOOLS.get(name, {})
-        max_refs = tool.get("max_refs", 9)
-
-        if len(refs) >= max_refs:
-            await msg.answer(t("img_ref_max_alert", lang, max=max_refs))
-            return
-
-        refs.append({"file_id": file_id, "type": ftype, "ref": f"img{len(refs)+1}"})
-        await state.update_data(img_refs=refs)
-        count = len(refs)
+    # RPUSH is atomic — no race condition even with simultaneous album photos
+    count = await _refs_push(uid, {"file_id": file_id, "type": ftype})
 
     follow_up = t("img_ref_send_more", lang) if count < max_refs else t("img_ref_max_reached", lang)
     await msg.answer(
@@ -444,23 +484,33 @@ async def img_collect_ref(msg: Message, state: FSMContext):
 
 @router.callback_query(F.data == "img_refs_done")
 async def img_refs_done(cb: CallbackQuery, state: FSMContext):
-    lang = get_lang(cb.from_user.id)
+    uid  = cb.from_user.id
+    lang = get_lang(uid)
     data = await state.get_data()
-    refs = data.get("img_refs", [])
     name = data.get("img_tool", "")
-    from config import IMAGE_TOOLS
     tool = IMAGE_TOOLS.get(name, {})
+    max_refs = tool.get("max_refs", 9)
+
+    # Pull refs from Redis (atomic store), cap at max, save to FSM for the order
+    refs = (await _refs_get(uid))[:max_refs]
+    # Attach ref labels now that we know the final order
+    for i, ref in enumerate(refs):
+        ref["ref"] = f"img{i+1}"
+    await _refs_clear(uid)
+    await state.update_data(img_refs=refs)
+
     if tool.get("requires_ref") and not refs:
         await cb.answer(t("img_ref_required_alert", lang), show_alert=True)
         return
     await cb.answer()
-    coins = data.get("img_coins", 1)
-    coins_word = t("coins_word", lang)
-    ar = data.get("img_ar", "—")
-    quality = data.get("img_quality", "—")
-    unlimited = has_unlimited(cb.from_user.id)
 
-    ref_line = f"\n{t('img_refs_attached', lang, count=len(refs))}" if refs else ""
+    coins      = data.get("img_coins", 1)
+    coins_word = t("coins_word", lang)
+    ar         = data.get("img_ar", "—")
+    quality    = data.get("img_quality", "—")
+    unlimited  = has_unlimited(uid)
+
+    ref_line  = f"\n{t('img_refs_attached', lang, count=len(refs))}" if refs else ""
     cost_line = f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n\n" if not unlimited else "\n"
 
     await cb.message.edit_text(
