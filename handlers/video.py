@@ -260,15 +260,12 @@ HAS_AUDIO = {"sd20","sd20f","veo31","veo31f","veo31l","ltx23","sora2","kl30","kl
 FLAT_PRICE_TOOLS = {"veo31","veo31f","veo31l"}  # flat per-video price, all durations cost the same
 
 # ── Video menu ────────────────────────────────────────────────
-@router.callback_query(F.data == "cat_video")
-async def video_menu(cb: CallbackQuery, state: FSMContext):
-    await state.clear()
-    uid = cb.from_user.id
-    lang = get_lang(uid)
+def build_cat_video_page(uid: int):
+    """Returns (text, keyboard) for the video category menu. Usable from Message and CallbackQuery contexts."""
     from database import has_unlimited, get_unlimited_tier, get_coins
     from config import UNLIMITED_TIER_CONFIG
+    lang = get_lang(uid)
     unlim = has_unlimited(uid)
-
     fam_buttons = []
     for fk, fd in VIDEO_FAMILIES.items():
         tids = fd["tids"]
@@ -288,24 +285,28 @@ async def video_menu(cb: CallbackQuery, state: FSMContext):
             tids = [t for t in tids if t not in _MANUAL_VIDEO_TOOL_IDS]
             if not tids:
                 continue
-
-        # Single-model family: button goes directly to model; multi-model: opens sub-menu
         if len(fd["tids"]) == 1:
             cb_data = f"vt_{tids[0]}"
         else:
             cb_data = f"vfam_{fk}"
         fam_buttons.append(InlineKeyboardButton(text=fd["label"], callback_data=cb_data))
-
     rows = list(chunked(fam_buttons, 2))
     rows.append([back_btn("main_menu", t("menu_main_menu", lang))])
     balance = get_coins(uid)
     low_bal = f"\n⚠️  {t('vid_low_balance_notice', lang, coins=balance)}" if not unlim and balance < 5 else ""
-    await cb.message.edit_text(
+    text = (
         f"{t('vid_menu_title', lang)}\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{t('vid_select_category', lang)}{low_bal}",
-        reply_markup=kb(*rows), parse_mode="HTML"
+        f"{t('vid_select_category', lang)}{low_bal}"
     )
+    return text, kb(*rows)
+
+
+@router.callback_query(F.data == "cat_video")
+async def video_menu(cb: CallbackQuery, state: FSMContext):
+    await state.clear()
+    text, keyboard = build_cat_video_page(cb.from_user.id)
+    await cb.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 @router.callback_query(F.data.startswith("vsub_"))
 async def video_subcat(cb: CallbackQuery, state: FSMContext):

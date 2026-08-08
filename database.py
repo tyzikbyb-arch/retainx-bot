@@ -81,6 +81,19 @@ def init_db():
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ref_first_done BOOLEAN DEFAULT FALSE")
             except Exception as e:
                 log.warning(f"DB migration (users.ref_first_done): {e}")
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_promo TEXT DEFAULT NULL")
+            except Exception as e:
+                log.warning(f"DB migration (users.active_promo): {e}")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS promo_codes (
+                    code TEXT PRIMARY KEY,
+                    uid BIGINT NOT NULL,
+                    pct INTEGER DEFAULT 30,
+                    uses INTEGER DEFAULT 0,
+                    created INTEGER
+                )
+            """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS artlist_accounts (
                     id SERIAL PRIMARY KEY,
@@ -463,6 +476,55 @@ def set_blogger(uid: int, val: bool):
                 VALUES (%s, 0, %s, %s)
                 ON CONFLICT (uid) DO UPDATE SET is_blogger = %s
             """, (uid, int(time.time()), val, val))
+        conn.commit()
+
+# ── Promo code functions ──────────────────────────────────────
+def create_promo_code(uid: int, code: str, pct: int = 30):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO promo_codes (code, uid, pct, uses, created) VALUES (%s, %s, %s, 0, %s) ON CONFLICT (code) DO NOTHING",
+                (code, uid, pct, int(time.time()))
+            )
+        conn.commit()
+
+def get_promo_code(code: str):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM promo_codes WHERE code = %s", (code,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+def get_promo_code_by_uid(uid: int):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM promo_codes WHERE uid = %s LIMIT 1", (uid,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+def increment_promo_uses(code: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE promo_codes SET uses = uses + 1 WHERE code = %s", (code,))
+        conn.commit()
+
+def get_active_promo(uid: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT active_promo FROM users WHERE uid = %s", (uid,))
+            row = cur.fetchone()
+            return row[0] if row else None
+
+def set_active_promo(uid: int, code: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET active_promo = %s WHERE uid = %s", (code, uid))
+        conn.commit()
+
+def clear_active_promo(uid: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET active_promo = NULL WHERE uid = %s", (uid,))
         conn.commit()
 
 # Initialize on import

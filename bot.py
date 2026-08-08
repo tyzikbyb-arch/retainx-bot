@@ -167,6 +167,57 @@ async def start(msg: Message, state: FSMContext):
         await msg.answer(text, reply_markup=get_kb(uid, lang), parse_mode="HTML")
         await msg.answer(t("choose_option", lang), reply_markup=keyboard, parse_mode="HTML")
 
+# ── /promo command ───────────────────────────────────────────────
+@dp.message(Command("promo"))
+async def cmd_promo(msg: Message):
+    from aiogram.types import InlineKeyboardButton
+    from handlers.credits import show_wallet
+    uid = msg.from_user.id
+    lang = get_lang(uid)
+    from database import get_active_promo, get_promo_code, set_active_promo, is_ref_first_topup_done, set_referred_by
+
+    parts = msg.text.strip().split(maxsplit=1)
+    code = parts[1].strip().upper() if len(parts) > 1 else None
+
+    if not code:
+        active = get_active_promo(uid)
+        if active:
+            pct = (get_promo_code(active) or {}).get("pct", 30)
+            await msg.answer(
+                f"{t('promo_enter_title', lang)}\n\n{t('promo_applied', lang, code=active, pct=pct)}",
+                reply_markup=kb(
+                    [InlineKeyboardButton(text=t("promo_cancel_btn", lang), callback_data="promo_cancel")],
+                    [menu_btn(lang)],
+                ),
+                parse_mode="HTML"
+            )
+        else:
+            await msg.answer(
+                f"{t('promo_enter_title', lang)}\n\n{t('promo_enter_desc', lang)}",
+                reply_markup=kb([menu_btn(lang)]),
+                parse_mode="HTML"
+            )
+        return
+
+    promo = get_promo_code(code)
+    if not promo:
+        await msg.answer(t("promo_invalid", lang), parse_mode="HTML")
+        return
+    if promo["uid"] == uid:
+        await msg.answer(t("promo_own_code", lang), parse_mode="HTML")
+        return
+    if is_ref_first_topup_done(uid):
+        await msg.answer(t("promo_not_first", lang), parse_mode="HTML")
+        return
+    if get_active_promo(uid):
+        await msg.answer(t("promo_already_used", lang), parse_mode="HTML")
+        return
+
+    set_active_promo(uid, code)
+    set_referred_by(uid, promo["uid"])
+    pct = promo["pct"]
+    await msg.answer(t("promo_applied", lang, code=code, pct=pct), parse_mode="HTML")
+
 # ── Panel button router ───────────────────────────────────────────
 ADMIN_PANEL_BUTTONS = {
     "≡  All Orders", "✉  Msg User", "＋  Add Coins",
@@ -195,12 +246,8 @@ async def panel_router(msg: Message, state: FSMContext):
         await show_wallet(msg, state)
     elif action == "video":
         await state.clear()
-        buttons = [[InlineKeyboardButton(text=video.subcat_label(s, lang), callback_data=f"vsub_{s}")] for s in video.VIDEO_SUBCATS]
-        buttons.append([InlineKeyboardButton(text=t("btn_back", lang),   callback_data="main_menu")])
-        await msg.answer(
-            f"{t('video_title', lang)}\n━━━━━━━━━━━━━━━━━━━━\n\n{t('select_category', lang)}",
-            reply_markup=kb(*buttons), parse_mode="HTML"
-        )
+        text, keyboard = video.build_cat_video_page(uid)
+        await msg.answer(text, reply_markup=keyboard, parse_mode="HTML")
     elif action == "images":
         await state.clear()
         from config import IMAGE_TOOLS

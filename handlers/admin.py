@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramRetryAfter
 from config import ADMIN_ID, BOT_TOKEN
-from database import get_order, update_order_status, add_coins, save_delivery, get_lang, set_blogger, get_is_blogger, cancel_order_atomic
+from database import get_order, update_order_status, add_coins, save_delivery, get_lang, set_blogger, get_is_blogger, cancel_order_atomic, get_promo_code, create_promo_code, get_promo_code_by_uid
 from keyboards import kb, menu_btn
 from aiogram.types import InlineKeyboardButton
 from i18n import t
@@ -245,5 +245,28 @@ async def cmd_remove_blogger(msg: Message):
         uid = int(parts[1])
         set_blogger(uid, False)
         await msg.answer(f"✓ Blogger status removed: user {uid}")
+    except Exception as e:
+        await msg.answer(f"❌ Error: {e}")
+
+@router.message(Command("setpromo"))
+async def cmd_set_promo(msg: Message):
+    if msg.from_user.id != ADMIN_ID:
+        return
+    parts = msg.text.strip().split()
+    if len(parts) < 3 or not parts[1].isdigit():
+        await msg.answer("Usage: /setpromo USER_ID CODE\nExample: /setpromo 939285095 MYBLOG25")
+        return
+    try:
+        uid = int(parts[1])
+        code = parts[2].upper()
+        existing_for_user = get_promo_code_by_uid(uid)
+        if existing_for_user:
+            await msg.answer(f"⚠️ User {uid} already has promo code: {existing_for_user['code']}")
+            return
+        if get_promo_code(code):
+            await msg.answer(f"⚠️ Code {code} is already taken by another user.")
+            return
+        create_promo_code(uid, code)
+        await msg.answer(f"✓ Promo code {code} assigned to user {uid}")
     except Exception as e:
         await msg.answer(f"❌ Error: {e}")
