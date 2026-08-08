@@ -197,7 +197,7 @@ def get_price_table(tid: str):
 
 def get_resolutions(tid: str):
     return {
-        "sd20":  ["480p","720p","1080p","4K"],
+        "sd20":  ["480p","720p","1080p"],
         "sd20f": ["480p","720p"],
         "hh10":  ["720p","1080p"],
         "wan27": ["720p","1080p"],
