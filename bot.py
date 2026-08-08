@@ -87,8 +87,8 @@ def build_main_menu_kb(coins: int, lang: str) -> InlineKeyboardMarkup:
     return kb(
         [InlineKeyboardButton(text=t("btn_video_generation", lang), callback_data="cat_video")],
         [InlineKeyboardButton(text=t("btn_image_generation", lang), callback_data="cat_images")],
-        [InlineKeyboardButton(text=t("btn_audio_voice", lang),      callback_data="cat_audio"),
-         InlineKeyboardButton(text=t("btn_music_generation", lang), callback_data="cat_music")],
+        [InlineKeyboardButton(text=t("btn_audio_voice", lang),      callback_data="cat_audio")],
+        [InlineKeyboardButton(text=t("btn_music_generation", lang), callback_data="cat_music")],
         [InlineKeyboardButton(text=t("btn_wallet_coins", lang, coins=coins), callback_data="wallet")],
         [InlineKeyboardButton(text=t("menu_orders", lang),          callback_data="my_orders")],
         [InlineKeyboardButton(text=t("btn_pricing", lang),  callback_data="pricing_menu"),
