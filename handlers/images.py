@@ -546,6 +546,14 @@ async def img_refs_done(cb: CallbackQuery, state: FSMContext):
     ref_line  = f"\n{t('img_refs_attached', lang, count=len(refs))}" if refs else ""
     cost_line = f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n\n" if not unlimited else "\n"
 
+    prompt_kbd_rows = []
+    if len(refs) < max_refs:
+        prompt_kbd_rows.append([InlineKeyboardButton(
+            text=t("img_btn_add_more_refs", lang, count=len(refs), max=max_refs),
+            callback_data="img_add_more_refs"
+        )])
+    prompt_kbd_rows.append([menu_btn(lang)])
+
     await cb.message.edit_text(
         f"◈  <b>{name}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -554,10 +562,40 @@ async def img_refs_done(cb: CallbackQuery, state: FSMContext):
         f"{ref_line}\n"
         f"{cost_line}"
         f"{t('img_enter_prompt', lang)}",
-        reply_markup=kb([menu_btn(lang)]),
+        reply_markup=kb(*prompt_kbd_rows),
         parse_mode="HTML"
     )
     await state.set_state(ImageStates.entering_prompt)
+
+@router.callback_query(F.data == "img_add_more_refs")
+async def img_add_more_refs(cb: CallbackQuery, state: FSMContext):
+    """Return to collecting_refs without losing already-saved refs."""
+    await cb.answer()
+    uid  = cb.from_user.id
+    lang = get_lang(uid)
+    data = await state.get_data()
+    name = data.get("img_tool", "")
+    tool = IMAGE_TOOLS.get(name, {})
+    max_refs = tool.get("max_refs", 9)
+
+    # Re-seed Redis with the refs already in FSM so new uploads append to them
+    existing = data.get("img_refs") or []
+    await _refs_clear(uid)
+    for ref in existing:
+        await _refs_push(uid, {k: v for k, v in ref.items() if k != "ref"})
+
+    count = len(existing)
+    await cb.message.edit_text(
+        f"{t('img_ref_title', lang, count=count, max=max_refs)}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{t('img_ref_instructions', lang, max=max_refs)}",
+        reply_markup=kb(
+            [InlineKeyboardButton(text=t("btn_done", lang), callback_data="img_refs_done")],
+            [menu_btn(lang)],
+        ),
+        parse_mode="HTML"
+    )
+    await state.set_state(ImageStates.collecting_refs)
 
 @router.callback_query(F.data == "img_to_prompt")
 async def img_to_prompt(cb: CallbackQuery, state: FSMContext):
