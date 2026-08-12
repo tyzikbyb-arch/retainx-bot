@@ -249,28 +249,61 @@ def _get_img_coins(tool: dict, quality: str) -> int:
 @router.message(ImageStates.entering_prompt)
 async def image_prompt_received(msg: Message, state: FSMContext):
     lang = get_lang(msg.from_user.id)
+    uid  = msg.from_user.id
     data = await state.get_data()
     name = data.get("img_tool")
     ar = data.get("img_ar")
     quality = data.get("img_quality")
     coins = data.get("img_coins", 1)
     coins_word = t("coins_word", lang)
-    prompt = msg.text
+
+    # Support captioned photos: user sends image(s) with text as caption
+    prompt = msg.text or msg.caption
+
+    if not prompt:
+        # Photo with no caption — tell them to send text
+        await msg.answer(
+            t("img_enter_prompt", lang),
+            reply_markup=kb(
+                [InlineKeyboardButton(text=t("btn_done", lang), callback_data="img_refs_done")],
+                [menu_btn(lang)],
+            )
+        )
+        return
+
+    # If photos are attached, save them into img_refs (append to any already collected)
+    if msg.photo or msg.document:
+        tool = IMAGE_TOOLS.get(name, {})
+        max_refs = tool.get("max_refs", 0)
+        if max_refs > 0:
+            existing_refs = data.get("img_refs") or []
+            file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
+            ftype   = "photo" if msg.photo else "document"
+            if len(existing_refs) < max_refs:
+                existing_refs = list(existing_refs)
+                idx = len(existing_refs) + 1
+                existing_refs.append({"file_id": file_id, "type": ftype, "ref": f"img{idx}"})
+                await state.update_data(img_refs=existing_refs)
 
     await state.update_data(img_prompt=prompt)
 
-    unlimited = has_unlimited(msg.from_user.id)
+    unlimited = has_unlimited(uid)
     params_text = f"  {t('img_model_label', lang)}           <b>{name}</b>\n  {t('img_aspect_ratio_label', lang)}   {ar}\n"
     if quality:
         params_text += f"  {t('img_quality_label', lang)}           {quality}\n"
     if not unlimited:
         params_text += f"  {t('img_cost_label', lang)}               <b>{coins} {coins_word}</b>\n"
 
+    refs_line = ""
+    all_refs = (await state.get_data()).get("img_refs") or []
+    if all_refs:
+        refs_line = f"\n{t('img_refs_attached', lang, count=len(all_refs))}"
+
     confirm_btn = t("img_btn_confirm_free", lang) if unlimited else t("img_btn_confirm", lang, coins=coins)
     await msg.answer(
         f"{t('img_order_summary_title', lang)}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"{params_text}\n"
+        f"{params_text}{refs_line}\n"
         f"  {t('img_prompt_label', lang)}\n<i>{prompt}</i>\n\n"
         f"━━━━━━━━━━━━━━━━━━━━",
         reply_markup=kb(
